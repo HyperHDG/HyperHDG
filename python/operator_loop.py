@@ -32,9 +32,8 @@ MODULE = """\
 #include <HyperHDG/topology/cubic.hxx>
 
 #include <HyperHDG/global_loop/elliptic.hxx>
-#include <HyperHDG/global_loop/local_operator_loop.hxx>
+#include <HyperHDG/global_loop/generic.hxx>
 #include <HyperHDG/local_solver/diffusion_ldgh.hxx>
-#include <HyperHDG/local_solver/diffusion_operator.hxx>
 
 #include "reproducibles_python/parameters/diffusion.hxx"
 
@@ -46,9 +45,9 @@ using Elliptic = GlobalLoop::Elliptic<
   Topo, Geom, Node,
   LocalSolver::Diffusion<{dim}, {degree}, {quadrature}, TestParametersSinEllipt, double>,
   std::vector<double> >;
-using OpLoop = GlobalLoop::LocalOperatorLoop<
+using OpLoop = GlobalLoop::Generic<
   Topo, Geom, Node,
-  LocalSolver::DiffusionOperator<{dim}, {degree}, {quadrature}, TestParametersSinEllipt, double> >;
+  LocalSolver::Diffusion<{dim}, {degree}, {quadrature}, TestParametersSinEllipt, double> >;
 
 NB_MODULE({name}, m)
 {{

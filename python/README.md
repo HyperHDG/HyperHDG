@@ -317,12 +317,12 @@ its time. The machinery simply predates the tools that now make its job unnecess
 
 ## Prototype: one global loop over local operators
 
-`include/HyperHDG/global_loop/local_operator_loop.hxx` is a prototype of a single global loop
-(design note `doc/local_operator_design.md`): a scatter–gather engine whose only knowledge of the
-physics is an immutable per-hyperedge *local operator* that the local solver returns from
-`local_operator(edge, Kind, args)`. The operator provides `apply<k>` (k traces at once; assembly
-is `apply<n_loc>` of the identity, so the matrix is the matrix-free operator by construction) and
-`residual(…, load, …)` with the load supplied by the solver. The loop owns the store (`prepare` /
+`include/HyperHDG/global_loop/generic.hxx` (`GlobalLoop::Generic`) is a prototype of a single
+global loop (design note `doc/local_operator_design.md`): a scatter–gather engine whose only
+knowledge of the physics is an immutable per-hyperedge *local operator* that the local solver
+returns from `local_operator(edge, Kind, args)`. The operator provides `apply<k>` (k traces at
+once; assembly is `apply<n_loc>` of the identity, so the matrix is the matrix-free operator by
+construction) and `residual(…, load, …)` with the load supplied by the solver. The loop owns the store (`prepare` /
 `release`: one operator per distinct `operator_key`; streaming without `prepare`; each public
 sweep decides once and runs a branch-free body), the constraint index set (Dirichlet rows:
 identity in `apply`, masked in `assemble`), `n_triplets` + `assemble` into caller arrays, and
@@ -330,11 +330,11 @@ identity in `apply`, masked in `assemble`), `n_triplets` + `assemble` into calle
 allocates global vectors: every entry point takes vector-like inputs and outputs (`std::vector`,
 `std::span`). Serial; parallel sweeps are a separate step.
 
-`include/HyperHDG/local_solver/diffusion_operator.hxx` wraps `LocalSolver::Diffusion` into the
-protocol: LU of the local matrix plus the coupling blocks B, C, D tabulated once per operator
-(S = C A⁻¹ B + D); congruent elements share one operator when the parameters declare
-`constant_coefficients` (key: rounded span vectors). Operators are trivially copyable (`SmallMat`
-copy/move defaulted), the store is one contiguous array.
+`LocalSolver::Diffusion` (`include/HyperHDG/local_solver/diffusion_ldgh.hxx`) implements the
+protocol next to its legacy interface: LU of the local matrix plus the coupling blocks B, C, D
+tabulated once per operator (S = C A⁻¹ B + D); congruent elements share one operator when the
+parameters declare `constant_coefficients` (key: rounded span vectors). Operators are trivially
+copyable (`SmallMat` copy/move defaulted), the store is one contiguous array.
 
 Bindings (`bind_python.hxx`, `requires`-guarded as before): NumPy in and out. The prototype's
 `apply(x, y)`, `residual(x, r)` and `assemble(rows, cols, vals)` write into caller-allocated

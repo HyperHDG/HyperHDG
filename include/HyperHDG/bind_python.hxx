@@ -267,7 +267,7 @@ auto bind_python(nanobind::module_& m, const char* name)
       "set_refinement", [](GlobalLoopT& o, unsigned int level) { o.set_refinement(level); },
       nb::arg("level"));
 
-  // ---- local-operator loop protocol (GlobalLoop::LocalOperatorLoop) ----------------------------
+  // ---- local-operator loop protocol (GlobalLoop::Generic) ----------------------------
   // Like the C++ interface, nothing here allocates global vectors: apply, residual and assemble
   // write into caller-allocated NumPy arrays (n_triplets sizes the triplet arrays). Args is the
   // solver's runtime parameter struct, constructible from the time.

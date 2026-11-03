@@ -26,7 +26,7 @@ namespace GlobalLoop
  * it never allocates global vectors: every entry point writes into caller-provided vectors (any
  * type with size() and operator[], e.g. std::vector or std::span).
  *
- * Local solver protocol (cf. local_operator_design_v2.md):
+ * Local solver protocol (cf. doc/local_operator_design.md):
  * - \c Args: runtime parameters (time, ...) forwarded to every call,
  * - \c local_operator(edge, Stiffness, args): builds the immutable per-edge operator with
  *   \c apply<k>(edge, in, args, out) and \c residual(edge, lambda, load, args, r),
@@ -51,7 +51,7 @@ template <class TopologyT,
           class LocalSolverT,
           typename dof_value_t = double,
           typename dof_index_t = unsigned int>
-class LocalOperatorLoop
+class Generic
 {
  public:
   static constexpr unsigned int hyEdge_dim = TopologyT::hyEdge_dim();
@@ -94,8 +94,8 @@ class LocalOperatorLoop
   std::vector<dof_value_t> free_mask_;    // 1 on free dofs, 0 on constrained dofs
 
  public:
-  LocalOperatorLoop(const typename TopologyT::constructor_value_type& construct_topo,
-                    const typename LocalSolverT::constructor_value_type& construct_loc_sol)
+  Generic(const typename TopologyT::constructor_value_type& construct_topo,
+          const typename LocalSolverT::constructor_value_type& construct_loc_sol)
   : hyper_graph_(construct_topo), local_solver_(construct_loc_sol)
   {
     static_assert(TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim(),
@@ -107,8 +107,8 @@ class LocalOperatorLoop
     static_assert(std::is_trivially_copyable_v<Operator>,
                   "Local operators must be trivially copyable (contiguous store, device copy).");
   }
-  LocalOperatorLoop(const typename TopologyT::constructor_value_type& construct_topo)
-  : LocalOperatorLoop(construct_topo, typename LocalSolverT::constructor_value_type())
+  Generic(const typename TopologyT::constructor_value_type& construct_topo)
+  : Generic(construct_topo, typename LocalSolverT::constructor_value_type())
   {
   }
 
@@ -483,6 +483,6 @@ class LocalOperatorLoop
       }
     }
   }
-};  // end of class LocalOperatorLoop
+};  // end of class Generic
 
 }  // end of namespace GlobalLoop
