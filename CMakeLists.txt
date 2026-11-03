@@ -135,6 +135,7 @@ add_subdirectory(examples)
 include(CTest)
 if(BUILD_TESTING)
   enable_testing()
+  add_subdirectory(tests)
   add_subdirectory(tests_c++)
 endif()
 
