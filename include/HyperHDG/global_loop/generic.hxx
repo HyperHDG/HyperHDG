@@ -93,22 +93,25 @@ class Generic
   std::vector<dof_index_t> constraints_;  // sorted global dof indices
   std::vector<dof_value_t> free_mask_;    // 1 on free dofs, 0 on constrained dofs
 
+  static_assert(TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim(),
+                "Hyperedge dimension of topology and geometry must be equal!");
+  static_assert(TopologyT::space_dim() == GeometryT::space_dim(),
+                "Space dimension of topology and geometry must be equal!");
+  static_assert(TopologyT::hyEdge_dim() == LocalSolverT::hyEdge_dim(),
+                "Hyperedge dimension of hypergraph and local solver must be equal!");
+  static_assert(std::is_trivially_copyable_v<Operator>,
+                "Local operators must be trivially copyable (contiguous store, device copy).");
+
  public:
   Generic(const typename TopologyT::constructor_value_type& construct_topo,
           const typename LocalSolverT::constructor_value_type& construct_loc_sol)
   : hyper_graph_(construct_topo), local_solver_(construct_loc_sol)
   {
-    static_assert(TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim(),
-                  "Hyperedge dimension of topology and geometry must be equal!");
-    static_assert(TopologyT::space_dim() == GeometryT::space_dim(),
-                  "Space dimension of topology and geometry must be equal!");
-    static_assert(TopologyT::hyEdge_dim() == LocalSolverT::hyEdge_dim(),
-                  "Hyperedge dimension of hypergraph and local solver must be equal!");
-    static_assert(std::is_trivially_copyable_v<Operator>,
-                  "Local operators must be trivially copyable (contiguous store, device copy).");
   }
+  // The local solver's own defaults (e.g. tau = 1 for Diffusion), not a value-initialized
+  // constructor argument (tau = 0, a singular local problem).
   Generic(const typename TopologyT::constructor_value_type& construct_topo)
-  : Generic(construct_topo, typename LocalSolverT::constructor_value_type())
+  : hyper_graph_(construct_topo), local_solver_()
   {
   }
 
