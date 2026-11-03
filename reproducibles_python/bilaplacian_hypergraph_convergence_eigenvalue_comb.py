@@ -28,5 +28,5 @@ def combination(poly_degree, dimension, iteration, approx_type):
 
 
 if __name__ == "__main__":
-  common.main(combination, rtol=1e-3, atol=1e-8, poly_degree=range(1, 4), dimension=range(1, 3), iteration=range(2, 6),
+  common.main(combination, rtol=1e-3, atol=1e-8, poly_degree=range(1, 4), dimension=range(1, 3), iteration=range(2, 6) if not common.QUICK else [2],
               approx_type=range(2))

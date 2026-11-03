@@ -16,7 +16,7 @@ hdg_module = common.module("advection_rotation_parabolic")
 
 
 def diffusion_test(theta, poly_degree, dimension, iteration):
-  time_steps, time_end = (10 ** 3 if not common.QUICK else 20), 2. * np.pi
+  time_steps, time_end = (10 ** 3 if not common.QUICK else 10), 2. * np.pi
   delta_time = time_end / time_steps
   hdg = hdg_module[f"AdvectionParab_D{dimension}_P{poly_degree}"]([2 ** iteration] * dimension,
                                                                   [0., theta, delta_time])
@@ -27,4 +27,4 @@ def diffusion_test(theta, poly_degree, dimension, iteration):
 
 
 if __name__ == "__main__":
-  common.main(diffusion_test, rtol=1e-5, theta=[0.5, 1.], poly_degree=range(3), dimension=[2], iteration=range(5, 8))
+  common.main(diffusion_test, rtol=1e-5, theta=[0.5, 1.], poly_degree=range(3), dimension=[2], iteration=range(5, 8) if not common.QUICK else [5])

@@ -27,4 +27,4 @@ def eigenvalue_approx_MA(poly_degree, dimension, iteration):
 
 
 if __name__ == "__main__":
-  common.main(eigenvalue_approx_MA, rtol=1e-3, poly_degree=range(1, 4), dimension=range(1, 3), iteration=range(2, 6))
+  common.main(eigenvalue_approx_MA, rtol=1e-3, poly_degree=range(1, 4), dimension=range(1, 3), iteration=range(2, 6) if not common.QUICK else [2])

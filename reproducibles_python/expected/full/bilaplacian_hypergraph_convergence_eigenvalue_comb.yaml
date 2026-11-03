@@ -1,0 +1,4 @@
+- {poly_degree: 1, dimension: 1, iteration: 2, start: SI, error_start: 5.117295847359074, error_newton: 5.529193624141996}
+- {poly_degree: 1, dimension: 1, iteration: 2, start: MA, error_start: 3.7219352099067464, error_newton: 5.529193624214258}
+- {poly_degree: 1, dimension: 1, iteration: 3, start: SI, error_start: 0.548485404877951, error_newton: 0.5719051338124217}
+- {poly_degree: 1, dimension: 1, iteration: 3, start: MA, error_start: 0.47901992170746155, error_newton: 0.571905133812507}

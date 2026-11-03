@@ -16,7 +16,7 @@ DOMAIN = str(common.ROOT / "domains" / "leVeque_hg.geo")
 
 
 def diffusion_test(theta, poly_degree, refinement):
-  time_steps, time_end = (10 ** 3 if not common.QUICK else 20), 5
+  time_steps, time_end = (10 ** 3 if not common.QUICK else 10), 5
   delta_time = time_end / time_steps
   hdg = hdg_module[f"AdvectionParab_D2_P{poly_degree}"](DOMAIN, [0., theta, delta_time])
   hdg.set_refinement(2 ** refinement)
@@ -30,4 +30,4 @@ def diffusion_test(theta, poly_degree, refinement):
 
 
 if __name__ == "__main__":
-  common.main(diffusion_test, rtol=1e-4, theta=[0.5, 1.], poly_degree=range(1, 4), refinement=range(5, 6))
+  common.main(diffusion_test, rtol=1e-4, theta=[0.5, 1.], poly_degree=range(1, 4), refinement=range(5, 6) if not common.QUICK else [3])

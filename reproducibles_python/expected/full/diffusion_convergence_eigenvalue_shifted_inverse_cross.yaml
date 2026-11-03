@@ -1,0 +1,12 @@
+- {poly_degree: 1, dimension: 1, iteration: 2, ev1: 2.4303970441005482, ev2: 10.007053878942413}
+- {poly_degree: 1, dimension: 1, iteration: 3, ev1: 2.4589051221651617, ev2: 9.920263910354606}
+- {poly_degree: 1, dimension: 1, iteration: 4, ev1: 2.4653535846632506, ev2: 9.883939378823857}
+- {poly_degree: 1, dimension: 1, iteration: 5, ev1: 2.4668977612423504, ev2: 9.873381786712066}
+- {poly_degree: 2, dimension: 1, iteration: 2, ev1: 2.435318719005005, ev2: 10.129585658134932}
+- {poly_degree: 2, dimension: 1, iteration: 3, ev1: 2.4594522563085994, ev2: 9.933424794357627}
+- {poly_degree: 2, dimension: 1, iteration: 4, ev1: 2.465417995995891, ev2: 9.885484097843722}
+- {poly_degree: 2, dimension: 1, iteration: 5, ev1: 2.4669055712856487, ev2: 9.873569575643991}
+- {poly_degree: 3, dimension: 1, iteration: 2, ev1: 2.435360102660792, ev2: 10.129693516058122}
+- {poly_degree: 3, dimension: 1, iteration: 3, ev1: 2.459453457031327, ev2: 9.9334279819088}
+- {poly_degree: 3, dimension: 1, iteration: 4, ev1: 2.4654180323347763, ev2: 9.885484194389868}
+- {poly_degree: 3, dimension: 1, iteration: 5, ev1: 2.466905572403895, ev2: 9.873569578613624}

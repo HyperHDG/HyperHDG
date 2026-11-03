@@ -1,0 +1,6 @@
+- {poly_degree: 1, dimension: 1, iteration: 2, start: SI, error_start: 2.430397044100549, error_newton: 9.585400221680272}
+- {poly_degree: 1, dimension: 1, iteration: 3, start: SI, error_start: 2.458905122165531, error_newton: 9.840588696830967}
+- {poly_degree: 2, dimension: 1, iteration: 2, start: SI, error_start: 2.435318719005034, error_newton: 9.868111295214334}
+- {poly_degree: 2, dimension: 1, iteration: 3, start: SI, error_start: 2.459452256308772, error_newton: 9.869563567771854}
+- {poly_degree: 3, dimension: 1, iteration: 2, start: SI, error_start: 2.435360102660805, error_newton: 9.869600093032451}
+- {poly_degree: 3, dimension: 1, iteration: 3, start: SI, error_start: 2.459453457031908, error_newton: 9.8696043701731}

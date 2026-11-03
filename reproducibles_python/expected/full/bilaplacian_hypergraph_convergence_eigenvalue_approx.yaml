@@ -1,0 +1,7 @@
+- {poly_degree: 1, dimension: 1, iteration: 2, error: 3.721935209906732}
+- {poly_degree: 1, dimension: 1, iteration: 3, error: 0.47901992170694996}
+- {poly_degree: 1, dimension: 1, iteration: 4, error: 0.059177621035246375}
+- {poly_degree: 1, dimension: 1, iteration: 5, error: 0.007320460724358213}
+- {poly_degree: 1, dimension: 2, iteration: 2, error: 20.090839453181616}
+- {poly_degree: 1, dimension: 2, iteration: 3, error: 2.214317920335816}
+- {poly_degree: 1, dimension: 2, iteration: 4, error: 0.2527238970682788}

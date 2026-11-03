@@ -57,9 +57,9 @@ _TOLERANCE = "rtol" if "rtol" in inspect.signature(spla.cg).parameters else "tol
 
 # the records written in this process, per script name: [(params, results)]
 RECORDS = {}
-# set by main() for --quick: the time-stepping scripts take far fewer steps then (see their test
-# functions), so the expected files hold quick-mode records
-QUICK = False
+# --quick (or the legacy positional True), known at import so a script can choose its quick grid
+# and the time-stepping scripts their step count; the expected files of the mode hold the records
+QUICK = "--quick" in sys.argv[1:] or "True" in sys.argv[1:]
 # the parameter that halves the mesh width from one record to the next
 REFINEMENT_KEYS = ("refinement", "iteration")
 
@@ -208,8 +208,8 @@ class NewtonHelper:
 def newton_eigenvalue(hdg, initial, guess, n_newton_steps, solvers, tol_cap=None,
                       scaling_fac=1e-2, norm_exact=1e-9, alpha=0.1, beta=0.5):
   """Newton's method with backtracking line search on the nonlinear eigenvalue problem. initial
-  is "default" (make_initial, normalized, eigenvalue guess with a random perturbation of up to
-  1e-1 as the scripts always did) or a start vector with the eigenvalue as last entry. solvers:
+  is "default" (make_initial, normalized, eigenvalue guess with a perturbation of up to 1e-1
+  drawn from a fixed seed, as the scripts always did at random) or a start vector with the eigenvalue as last entry. solvers:
   the Krylov solvers tried in turn for the Newton update, with tolerance scaling_fac * residual
   norm (capped at tol_cap if given). Returns the eigenvalue and the vector."""
   helper = NewtonHelper(hdg)
@@ -218,7 +218,9 @@ def newton_eigenvalue(hdg, initial, guess, n_newton_steps, solvers, tol_cap=None
   if initial == "default":
     vector = np.asarray(hdg.make_initial([0] * n))
     vector /= np.linalg.norm(vector)
-    vector[-1] = guess + 1e-3 * random.randint(-100, 100)
+    # the perturbation of the guess the scripts always used, but from a fixed seed so that a
+    # run is reproducible (the Krylov solves of the Newton updates are fragile enough)
+    vector[-1] = guess + 1e-3 * random.Random(2024).randint(-100, 100)
   else:
     vector = np.asarray(initial, dtype=float)
     temp, vector[-1] = vector[-1], 0.
@@ -420,7 +422,7 @@ def main(test, argv=None, rtol=1e-6, atol=1e-12, order=None, **grids):
   with --check the process exits 1 on any complaint or raised run."""
   global QUICK
   argv = sys.argv[1:] if argv is None else argv
-  quick = QUICK = "--quick" in argv or "True" in argv
+  quick = QUICK = QUICK or "--quick" in argv or "True" in argv
   checking, recording = "--check" in argv, "--record" in argv
   grids = {key: list(values) for key, values in grids.items()}
   if quick:

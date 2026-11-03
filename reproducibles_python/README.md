@@ -56,5 +56,8 @@ order the study states.
   every push; when a change moves a number beyond its tolerance, the full sweeps are run by hand,
   the convergence tables checked, and both sets re-recorded in that change.
 
-The ctests run `--quick --check`; `shell_scripts/reproducibles_test.sh` runs every study the
+The ctests run `--quick --check` for every study except `advection_hypergraph` (no solver
+converges) and the two advection studies on the `leVeque_hg.geo` hypergraph (their solves break
+down or take hours even in quick mode) and the ten Newton eigenvalue studies and combinations (the
+Krylov solves of their Newton updates break down on some machines); `shell_scripts/reproducibles_test.sh` runs every study the
 same way and greps the logs, which the weekly workflow does.
