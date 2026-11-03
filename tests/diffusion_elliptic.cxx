@@ -1,8 +1,8 @@
 // LDG-H diffusion on the unit cube with GlobalLoop::Generic: solve u = sin(pi/2 x_0) on meshes of
-// 2, 4, 8 elements per direction and check that the L2 error converges with order degree + 1 on
-// the last refinement. On meshes small enough for a dense LU, the assembled matrix is also solved
-// directly: it must be non-singular, and the direct solution must agree with the matrix-free CG.
-// One executable per (DIM, DEGREE), set by CMake (tests/CMakeLists.txt).
+// 2, 4, 8 (degree 1: up to 16) elements per direction and check that the L2 error converges with
+// order degree + 1 on the last refinement. On meshes small enough for a dense LU, the assembled
+// matrix is also solved directly: it must be non-singular, and the direct solution must agree with
+// the matrix-free CG. One executable per (DIM, DEGREE), set by CMake (tests/CMakeLists.txt).
 #include <HyperHDG/geometry/unit_cube.hxx>
 #include <HyperHDG/global_loop/generic.hxx>
 #include <HyperHDG/local_solver/diffusion_ldgh.hxx>
@@ -29,6 +29,8 @@
 
 constexpr unsigned int dim = DIM, degree = DEGREE;
 constexpr unsigned int max_direct_dofs = 2000;  // dense LU: 32 MB, well under a second
+// Degree 1 is cheap, and in 3D its rate is preasymptotic up to n = 8 (1.67 instead of 1.7).
+constexpr unsigned int max_n = degree == 1 ? 16 : 8;
 
 using Loop = GlobalLoop::Generic<
   Topology::Cubic<dim, dim>,
@@ -54,7 +56,7 @@ int main()
 {
   int failures = 0;
   double previous = 0.;
-  for (unsigned int n = 2; n <= 8; n *= 2)
+  for (unsigned int n = 2; n <= max_n; n *= 2)
   {
     Loop loop(std::vector<unsigned int>(dim, n));
     loop.constrain_dirichlet_nodes();
@@ -102,7 +104,7 @@ int main()
     }
 
     // Only the last rate is checked: the coarse meshes are preasymptotic.
-    if (n == 8)
+    if (n == max_n)
     {
       const double rate = std::log2(previous / error);
       std::printf("  rate: %.3f (expected at least %.1f)\n", rate, degree + 1 - 0.3);
