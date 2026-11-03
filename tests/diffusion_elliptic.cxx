@@ -36,18 +36,6 @@ using Loop = GlobalLoop::Generic<
   NodeDescriptor::Cubic<dim, dim>,
   LocalSolver::Diffusion<dim, degree, 2 * degree, tests::DiffusionSin, double> >;
 
-// The interface of SparseLA::conjugate_gradient: y = A x as a returned vector.
-struct MatrixFree
-{
-  Loop& loop;
-  std::vector<double> trace_to_flux(const std::vector<double>& x)
-  {
-    std::vector<double> y(x.size());
-    loop.apply(x, y);
-    return y;
-  }
-};
-
 // Dense LU of the assembled matrix (constrained rows are identity rows, as in apply).
 std::vector<double> direct_solve(Loop& loop, std::vector<double> rhs)
 {
@@ -78,12 +66,21 @@ int main()
     for (double& value : rhs)
       value = -value;
 
-    MatrixFree matrix_free{loop};
-    const std::vector<double> x = SparseLA::conjugate_gradient(
-      rhs, matrix_free, 10 * size, 1e-12 * SparseLA::norm_2(rhs));  // throws if not converged
+    SparseLA::SolverOptions options;
+    options.rtol = 1e-12;
+    options.max_iterations = 10 * size;
+    std::vector<double> x(size, 0.);
+    const SparseLA::SolverResult cg =
+      SparseLA::cg([&](const std::vector<double>& in, std::vector<double>& out)
+                   { loop.apply(in, out); }, rhs, x, options);
     const double error = loop.errors(x)[0];
-    std::printf("- {dim: %u, degree: %u, n: %u, dofs: %u, error: %.6e}\n", dim, degree, n, size,
-                error);
+    std::printf("- {dim: %u, degree: %u, n: %u, dofs: %u, cg: %s, iterations: %u, error: %.6e}\n",
+                dim, degree, n, size, SparseLA::to_string(cg.reason), cg.iterations, error);
+    if (!cg.converged())
+    {
+      std::printf("  FAIL: CG did not converge\n");
+      ++failures;
+    }
     if (!std::isfinite(error))
     {
       std::printf("  FAIL: the error is not finite\n");

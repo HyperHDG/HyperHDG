@@ -19,5 +19,6 @@ function(add_hyperhdg_ladder_test source)
   endforeach()
 endfunction()
 
+add_hyperhdg_test(cg cg.cxx)
 add_hyperhdg_test(generic generic.cxx)
 add_hyperhdg_ladder_test(diffusion_elliptic.cxx)
