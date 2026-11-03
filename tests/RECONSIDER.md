@@ -90,11 +90,6 @@ its successor if there is one.
 - python/diffusion.py
 - python/geo2h5.py
 - python/hyperhdg.py
-- python/operator_loop.py
-- python/operator_loop.sh
-- python/operator_loop_arrays.py
-- python/operator_loop_check.py
-- python/operator_loop_convergence.py
 
 ### examples/
 
