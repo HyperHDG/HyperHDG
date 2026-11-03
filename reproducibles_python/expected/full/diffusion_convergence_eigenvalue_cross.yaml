@@ -1,0 +1,12 @@
+- {poly_degree: 1, dimension: 1, iteration: 2, start: SI, error_start: 2.4303970441005482, error_newton: 9.58540022168027}
+- {poly_degree: 1, dimension: 1, iteration: 3, start: SI, error_start: 2.4589051221651617, error_newton: 9.840588696830967}
+- {poly_degree: 1, dimension: 1, iteration: 4, start: SI, error_start: 2.4653535846632506, error_newton: -1.0}
+- {poly_degree: 1, dimension: 1, iteration: 5, start: SI, error_start: 2.4668977612423504, error_newton: 9.869218792848118}
+- {poly_degree: 2, dimension: 1, iteration: 2, start: SI, error_start: 2.435318719005005, error_newton: 9.868111295214335}
+- {poly_degree: 2, dimension: 1, iteration: 3, start: SI, error_start: 2.4594522563085994, error_newton: 9.869563567771854}
+- {poly_degree: 2, dimension: 1, iteration: 4, start: SI, error_start: 2.465417995995891, error_newton: -1.0}
+- {poly_degree: 2, dimension: 1, iteration: 5, start: SI, error_start: 2.4669055712856487, error_newton: 9.869604366345891}
+- {poly_degree: 3, dimension: 1, iteration: 2, start: SI, error_start: 2.435360102660792, error_newton: 9.869600093032451}
+- {poly_degree: 3, dimension: 1, iteration: 3, start: SI, error_start: 2.459453457031327, error_newton: 9.869604370173102}
+- {poly_degree: 3, dimension: 1, iteration: 4, start: SI, error_start: 2.4654180323347763, error_newton: -1.0}
+- {poly_degree: 3, dimension: 1, iteration: 5, start: SI, error_start: 2.466905572403895, error_newton: 9.869604402708612}

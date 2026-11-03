@@ -1,0 +1,25 @@
+// Parabolic LDG-H bilaplacian on the unit cube: bilaplacian_convergence_parabolic.py.
+#include "bind_grid.hxx"
+
+#include <HyperHDG/geometry/unit_cube.hxx>
+#include <HyperHDG/global_loop/parabolic.hxx>
+#include <HyperHDG/local_solver/bilaplacian_parab_ldgh.hxx>
+#include <HyperHDG/node_descriptor/cubic.hxx>
+#include <HyperHDG/topology/cubic.hxx>
+
+#include "reproducibles_python/parameters/bilaplacian.hxx"
+
+template <unsigned dim, unsigned degree>
+using BilaplacianParab = GlobalLoop::Parabolic<
+  Topology::Cubic<dim, dim>,
+  Geometry::UnitCube<dim, dim, double>,
+  NodeDescriptor::Cubic<dim, dim>,
+  LocalSolver::BilaplacianParab<dim, degree, 2 * degree, TestParametersSinParab, double> >;
+
+NB_MODULE(bilaplacian_parabolic, m)
+{
+  using namespace reproducibles;
+  // constructed with the vector of solver constants (e.g. diffusion coefficient, theta, dt)
+  bind_grid<BilaplacianParab, std::vector<unsigned int>, std::vector<double> >(
+    m, "BilaplacianParab", seq<1, 2>{}, seq<1, 2, 3>{});
+}

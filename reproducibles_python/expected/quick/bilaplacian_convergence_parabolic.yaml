@@ -1,0 +1,12 @@
+- {poly_degree: 1, dimension: 1, iteration: 0, error: 0.788404212654133}
+- {poly_degree: 1, dimension: 1, iteration: 1, error: 0.46470651058772294}
+- {poly_degree: 1, dimension: 2, iteration: 0, error: 0.12359554048041181}
+- {poly_degree: 1, dimension: 2, iteration: 1, error: 0.1571345184857161}
+- {poly_degree: 2, dimension: 1, iteration: 0, error: 0.6002298352764428}
+- {poly_degree: 2, dimension: 1, iteration: 1, error: 0.044643697264387466}
+- {poly_degree: 2, dimension: 2, iteration: 0, error: 0.17987635957754428}
+- {poly_degree: 2, dimension: 2, iteration: 1, error: 0.023112196553569504}
+- {poly_degree: 3, dimension: 1, iteration: 0, error: 0.0072461283363468255}
+- {poly_degree: 3, dimension: 1, iteration: 1, error: 0.003989763886482704}
+- {poly_degree: 3, dimension: 2, iteration: 0, error: 0.0020727762581033865}
+- {poly_degree: 3, dimension: 2, iteration: 1, error: 0.0023710052576428604}

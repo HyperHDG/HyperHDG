@@ -1,85 +1,34 @@
-from __future__ import print_function
+#!/usr/bin/env python3
+"""Convergence of the Timoshenko beam solver (TimoshenkoBeam with its default parameters, Elliptic
+loop) on the network domains/cross.geo with every edge split into 2^iteration pieces, degrees 1 to
+6, iterations 0 to 5, the assembled system solved by CG to 1e-12: the errors go to
+output/timoshenko_convergence_cross.yaml, every run is plotted. The classes TimoshenkoBeam_D1_P<degree>
+come from modules/timoshenko_file_elliptic.cxx.
 
+    python3 reproducibles_python/timoshenko_convergence_cross.py [--quick]
+"""
 import numpy as np
 import scipy.sparse as sp
 
-from datetime import datetime
+import common
 
-import os, sys
-
-# --------------------------------------------------------------------------------------------------
-# Function bilaplacian_test.
-# --------------------------------------------------------------------------------------------------
-def diffusion_test(poly_degree, iteration, debug_mode=False):
-  start_time = datetime.now()
-  print("Starting time is", start_time)
-  os.makedirs("output", exist_ok=True)
-  
-  try:
-    import HyperHDG
-  except (ImportError, ModuleNotFoundError) as error:
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../import")
-    import HyperHDG
-
-  const                 = HyperHDG.config()
-  const.global_loop     = "Elliptic"
-  const.local_solver    = "TimoshenkoBeam<1,3," + str(poly_degree) + "," + str(2*poly_degree) +">"
-  const.topology        = "File<1,3>"
-  const.geometry        = "File<1,3>"
-  const.node_descriptor = "File<1,3>"
-  const.cython_replacements = ["string", "string"]
-  const.debug_mode      = debug_mode
-
-  PyDP = HyperHDG.include(const)
-  HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + "/../domains/cross.geo" )
-  HDG_wrapper.refine(2 ** iteration);
-
-  vectorRHS = np.multiply( HDG_wrapper.residual_flux(HDG_wrapper.zero_vector()), -1. )
-  
-  system_size = HDG_wrapper.size_of_system()
-  col_ind, row_ind, vals = HDG_wrapper.sparse_stiff_mat()
-  A = sp.csr_matrix((vals, (row_ind,col_ind)), shape=(system_size,system_size))
-
-  iters = 0
-  def nonlocal_iterate(vec_x):
-    nonlocal iters
-    iters += 1
-
-  vectorSolution, num_iter = sp.linalg.cg(A, vectorRHS, tol=1e-12, callback=nonlocal_iterate)
-  if num_iter != 0:
-    raise RuntimeError("Linear solver did not converge!")
-  error = HDG_wrapper.errors(vectorSolution)[0]
-
-  print("Iteration: ", iteration, " Error: ", error)
-  f = open("output/timoshenko_convergence_cross.txt", "a")
-  f.write("Polynomial degree = " + str(poly_degree) + ". Iteration = " + str(iteration) + 
-          ". Error = " + str(error) + ".\n")
-  f.close()
-  
-  HDG_wrapper.plot_option( "fileName" , "timo_cross-" + str(poly_degree) + "-" + str(iteration) )
-  HDG_wrapper.plot_option( "printFileNumber" , "false" )
-  HDG_wrapper.plot_option( "scale" , "0.95" )
-  HDG_wrapper.plot_solution(vectorSolution)
-  
-  end_time = datetime.now()
-  print("Program ended at", end_time, "after", end_time-start_time)
-
-# --------------------------------------------------------------------------------------------------
-# Function main.
-# --------------------------------------------------------------------------------------------------
-def main(debug_mode):
-  for poly_degree in range(1,7):
-    print("\n Polynomial degree is set to be ", poly_degree, "\n\n")
-    for iteration in range(6):
-      try:
-        diffusion_test(poly_degree, iteration, debug_mode)
-      except RuntimeError as error:
-        print("ERROR: ", error)
+NAME = "timoshenko_convergence_cross"
+hdg_module = common.module("timoshenko_file_elliptic")
+DOMAIN = str(common.ROOT / "domains" / "cross.geo")
 
 
-# --------------------------------------------------------------------------------------------------
-# Define main function.
-# -------------------------------------------------------------------------------------------------- 
+def diffusion_test(poly_degree, iteration):
+  hdg = hdg_module[f"TimoshenkoBeam_D1_P{poly_degree}"](DOMAIN)
+  hdg.set_refinement(2 ** iteration)
+  rhs = -np.asarray(hdg.residual_flux(hdg.zero_vector()))
+  n = hdg.size_of_system()
+  rows, cols, vals = hdg.trace_to_flux_mat()
+  A = sp.csr_matrix((vals, (rows, cols)), shape=(n, n))
+  solution = common.solve(A, rhs, tol=1e-12, solvers=("cg",))
+  error = hdg.errors(list(solution))[0]
+  common.report(NAME, error, poly_degree=poly_degree, iteration=iteration)
+  common.plot(hdg, solution, f"timo_cross-{poly_degree}-{iteration}")
+
+
 if __name__ == "__main__":
-  main(len(sys.argv) > 1 and sys.argv[1] == "True")
-
+  common.main(diffusion_test, rtol=1e-5, poly_degree=range(1, 7), iteration=range(6))

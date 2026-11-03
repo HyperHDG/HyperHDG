@@ -1,54 +1,32 @@
-from __future__ import print_function
+#!/usr/bin/env python3
+"""Newton's method on the eigenpair started from the shifted-inverse (SI) and from the
+mass-approximation (MA) eigenpair of the same discretization: the errors of the start and of the
+Newton result go to output/bilaplacian_hypergraph_convergence_eigenvalue_comb.yaml.
 
+    python3 reproducibles_python/bilaplacian_hypergraph_convergence_eigenvalue_comb.py [--quick]
+"""
 from bilaplacian_hypergraph_convergence_eigenvalue_approx import eigenvalue_approx_MA
 from bilaplacian_hypergraph_convergence_eigenvalue_shifted_inverse import eigenvalue_approx_SI
 from bilaplacian_hypergraph_convergence_eigenvalue_newt import eigenvalue_newt
 
-import os, sys
-  
+import common
 
-# --------------------------------------------------------------------------------------------------
-# Function main.
-# --------------------------------------------------------------------------------------------------
-def main(debug_mode):
-  for poly_degree in range(1,4):
-    print("\n  Polynomial degree is set to be ", poly_degree, "\n\n")
-    for dimension in range(1,3):
-      print("\nDimension is ", dimension, "\n")
-      for iteration in range(2,6):
-        for approx_type in range(2):
-          if approx_type == 0:
-            value,vector,errorSI = eigenvalue_approx_SI(poly_degree,dimension,iteration,debug_mode)
-            vector.append(value)
-            try:
-              _,_,errorNLSI = eigenvalue_newt(poly_degree,dimension,iteration,vector,debug_mode)
-            except RuntimeError as error:
-              print("ERROR: ", error)
-              errorNLSI = -1.
-            f = open("output/bilaplacian_hypergraph_convergence_eigenvalue_combSI.txt", "a")
-            f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
-                    + ". Iteration = " + str(iteration) + ". ErrorSI = " + str(errorSI) + ".\n")
-            f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
-                    + ". Iteration = " + str(iteration) + ". ErrorNL = " + str(errorNLSI) + ".\n")
-            f.close()
-          else:
-            value,vector,errorMA = eigenvalue_approx_MA(poly_degree,dimension,iteration,debug_mode)
-            vector.append(value)
-            try:
-              _,_,errorNLMA = eigenvalue_newt(poly_degree,dimension,iteration,vector,debug_mode)
-            except RuntimeError as error:
-              print("ERROR: ", error)
-              errorNLMA = -1.
-            f = open("output/bilaplacian_hypergraph_convergence_eigenvalue_combMA.txt", "a")
-            f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
-                    + ". Iteration = " + str(iteration) + ". ErrorMA = " + str(errorMA) + ".\n")
-            f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
-                    + ". Iteration = " + str(iteration) + ". ErrorNL = " + str(errorNLMA) + ".\n")
-            f.close()
+NAME = "bilaplacian_hypergraph_convergence_eigenvalue_comb"
 
 
-# --------------------------------------------------------------------------------------------------
-# Define main function.
-# -------------------------------------------------------------------------------------------------- 
+def combination(poly_degree, dimension, iteration, approx_type):
+  start, name = (eigenvalue_approx_SI, "SI") if approx_type == 0 else (eigenvalue_approx_MA, "MA")
+  value, vector, error_start = start(poly_degree, dimension, iteration)
+  vector.append(value)
+  try:
+    _, _, error_newton = eigenvalue_newt(poly_degree, dimension, iteration, vector)
+  except RuntimeError as error:
+    print("ERROR: ", error)
+    error_newton = -1.
+  common.report(NAME, {"error_start": error_start, "error_newton": error_newton},
+                poly_degree=poly_degree, dimension=dimension, iteration=iteration, start=name)
+
+
 if __name__ == "__main__":
-  main(len(sys.argv) > 1 and sys.argv[1] == "True")
+  common.main(combination, rtol=1e-3, atol=1e-8, poly_degree=range(1, 4), dimension=range(1, 3), iteration=range(2, 6) if not common.QUICK else [2],
+              approx_type=range(2))

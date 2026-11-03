@@ -1,54 +1,29 @@
-from __future__ import print_function
+#!/usr/bin/env python3
+"""Newton's method on the eigenpair of the cross network started from the shifted-inverse
+eigenpair of the same discretization: the eigenvalue of the start and of the Newton result go to
+output/diffusion_convergence_eigenvalue_cross.yaml.
 
-from diffusion_convergence_eigenvalue_approx import eigenvalue_approx_MA
+    python3 reproducibles_python/diffusion_convergence_eigenvalue_cross.py [--quick]
+"""
 from diffusion_convergence_eigenvalue_shifted_inverse_cross import eigenvalue_approx_SI
 from diffusion_hypergraph_convergence_eigenvalue_newt_cross import eigenvalue_newt
 
-import os, sys
-  
+import common
 
-# --------------------------------------------------------------------------------------------------
-# Function main.
-# --------------------------------------------------------------------------------------------------
-def main(debug_mode):
-  for poly_degree in range(1,4):
-    print("\n  Polynomial degree is set to be ", poly_degree, "\n\n")
-    for dimension in range(1,2):
-      print("\nDimension is ", dimension, "\n")
-      for iteration in range(2,6):
-        for approx_type in range(1):
-          if approx_type == 0:
-            value,vector,errorSI = eigenvalue_approx_SI(poly_degree,dimension,iteration,debug_mode)
-            vector.append(value)
-            try:
-              _,_,errorNLSI = eigenvalue_newt(poly_degree,dimension,iteration, vector,debug_mode)
-            except RuntimeError as error:
-              print("ERROR: ", error)
-              errorNLSI = -1.
-            f = open("output/diffusion_convergence_eigenvalue_combSI.txt", "a")
-            f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
-                    + ". Iteration = " + str(iteration) + ". ErrorSI = " + str(errorSI) + ".\n")
-            f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
-                    + ". Iteration = " + str(iteration) + ". ErrorNL = " + str(errorNLSI) + ".\n")
-            f.close()
-          else:
-            value,vector,errorMA = eigenvalue_approx_MA(poly_degree,dimension,iteration,debug_mode)
-            vector.append(value)
-            try:
-              _,_,errorNLMA = eigenvalue_newt(poly_degree,dimension,iteration,vector,debug_mode)
-            except RuntimeError as error:
-              print("ERROR: ", error)
-              errorNLMA = -1.
-            f = open("output/diffusion_convergence_eigenvalue_combMA.txt", "a")
-            f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
-                    + ". Iteration = " + str(iteration) + ". ErrorMA = " + str(errorMA) + ".\n")
-            f.write("Polynomial degree = " + str(poly_degree) + ". Dimension = " + str(dimension) \
-                    + ". Iteration = " + str(iteration) + ". ErrorNL = " + str(errorNLMA) + ".\n")
-            f.close()
+NAME = "diffusion_convergence_eigenvalue_cross"
 
 
-# --------------------------------------------------------------------------------------------------
-# Define main function.
-# -------------------------------------------------------------------------------------------------- 
+def combination(poly_degree, dimension, iteration, approx_type):
+  value, vector, error_start = eigenvalue_approx_SI(poly_degree, dimension, iteration)
+  vector.append(value)
+  try:
+    _, _, error_newton = eigenvalue_newt(poly_degree, dimension, iteration, vector)
+  except RuntimeError as error:
+    print("ERROR: ", error)
+    error_newton = -1.
+  common.report(NAME, {"error_start": error_start, "error_newton": error_newton},
+                poly_degree=poly_degree, dimension=dimension, iteration=iteration, start="SI")
+
+
 if __name__ == "__main__":
-  main(len(sys.argv) > 1 and sys.argv[1] == "True")
+  common.main(combination, rtol=1e-3, atol=1e-8, poly_degree=range(1, 4), dimension=[1], iteration=range(2, 6), approx_type=[0])

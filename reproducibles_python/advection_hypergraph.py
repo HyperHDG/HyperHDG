@@ -1,109 +1,32 @@
-from __future__ import print_function
+#!/usr/bin/env python3
+"""The parabolic advection solver (AdvectionParab, Parabolic loop, theta = 1/2, 10^3 time steps to
+t = 10) with the injection test on the network domains/injection_test.geo, degree 3, with and
+without the penalty tau: the state is plotted at the start and after every step into one file per
+tau, the errors at t = 10 go to output/advection_hypergraph.yaml. Known since 2026-09: none
+of the linear solvers converges, so shell_scripts/reproducibles_test.sh skips this script. The
+classes AdvectionParab_D1_P3 come from modules/advection_injection_file_parabolic.cxx.
 
-import numpy as np
-import scipy.sparse.linalg as sp_lin_alg
-from scipy.sparse.linalg import LinearOperator
+    python3 reproducibles_python/advection_hypergraph.py [--quick]
+"""
+import common
 
-from datetime import datetime
-
-import os, sys
-
-
-# --------------------------------------------------------------------------------------------------
-# Function diffusion_test.
-# --------------------------------------------------------------------------------------------------
-def diffusion_test(tau, theta, poly_degree, edge_dim, space_dim, iteration, debug_mode=False):
-  start_time = datetime.now()
-  print("Starting time is", start_time)
-  os.makedirs("output", exist_ok=True)
-
-  time_steps  = 10 ** 3
-  time_end    = 10
-  delta_time  = time_end / time_steps
-  
-  try:
-    import HyperHDG
-  except (ImportError, ModuleNotFoundError) as error:
-    sys.path.append(os.path.dirname(os.path.abspath(__file__)) + "/../import")
-    import HyperHDG
-  
-  const                 = HyperHDG.config()
-  const.global_loop     = "Parabolic"
-  const.topology        = "File<" + str(edge_dim) + "," + str(space_dim) + ",std::vector,Point<" \
-    + str(space_dim) + ",double> >"
-  const.geometry        = "File<" + str(edge_dim) + "," + str(space_dim) + ",std::vector,Point<" \
-    + str(space_dim) + ",double> >"
-  const.node_descriptor = "File<" + str(edge_dim) + "," + str(space_dim) + ",std::vector,Point<" \
-    + str(space_dim) + ",double> >"
-  const.local_solver    = "AdvectionParab<" + str(edge_dim) + "," + str(poly_degree) + "," \
-    + str(2*poly_degree) + ",injection,double>"
-  const.cython_replacements = ["string", "string", "double", "vector[double]"]
-  const.include_files   = ["reproducibles_python/parameters/advection.hxx"]
-  const.debug_mode      = debug_mode
-
-  PyDP = HyperHDG.include(const)
-  HDG_wrapper = PyDP( os.path.dirname(os.path.abspath(__file__)) + \
-    "/../domains/injection_test.geo", lsol_constr= [tau,theta,delta_time] )
-
-  vectorSolution = HDG_wrapper.make_initial(HDG_wrapper.zero_vector())
-
-  HDG_wrapper.plot_option( "fileName" , "adv_injection" + str(tau) )
-  HDG_wrapper.plot_option( "printFileNumber" , "true" )
-  HDG_wrapper.plot_option( "scale" , "0.95" )
-  HDG_wrapper.plot_solution(vectorSolution, time_end)
-
-  system_size = HDG_wrapper.size_of_system()
-  A = LinearOperator( (system_size,system_size), matvec= HDG_wrapper.trace_to_flux )
-
-  for time_step in range(time_steps):
-    
-    vectorRHS = np.multiply(HDG_wrapper.residual_flux(HDG_wrapper.zero_vector(), \
-                 (time_step+1) * delta_time), -1.)
-
-    [vectorSolution, num_iter] = sp_lin_alg.gmres(A,vectorRHS,tol=1e-13)
-    if num_iter != 0:
-      # print("GMRES also failed with a total number of ", num_iter, "iterations.")
-      [vectorSolution, num_iter] = sp_lin_alg.bicgstab(A,vectorRHS,tol=1e-13)
-      if num_iter != 0:
-        print("BiCGStab also failed with a total number of ", num_iter, "iterations.")
-        raise RuntimeError("All linear solvers did not converge!")
-
-    HDG_wrapper.set_data(vectorSolution, (time_step+1) * delta_time)
-
-    HDG_wrapper.plot_option( "fileName" , "adv_injection" + str(tau) )
-    HDG_wrapper.plot_option( "printFileNumber" , "true" )
-    HDG_wrapper.plot_option( "scale" , "0.95" )
-    HDG_wrapper.plot_solution(vectorSolution, time_end)
-    
-  error = HDG_wrapper.errors(vectorSolution, time_end)[0]
-  print( "Iteration: ", iteration, " Error: ", error )
-  f = open("output/advection_injection_theta"+str(theta)+".txt", "a")
-  f.write("Polynomial degree = " + str(poly_degree) + ". edge_dim = " + str(edge_dim) \
-          + ". Iteration = " + str(iteration) + ". Error = " + str(error) + ".\n")
-  f.close()
-  
-  end_time = datetime.now()
-  print("Program ended at", end_time, "after", end_time-start_time)
-  
-
-# --------------------------------------------------------------------------------------------------
-# Function main.
-# --------------------------------------------------------------------------------------------------
-def main(debug_mode):
-  edge_dim = 1
-  space_dim = 2
-  iteration = 2
-  poly_degree = 3
-  theta = 0.5
-  for tau in [0, 1]:
-    try:
-      diffusion_test(tau, theta, poly_degree, edge_dim, space_dim, iteration, debug_mode)
-    except RuntimeError as error:
-      print("ERROR: ", error)
+NAME = "advection_hypergraph"
+hdg_module = common.module("advection_injection_file_parabolic")
+DOMAIN = str(common.ROOT / "domains" / "injection_test.geo")
 
 
-# --------------------------------------------------------------------------------------------------
-# Define main function.
-# -------------------------------------------------------------------------------------------------- 
+def diffusion_test(tau, theta, poly_degree, edge_dim, space_dim, iteration):
+  time_steps, time_end = (10 ** 3 if not common.QUICK else 20), 10
+  delta_time = time_end / time_steps
+  hdg = hdg_module[f"AdvectionParab_D{edge_dim}_P{poly_degree}"](DOMAIN, [tau, theta, delta_time])
+  filename = f"adv_injection{tau}"
+  solution = common.time_stepping(
+    hdg, time_steps, delta_time, solvers=("gmres", "bicgstab"),
+    on_start=lambda x: common.plot(hdg, x, filename, time=time_end),
+    on_step=lambda step, x: hdg.plot_solution(list(x), time_end))
+  error = hdg.errors(list(solution), time_end)[0]
+  common.report(NAME, error, tau=tau, theta=theta, poly_degree=poly_degree, edge_dim=edge_dim, space_dim=space_dim, iteration=iteration)
+
+
 if __name__ == "__main__":
-  main(len(sys.argv) > 1 and sys.argv[1] == "True")
+  common.main(diffusion_test, rtol=1e-5, tau=[0, 1], theta=[0.5], poly_degree=[3], edge_dim=[1], space_dim=[2], iteration=[2])

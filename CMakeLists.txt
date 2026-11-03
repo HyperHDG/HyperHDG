@@ -207,6 +207,12 @@ if(NOT NOPYTHONTESTS)
   add_subdirectory(tests_python)
 endif()
 
+## The precompiled nanobind modules the reproducibles run on, and one quick test per script
+option(HYPERHDG_REPRODUCIBLES "Build the nanobind modules of reproducibles_python" ON)
+if(HYPERHDG_REPRODUCIBLES)
+  add_subdirectory(reproducibles_python)
+endif()
+
 ## Print a summary
 include(FeatureSummary)
 feature_summary(WHAT ALL)

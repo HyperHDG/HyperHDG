@@ -1,0 +1,5 @@
+- {theta: 0.5, poly_degree: 0, iteration: 5, error: 0.2260926308714126}
+- {theta: 0.5, poly_degree: 0, iteration: 6, error: 0.20124725917175815}
+- {theta: 0.5, poly_degree: 0, iteration: 7, error: 0.17976526022131645}
+- {theta: 0.5, poly_degree: 1, iteration: 5, error: 0.10939315896300254}
+- {theta: 0.5, poly_degree: 1, iteration: 6, error: 0.08139495706342496}
