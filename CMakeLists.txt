@@ -128,16 +128,23 @@ if(HYPERHDG_OPENMP)
   endif()
 endif()
 
-## Add the examples subdirectory
-add_subdirectory(examples)
-
-## Add tests if requested through the BUILD_TESTING option (default: ON)
+## Add tests if requested through the BUILD_TESTING option (default: ON). tests_c++ and
+## tests_python predate tests/ and are being migrated there (tests/RECONSIDER.md);
+## -DHYPERHDG_LEGACY_TESTS=OFF leaves them out.
 include(CTest)
+option(HYPERHDG_LEGACY_TESTS "Build and run tests_c++ and tests_python" ON)
+## Every single run is serial (no BLAS or OpenMP threads); ctest -j runs the tests in parallel.
+set(HYPERHDG_TEST_ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1")
 if(BUILD_TESTING)
   enable_testing()
   add_subdirectory(tests)
-  add_subdirectory(tests_c++)
+  if(HYPERHDG_LEGACY_TESTS)
+    add_subdirectory(tests_c++)
+  endif()
 endif()
+
+## Add the examples subdirectory (after enable_testing, so that the examples are run as tests)
+add_subdirectory(examples)
 
 ## Build documentation if requested through the BUILD_DOC option (default: ON)
 if(BUILD_DOC)
@@ -204,7 +211,7 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg
 )
 
-if(NOT NOPYTHONTESTS)
+if(NOT NOPYTHONTESTS AND HYPERHDG_LEGACY_TESTS)
   add_subdirectory(tests_python)
 endif()
 

@@ -5,6 +5,7 @@ function(add_hyperhdg_test name source)
   target_link_libraries(${name} PRIVATE HyperHDG)
   target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR})
   add_test(NAME ${name} COMMAND ${name})
+  set_tests_properties(${name} PROPERTIES ENVIRONMENT "${HYPERHDG_TEST_ENVIRONMENT}")
 endfunction()
 
 # One executable per instantiation (dimension, degree): the build parallelizes over them, and ccache
