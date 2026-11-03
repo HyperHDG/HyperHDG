@@ -22,6 +22,6 @@ NB_MODULE(advection_movie_file_parabolic, m)
 {
   using namespace reproducibles;
   // constructed with the file name and the vector of solver constants (tau, theta, dt)
-  bind_grid<AdvectionParab, std::string, std::vector<double> >(
-    m, "AdvectionParab", seq<2>{}, seq<1, 2, 3>{});
+  bind_grid<AdvectionParab, std::string, std::vector<double> >(m, "AdvectionParab", seq<2>{},
+                                                               seq<1, 2, 3>{});
 }

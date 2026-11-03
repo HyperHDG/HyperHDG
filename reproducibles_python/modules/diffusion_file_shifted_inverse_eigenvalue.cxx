@@ -1,4 +1,5 @@
-// DiffusionEigs with the shifted-inverse eigenvalue loop on a network read from file (domains/cross_2d.geo): the *_cross.py eigenvalue scripts.
+// DiffusionEigs with the shifted-inverse eigenvalue loop on a network read from file
+// (domains/cross_2d.geo): the *_cross.py eigenvalue scripts.
 #include "bind_grid.hxx"
 
 #include <HyperHDG/geometry/file.hxx>

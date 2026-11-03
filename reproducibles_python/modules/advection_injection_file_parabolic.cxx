@@ -12,16 +12,16 @@
 
 // dim is the hyperedge dimension of the domain file (domains/injection_test.geo)
 template <unsigned dim, unsigned degree>
-using AdvectionParab = GlobalLoop::Parabolic<
-  Topology::File<dim, 2>,
-  Geometry::File<dim, 2>,
-  NodeDescriptor::File<dim, 2>,
-  LocalSolver::AdvectionParab<dim, degree, 2 * degree, injection, double> >;
+using AdvectionParab =
+  GlobalLoop::Parabolic<Topology::File<dim, 2>,
+                        Geometry::File<dim, 2>,
+                        NodeDescriptor::File<dim, 2>,
+                        LocalSolver::AdvectionParab<dim, degree, 2 * degree, injection, double> >;
 
 NB_MODULE(advection_injection_file_parabolic, m)
 {
   using namespace reproducibles;
   // constructed with the file name and the vector of solver constants (tau, theta, dt)
-  bind_grid<AdvectionParab, std::string, std::vector<double> >(
-    m, "AdvectionParab", seq<1>{}, seq<3>{});
+  bind_grid<AdvectionParab, std::string, std::vector<double> >(m, "AdvectionParab", seq<1>{},
+                                                               seq<3>{});
 }

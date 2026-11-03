@@ -15,10 +15,15 @@ using DiffusionAdvectionReaction = GlobalLoop::Elliptic<
   Topology::Cubic<dim, 3>,
   Geometry::UnitCube<dim, 3, double>,
   NodeDescriptor::Cubic<dim, 3>,
-  LocalSolver::DiffusionAdvectionReaction<dim, degree, 2 * degree, HG<dim>::template TestParametersQuadEllipt, double> >;
+  LocalSolver::DiffusionAdvectionReaction<dim,
+                                          degree,
+                                          2 * degree,
+                                          HG<dim>::template TestParametersQuadEllipt,
+                                          double> >;
 
 NB_MODULE(diffusion_advection_reaction_hypergraph_elliptic, m)
 {
   using namespace reproducibles;
-  bind_grid<DiffusionAdvectionReaction>(m, "DiffusionAdvectionReaction", seq<1, 2, 3>{}, seq<1, 2, 3>{});
+  bind_grid<DiffusionAdvectionReaction>(m, "DiffusionAdvectionReaction", seq<1, 2, 3>{},
+                                        seq<1, 2, 3>{});
 }

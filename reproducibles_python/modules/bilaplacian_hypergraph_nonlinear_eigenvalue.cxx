@@ -1,4 +1,5 @@
-// BilaplacianEigs with the nonlinear (Newton) eigenvalue loop on hypergraphs of dim-dimensional hyperedges in 3D: bilaplacian_hypergraph_convergence_eigenvalue_*.py.
+// BilaplacianEigs with the nonlinear (Newton) eigenvalue loop on hypergraphs of dim-dimensional
+// hyperedges in 3D: bilaplacian_hypergraph_convergence_eigenvalue_*.py.
 #include "bind_grid.hxx"
 
 #include <HyperHDG/geometry/unit_cube.hxx>

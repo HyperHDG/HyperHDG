@@ -10,11 +10,11 @@
 
 // dim is the hyperedge dimension (1, beams) in three-dimensional space
 template <unsigned dim, unsigned degree>
-using TimoshenkoBeam = GlobalLoop::Elliptic<
-  Topology::File<dim, 3>,
-  Geometry::File<dim, 3>,
-  NodeDescriptor::File<dim, 3>,
-  LocalSolver::TimoshenkoBeam<dim, 3, degree, 2 * degree> >;
+using TimoshenkoBeam =
+  GlobalLoop::Elliptic<Topology::File<dim, 3>,
+                       Geometry::File<dim, 3>,
+                       NodeDescriptor::File<dim, 3>,
+                       LocalSolver::TimoshenkoBeam<dim, 3, degree, 2 * degree> >;
 
 NB_MODULE(timoshenko_file_elliptic, m)
 {

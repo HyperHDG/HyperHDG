@@ -1,4 +1,5 @@
-// LDG-H diffusion on the unit cube, elliptic loop: the classes of diffusion_convergence_elliptic.py.
+// LDG-H diffusion on the unit cube, elliptic loop: the classes of
+// diffusion_convergence_elliptic.py.
 #include "bind_grid.hxx"
 
 #include <HyperHDG/geometry/unit_cube.hxx>

@@ -1,4 +1,5 @@
-// Postprocessed LDG-H diffusion on the unit cube, elliptic loop: diffusion_convergence_elliptic_postprocess.py.
+// Postprocessed LDG-H diffusion on the unit cube, elliptic loop:
+// diffusion_convergence_elliptic_postprocess.py.
 #include "bind_grid.hxx"
 
 #include <HyperHDG/geometry/unit_cube.hxx>

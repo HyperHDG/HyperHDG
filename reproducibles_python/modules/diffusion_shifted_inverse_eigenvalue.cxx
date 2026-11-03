@@ -1,4 +1,5 @@
-// DiffusionEigs with the shifted-inverse eigenvalue loop on the unit cube: diffusion_convergence_eigenvalue_*.py.
+// DiffusionEigs with the shifted-inverse eigenvalue loop on the unit cube:
+// diffusion_convergence_eigenvalue_*.py.
 #include "bind_grid.hxx"
 
 #include <HyperHDG/geometry/unit_cube.hxx>

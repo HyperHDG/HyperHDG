@@ -11,11 +11,11 @@
 #include "reproducibles_python/parameters/advection.hxx"
 
 template <unsigned dim, unsigned degree>
-using AdvectionParab = GlobalLoop::Parabolic<
-  Topology::Cubic<dim, dim>,
-  Geometry::UnitCube<dim, dim, double>,
-  NodeDescriptor::Cubic<dim, dim>,
-  LocalSolver::AdvectionParab<dim, degree, 2 * degree, LeVeque, double> >;
+using AdvectionParab =
+  GlobalLoop::Parabolic<Topology::Cubic<dim, dim>,
+                        Geometry::UnitCube<dim, dim, double>,
+                        NodeDescriptor::Cubic<dim, dim>,
+                        LocalSolver::AdvectionParab<dim, degree, 2 * degree, LeVeque, double> >;
 
 NB_MODULE(advection_rotation_parabolic, m)
 {

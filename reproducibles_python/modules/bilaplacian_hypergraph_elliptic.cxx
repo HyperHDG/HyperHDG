@@ -1,4 +1,5 @@
-// LDG-H bilaplacian on hypergraphs in 3D, elliptic loop: bilaplacian_hypergraph_convergence_elliptic.py.
+// LDG-H bilaplacian on hypergraphs in 3D, elliptic loop:
+// bilaplacian_hypergraph_convergence_elliptic.py.
 #include "bind_grid.hxx"
 
 #include <HyperHDG/geometry/unit_cube.hxx>
@@ -14,7 +15,8 @@ using Bilaplacian = GlobalLoop::Elliptic<
   Topology::Cubic<dim, 3>,
   Geometry::UnitCube<dim, 3, double>,
   NodeDescriptor::Cubic<dim, 3>,
-  LocalSolver::Bilaplacian<dim, degree, 2 * degree, HG<dim>::template TestParametersQuadEllipt, double> >;
+  LocalSolver::
+    Bilaplacian<dim, degree, 2 * degree, HG<dim>::template TestParametersQuadEllipt, double> >;
 
 NB_MODULE(bilaplacian_hypergraph_elliptic, m)
 {

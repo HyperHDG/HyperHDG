@@ -15,7 +15,8 @@ using DiffusionPostprocess = GlobalLoop::Elliptic<
   Topology::Cubic<dim, 3>,
   Geometry::UnitCube<dim, 3, double>,
   NodeDescriptor::Cubic<dim, 3>,
-  LocalSolver::DiffusionPostprocess<dim, degree, 6, HG<dim>::template TestParametersQuadElliptHO, double> >;
+  LocalSolver::
+    DiffusionPostprocess<dim, degree, 6, HG<dim>::template TestParametersQuadElliptHO, double> >;
 
 NB_MODULE(diffusion_postprocess_hypergraph_elliptic_ho, m)
 {

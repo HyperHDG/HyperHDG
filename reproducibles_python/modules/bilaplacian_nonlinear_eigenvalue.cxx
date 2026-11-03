@@ -1,4 +1,5 @@
-// BilaplacianEigs with the nonlinear (Newton) eigenvalue loop on the unit cube: bilaplacian_convergence_eigenvalue_*.py.
+// BilaplacianEigs with the nonlinear (Newton) eigenvalue loop on the unit cube:
+// bilaplacian_convergence_eigenvalue_*.py.
 #include "bind_grid.hxx"
 
 #include <HyperHDG/geometry/unit_cube.hxx>

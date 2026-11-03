@@ -1,4 +1,5 @@
-// Interior penalty diffusion on hypergraphs in 3D, elliptic loop: diffusion_hypergraph_convergence_elliptic_ip.py.
+// Interior penalty diffusion on hypergraphs in 3D, elliptic loop:
+// diffusion_hypergraph_convergence_elliptic_ip.py.
 #include "bind_grid.hxx"
 
 #include <HyperHDG/geometry/unit_cube.hxx>
@@ -14,7 +15,8 @@ using DiffusionIP = GlobalLoop::Elliptic<
   Topology::Cubic<dim, 3>,
   Geometry::UnitCube<dim, 3, double>,
   NodeDescriptor::Cubic<dim, 3>,
-  LocalSolver::DiffusionIP<dim, degree, 2 * degree, HG<dim>::template TestParametersQuadEllipt, double> >;
+  LocalSolver::
+    DiffusionIP<dim, degree, 2 * degree, HG<dim>::template TestParametersQuadEllipt, double> >;
 
 NB_MODULE(diffusion_ip_hypergraph_elliptic, m)
 {
