@@ -12,7 +12,13 @@ namespace LocalSolver
 {
 
 /*!*************************************************************************************************
- * \brief   Default parameters for the diffusion equation, cf. below.
+ * \brief   Default parameters of the Timoshenko beam solver: a uniform force -e_z on every beam, no
+ *          distributed moment, zero displacement and rotation at all Dirichlet nodes.
+ *
+ * There is no closed-form solution to this problem, so analytic_result_u and analytic_result_phi
+ * are zero and errors() returns the norm of the discrete solution. Convergence studies use their
+ * own parameters, cf. reproducibles_python/parameters/timoshenko.hxx. The functions receive a
+ * point and a direction and return the component of the vector field along that direction.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
@@ -29,89 +35,60 @@ struct TimoschenkoBeamParametersDefault
    ************************************************************************************************/
   static constexpr std::array<unsigned int, 0U> neumann_nodes{};
   /*!***********************************************************************************************
-   * \brief   Inverse diffusionbeam_network_bilaplacian.hxx coefficient in PDE as analytic function.
+   * \brief   Distributed force: uniform, -e_z.
    ************************************************************************************************/
-  // static param_float_t inverse_diffusion_coeff(const Point<space_dimT, param_float_t>&,
-  //                                              const param_float_t = 0.)
-  // {
-  //   return 1.;
-  //   // return 1. / M_PI / M_PI;
-  // }
-  /*!***********************************************************************************************
-   * \brief   Right-hand side in PDE as analytic function.
-   ************************************************************************************************/
-  static param_float_t right_hand_side_n(const Point<space_dimT, param_float_t>& point,
+  static param_float_t right_hand_side_n(const Point<space_dimT, param_float_t>&,
                                          const Point<space_dimT, param_float_t>& normal,
                                          const param_float_t = 0.)
   {
-    return M_PI * (M_PI - 1.) * cos(M_PI * point[0]) * normal[2] *
-             (point[1] == 0. && point[2] == 0.) +
-           M_PI * cos(M_PI * point[1]) * (M_PI * normal[1] + normal[0]) *
-             (point[0] == 0. && point[2] == 0.);
-    // return -M_PI * cos(M_PI * point[0]) * normal[2] * (point[1] == 0. && point[2] == 0.);
-    // return M_PI * M_PI * cos(M_PI * point[0]) * normal[2] * (point[1] == 0. && point[2] == 0.);
-    // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
-    // return M_PI * M_PI * sin(M_PI * point[0]) * normal[0];
+    return -normal[2];
   }
   /*!***********************************************************************************************
-   * \brief   Right-hand side in PDE as analytic function.
+   * \brief   Distributed moment: none.
    ************************************************************************************************/
-  static param_float_t right_hand_side_m(const Point<space_dimT, param_float_t>& point,
-                                         const Point<space_dimT, param_float_t>& normal,
+  static param_float_t right_hand_side_m(const Point<space_dimT, param_float_t>&,
+                                         const Point<space_dimT, param_float_t>&,
                                          const param_float_t = 0.)
   {
-    return (M_PI * M_PI - M_PI + 1.) * sin(M_PI * point[0]) * normal[1] *
-             (point[1] == 0. && point[2] == 0.) +
-           (M_PI * M_PI + 1.) * sin(M_PI * point[1]) * normal[2] *
-             (point[0] == 0. && point[2] == 0.);
-    // return  (M_PI * M_PI + 1.) * sin(M_PI * point[0]) * normal[1] * (point[1] == 0. && point[2]
-    // == 0.); return  -M_PI * sin(M_PI * point[0]) * normal[1] * (point[1] == 0. && point[2] ==
-    // 0.); return M_PI * M_PI * sin(M_PI * point[0]) * normal[0]; return M_PI * M_PI * sin(M_PI *
-    // point[0]) * normal[0];
+    return 0.;
   }
   /*!***********************************************************************************************
-   * \brief   Dirichlet values of solution as analytic function.
+   * \brief   Dirichlet values of the displacement: zero.
    ************************************************************************************************/
-  static param_float_t dirichlet_value_u(const Point<space_dimT, param_float_t>& point,
-                                         const Point<space_dimT, param_float_t>& normal,
+  static param_float_t dirichlet_value_u(const Point<space_dimT, param_float_t>&,
+                                         const Point<space_dimT, param_float_t>&,
                                          const param_float_t = 0.)
   {
-    return analytic_result_u(point, normal);
+    return 0.;
   }
   /*!***********************************************************************************************
-   * \brief   Dirichlet values of solution as analytic function.
+   * \brief   Dirichlet values of the rotation: zero.
    ************************************************************************************************/
-  static param_float_t dirichlet_value_phi(const Point<space_dimT, param_float_t>& point,
-                                           const Point<space_dimT, param_float_t>& normal,
+  static param_float_t dirichlet_value_phi(const Point<space_dimT, param_float_t>&,
+                                           const Point<space_dimT, param_float_t>&,
                                            const param_float_t = 0.)
   {
-    return analytic_result_phi(point, normal);
+    return 0.;
   }
   /*!***********************************************************************************************
-   * \brief   Analytic result of PDE (for convergence tests).
+   * \brief   No closed-form displacement: zero, so errors() is the norm of the discrete solution.
    ************************************************************************************************/
-  static param_float_t analytic_result_u(const Point<space_dimT, param_float_t>& point,
-                                         const Point<space_dimT, param_float_t>& normal,
+  static param_float_t analytic_result_u(const Point<space_dimT, param_float_t>&,
+                                         const Point<space_dimT, param_float_t>&,
                                          const param_float_t = 0.)
   {
-    // return 0.;
-    return cos(M_PI * point[0]) * normal[2] + cos(M_PI * point[1]) * normal[1];
-    // return point[0] * normal[0];
-    // return sin(M_PI * point[0]) * normal[0];
+    return 0.;
   }
   /*!***********************************************************************************************
-   * \brief   Analytic result of PDE (for convergence tests).
+   * \brief   No closed-form rotation: zero.
    ************************************************************************************************/
-  static param_float_t analytic_result_phi(const Point<space_dimT, param_float_t>& point,
-                                           const Point<space_dimT, param_float_t>& normal,
+  static param_float_t analytic_result_phi(const Point<space_dimT, param_float_t>&,
+                                           const Point<space_dimT, param_float_t>&,
                                            const param_float_t = 0.)
   {
-    // return 0.;
-    return sin(M_PI * point[0]) * normal[1] + sin(M_PI * point[1]) * normal[2];
-    // return point[0] * normal[0];
-    // return sin(M_PI * point[0]) * normal[0];
+    return 0.;
   }
-};  // end of struct DiffusionParametersDefault
+};  // end of struct TimoschenkoBeamParametersDefault
 
 /*!*************************************************************************************************
  * \brief   Default parameters for the diffusion equation, cf. below.
@@ -206,7 +183,7 @@ struct TimoschenkoBeamParametersClamped
     // return point[0] * normal[0];
     // return sin(M_PI * point[0]) * normal[0];
   }
-};  // end of struct DiffusionParametersDefault
+};  // end of struct TimoschenkoBeamParametersClamped
 
 /*!*************************************************************************************************
  * \brief   Local solver for the equation that governs the bending and change of length of an
