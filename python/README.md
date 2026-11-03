@@ -16,6 +16,53 @@ git submodule update --init --recursive        # nanobind lives in submodules/na
 python python/diffusion.py domains/cross.geo --degree 2 --refine 8
 ```
 
+The domain may also be a `.geo.h5` file (the HDF5 counterpart of `.geo`, read and written by
+`include/HyperHDG/read_domain_hdf5.hxx`, with a VTKHDF view for ParaView; `domains/cross.geo.h5`
+is an example), if CMake finds HDF5: through `HDF5_ROOT` or `CMAKE_PREFIX_PATH` (a conda
+environment: `$CONDA_PREFIX`), or `h5cc` on `PATH`.
+
+### Plotting as VTKHDF
+
+With HDF5 found, `plot_option("fileEnding", "vtkhdf")` makes `plot_solution(x, t)` write one HDF5
+file `output/<fileName>.vtkhdf` in the VTKHDF format: the mesh on the first call, then one time
+step per call (`t` is the step's time; `fileNumber` counts the steps), which ParaView opens as a
+time series. `plot_option("valuesSelect", "mag:0,1,2")` or `"i,j"` restricts the stored
+components of the solution, `"none"` drops them; a geometry's extra data becomes
+`CellData/properties`. The `.vtu` writer stays the default.
+
+### `.geo` to `.geo.h5`, and inspecting `.h5` files
+
+```sh
+python python/geo2h5.py domains/cross.geo                 # -> domains/cross.geo.h5
+python python/geo2h5.py domains/cross.geo out.geo.h5 --no-vtkhdf
+```
+
+The dimensions are read from the header and the matching `read_domain` instantiation is compiled
+on demand (a few seconds per combination, then cached). HDF5 ships `h5dump` and `h5ls` (packages
+`hdf5` or `hdf5-tools`, or `hdf5` in a conda environment); none of these prints data unless asked:
+
+```sh
+h5dump -n  domains/cross.geo.h5               # list groups, datasets and links
+h5dump -H  domains/cross.geo.h5               # shapes and types of everything, no data
+h5dump -A  domains/cross.geo.h5               # attributes (space_dim, hyperedge_dim, ...)
+h5dump -d /domain/edges domains/cross.geo.h5  # one dataset with its data
+h5dump -p -d /domain/points domains/cross.geo.h5   # plus chunking and compression
+h5ls -r    domains/cross.geo.h5               # one line per object, with shapes
+```
+
+From Python, h5py does the same:
+
+```python
+import h5py
+with h5py.File("domains/cross.geo.h5") as f:
+    f.visititems(lambda name, obj: print(name, getattr(obj, "shape", "")))
+    points, edges = f["domain/points"][:], f["domain/edges"][:]
+```
+
+ParaView reads the `/VTKHDF` view as an unstructured grid. It picks readers by file extension and
+does not know `.geo.h5`, so choose "VTKHDF Reader" when it asks, or symlink the file to a
+`.vtkhdf` name.
+
 `python/diffusion.py` is the command-line counterpart of
 `reproducibles_python/fiber_network_diffusion.py`: LDG-H diffusion on a hypergraph of
 one-dimensional hyperedges, condensed system assembled as a COO triplet and solved with

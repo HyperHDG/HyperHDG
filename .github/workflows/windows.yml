@@ -7,7 +7,7 @@ on: [push]
 env:
   PKGS: >-
     mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
-    mingw-w64-ucrt-x86_64-openblas mingw-w64-ucrt-x86_64-lapack
+    mingw-w64-ucrt-x86_64-openblas mingw-w64-ucrt-x86_64-lapack mingw-w64-ucrt-x86_64-hdf5
     mingw-w64-ucrt-x86_64-python mingw-w64-ucrt-x86_64-cython mingw-w64-ucrt-x86_64-python-numpy
     mingw-w64-ucrt-x86_64-python-scipy mingw-w64-ucrt-x86_64-python-matplotlib
     mingw-w64-ucrt-x86_64-python-pandas mingw-w64-ucrt-x86_64-python-joblib
