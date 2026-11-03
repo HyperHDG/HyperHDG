@@ -69,7 +69,10 @@ jobs:
         python3 -m pip install ${{ env.PYTHON }}
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends \
-          libblas-dev liblapack-dev libhdf5-dev ccache ${{ matrix.comp.pkg }}
+          libopenblas-serial-dev ccache ${{ matrix.comp.pkg }}
+        # The serial OpenBLAS (no threads, every test run is serial) is the system libblas.so and
+        # liblapack.so through Debian's alternatives, instead of the reference implementations.
+        readlink -f /usr/lib/x86_64-linux-gnu/libblas.so /usr/lib/x86_64-linux-gnu/liblapack.so
     # One cache per compiler and commit; a new commit starts from the latest cache of its compiler.
     - name: Restore ccache
       uses: actions/cache/restore@v4
@@ -77,10 +80,13 @@ jobs:
         path: ${{ env.CCACHE_DIR }}
         key: ccache-${{ matrix.comp.cxx }}-${{ github.sha }}
         restore-keys: ccache-${{ matrix.comp.cxx }}-
+    # tests/ and examples/ only: tests_c++ and tests_python are being migrated (tests/RECONSIDER.md),
+    # and HDF5 (reading .geo.h5, VTKHDF plots) is not needed by them.
     - name: Configure
       run: >
         ccache --zero-stats &&
         cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug -DPython3_EXECUTABLE=$(which python3)
+        -DHYPERHDG_LEGACY_TESTS=OFF -DHYPERHDG_HDF5=OFF
     - name: Build
       run: cmake --build build -j $(nproc)
     - name: Test
