@@ -1,0 +1,158 @@
+// The interface of GlobalLoop::Generic on one small instantiation (2D, degree 1, 3 x 3 elements):
+// properties a solve does not check by itself, such as that the streaming sweeps (no prepare)
+// agree with the prepared ones, that the assembled matrix is the matrix-free operator in both
+// modes, and how constraints, the store and reductions behave.
+#include <HyperHDG/geometry/unit_cube.hxx>
+#include <HyperHDG/global_loop/generic.hxx>
+#include <HyperHDG/local_solver/diffusion_ldgh.hxx>
+#include <HyperHDG/node_descriptor/cubic.hxx>
+#include <HyperHDG/topology/cubic.hxx>
+
+#include <tests/parameters/diffusion.hxx>
+
+#include <algorithm>
+#include <cmath>
+#include <cstdio>
+#include <random>
+#include <vector>
+
+using Loop = GlobalLoop::Generic<Topology::Cubic<2, 2>,
+                                 Geometry::UnitCube<2, 2, double>,
+                                 NodeDescriptor::Cubic<2, 2>,
+                                 LocalSolver::Diffusion<2, 1, 2, tests::DiffusionSin, double> >;
+using Vec = std::vector<double>;
+
+int failures = 0;
+void check(const bool ok, const char* what)
+{
+  std::printf("%s  %s\n", ok ? "ok  " : "FAIL", what);
+  failures += !ok;
+}
+double max_difference(const Vec& a, const Vec& b)
+{
+  double difference = 0.;
+  for (std::size_t i = 0; i < a.size(); ++i)
+    difference = std::max(difference, std::abs(a[i] - b[i]));
+  return difference;
+}
+Vec product(Loop& loop, const Vec& x)
+{
+  Vec y(x.size());
+  loop.apply(x, y);
+  return y;
+}
+Vec residual_of(Loop& loop, const Vec& x)
+{
+  Vec r(x.size());
+  loop.residual(x, r);
+  return r;
+}
+// Dense column-major matrix from the triplets of assemble; duplicate entries are summed.
+Vec assembled(Loop& loop, const bool identity_rows)
+{
+  const std::size_t n = loop.size_of_system(), m = loop.n_triplets(identity_rows);
+  std::vector<unsigned int> rows(m), cols(m);
+  Vec vals(m), dense(n * n, 0.);
+  loop.assemble(Loop::Args(), identity_rows, rows, cols, vals);
+  for (std::size_t k = 0; k < m; ++k)
+    dense[cols[k] * n + rows[k]] += vals[k];
+  return dense;
+}
+Vec multiply(const Vec& dense, const Vec& x)
+{
+  Vec y(x.size(), 0.);
+  for (std::size_t col = 0; col < x.size(); ++col)
+    for (std::size_t row = 0; row < x.size(); ++row)
+      y[row] += dense[col * x.size() + row] * x[col];
+  return y;
+}
+
+int main()
+{
+  const double tol = 1e-12;
+  Loop loop(std::vector<unsigned int>{3, 3});
+  const unsigned int n = loop.size_of_system();
+  check(loop.n_hyEdges() == 9, "9 hyperedges");
+  check(n == 24 * 2, "24 faces with 2 dofs each");
+
+  std::mt19937 generator(1);
+  std::uniform_real_distribution<double> uniform(-1., 1.);
+  Vec x(n), z(n), zero(n, 0.);
+  for (unsigned int i = 0; i < n; ++i)
+    x[i] = uniform(generator), z[i] = uniform(generator);
+
+  // ---- constraints
+  loop.constrain_dirichlet_nodes();
+  const auto constraints = loop.constraints();
+  check(constraints.size() == 12 * 2, "Dirichlet constraints: the 12 boundary faces");
+  check(std::is_sorted(constraints.begin(), constraints.end()), "constraints are sorted");
+  loop.set_constraints(std::vector<unsigned int>(constraints.rbegin(), constraints.rend()));
+  check(loop.constraints() == constraints, "set_constraints reproduces them, sorted");
+  std::vector<bool> constrained(n, false);
+  for (unsigned int i : constraints)
+    constrained[i] = true;
+
+  // ---- streaming (no prepare)
+  check(!loop.prepared() && loop.n_operators() == 0, "not prepared after construction");
+  const Vec y_stream = product(loop, x), r_stream = residual_of(loop, x),
+            r0 = residual_of(loop, zero);
+  bool identity = true, affine = true;
+  for (unsigned int i = 0; i < n; ++i)
+    if (constrained[i])
+      identity = identity && y_stream[i] == x[i] && r_stream[i] == x[i];
+    else
+      affine = affine && std::abs(r_stream[i] - r0[i] - y_stream[i]) <= tol;
+  check(identity, "apply and residual are the identity on constrained dofs");
+  check(affine, "residual(x) - residual(0) = apply(x) on free dofs");
+  {
+    Vec combination(n);
+    for (unsigned int i = 0; i < n; ++i)
+      combination[i] = 2. * x[i] - z[i];
+    const Vec y_z = product(loop, z), y_combination = product(loop, combination);
+    Vec expected(n);
+    for (unsigned int i = 0; i < n; ++i)
+      expected[i] = 2. * y_stream[i] - y_z[i];
+    check(max_difference(y_combination, expected) <= tol, "apply is linear");
+  }
+  const Vec a_stream = assembled(loop, true);
+  check(max_difference(multiply(a_stream, x), y_stream) <= tol,
+        "streaming: assembled matrix (identity rows) times x = apply(x)");
+  {
+    const Vec a_masked = assembled(loop, false);
+    bool zero_rows = true;
+    for (unsigned int col = 0; col < n; ++col)
+      for (unsigned int i : constraints)
+        zero_rows = zero_rows && a_masked[col * n + i] == 0.;
+    check(zero_rows, "without identity rows, constrained rows are zero");
+    check(loop.n_triplets(true) == loop.n_triplets(false) + constraints.size(),
+          "n_triplets(true) adds one entry per constraint");
+  }
+  bool symmetric = true;
+  for (unsigned int row = 0; row < n; ++row)
+    for (unsigned int col = 0; col < n; ++col)
+      if (!constrained[row] && !constrained[col])
+        symmetric = symmetric && std::abs(a_stream[col * n + row] - a_stream[row * n + col]) <= tol;
+  check(symmetric, "the free-free block is symmetric");
+
+  // ---- prepared store
+  loop.prepare();
+  check(loop.prepared(), "prepared after prepare");
+  check(loop.n_operators() == 1, "congruent hyperedges share one operator (operator_key)");
+  check(max_difference(product(loop, x), y_stream) <= tol, "prepared apply = streaming apply");
+  check(max_difference(residual_of(loop, x), r_stream) <= tol,
+        "prepared residual = streaming residual");
+  check(max_difference(assembled(loop, true), a_stream) <= tol,
+        "prepared assemble = streaming assemble");
+  const double error_prepared = loop.errors(x)[0];
+
+  // ---- reductions, release
+  const double count =
+    loop.reduce(x, Loop::Args(), [](auto&, const auto&, const auto&) { return 1.; }, 0.);
+  check(count == 9., "reduce visits every hyperedge once");
+  loop.release();
+  check(!loop.prepared() && loop.n_operators() == 0, "release empties the store");
+  check(std::abs(loop.errors(x)[0] - error_prepared) <= tol * error_prepared,
+        "errors: streaming = prepared");
+
+  return failures;
+}
