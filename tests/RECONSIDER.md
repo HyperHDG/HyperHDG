@@ -71,23 +71,16 @@ its successor if there is one.
 - tests_c++/plot_vtkhdf_paraview.py
 - tests_c++/point_functions.cxx
 - tests_c++/qr_handedness.cxx
-- tests_c++/stiffness_matrix.cxx
 
 ### tests_python/
 
 - tests_python/CMakeLists.txt
-- tests_python/diffusion_uniform.py
 - tests_python/local_solvers/run.py
 - tests_python/nanobind_bindings.py
-- tests_python/operator_matrices.py
-- tests_python/stiffness_matrix.py
 
 ### python/
 
 - python/README.md
-- python/check_vs_cython.py
-- python/convergence.sh
-- python/diffusion.py
 - python/geo2h5.py
 - python/hyperhdg.py
 
