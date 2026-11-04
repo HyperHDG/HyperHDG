@@ -143,8 +143,8 @@ void linear_combination(const typename vectorT::value_type leftFac,
  **************************************************************************************************/
 enum class StopReason
 {
-  converged_rtol,           //!< ||r|| <= rtol * ||b|| (and ||r|| > atol)
-  converged_atol,           //!< ||r|| <= atol (checked first, as in PETSc)
+  converged_rtol,           //!< ||r|| <= rtol * ||b||, which is at least atol
+  converged_atol,           //!< ||r|| <= atol, which is larger than rtol * ||b||
   diverged_dtol,            //!< ||r|| > dtol * ||r_0||
   diverged_max_iterations,  //!< max_iterations done without convergence
   diverged_breakdown,       //!< d^T A d is zero: A is singular or indefinite on the Krylov space
@@ -276,9 +276,12 @@ SolverResult cg(OperatorT&& apply,
     result.residual_norm = norm(r_square);
     if (!std::isfinite(result.residual_norm))
       return stop(StopReason::diverged_nan);
+    // The reason names the tolerance that set the target, not the smallest one the residual
+    // meets: a residual that rounds to exactly zero would otherwise read converged_atol on one
+    // platform and converged_rtol on another (PETSc reports atol whenever ||r|| <= atol).
     if (result.residual_norm <= target)
-      return stop(result.residual_norm <= options.atol ? StopReason::converged_atol
-                                                       : StopReason::converged_rtol);
+      return stop(options.rtol * rhs_norm >= options.atol ? StopReason::converged_rtol
+                                                          : StopReason::converged_atol);
     if (result.residual_norm > options.dtol * initial_residual_norm)
       return stop(StopReason::diverged_dtol);
     if (result.iterations == options.max_iterations)
