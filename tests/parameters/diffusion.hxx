@@ -10,7 +10,8 @@ namespace tests
 /*!*************************************************************************************************
  * \brief   u = sin(pi/2 x_0) on the unit cube, Dirichlet data everywhere.
  *
- * The problem of reproducibles_python/diffusion_convergence_elliptic.py (TestParametersSinEllipt).
+ * TestParametersSinEllipt of reproducibles_python/parameters/diffusion.hxx, the problem of the
+ * former reproducibles_python/diffusion_convergence_elliptic.py.
  * The coefficients do not depend on space, so identical hyperedges share one local operator (cf.
  * Diffusion::operator_key).
  **************************************************************************************************/

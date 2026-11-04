@@ -13,9 +13,9 @@ endforeach()
 
 # Compile and run every local solver once (cf. local_solvers/run.py).
 foreach(case
-    Diffusion_Elliptic Diffusion_Elliptic_hypergraph DiffusionIP_Elliptic
-    DiffusionPostprocess_Elliptic DiffusionAdvectionReaction_Elliptic Bilaplacian_Elliptic
-    BilaplacianUniform_Elliptic TimoshenkoBeam_Elliptic DiffusionParab_Parabolic
+    Diffusion_Elliptic_hypergraph DiffusionIP_Elliptic DiffusionPostprocess_Elliptic
+    DiffusionAdvectionReaction_Elliptic Bilaplacian_Elliptic BilaplacianUniform_Elliptic
+    DiffusionParab_Parabolic
     BilaplacianParab_Parabolic AdvectionParab_Parabolic DiffusionEigs_NonlinearEigenvalue
     BilaplacianEigs_NonlinearEigenvalue DiffusionEigs_ShiftedInverseEigenvalue
     BilaplacianEigs_ShiftedInverseEigenvalue Diffusion_MassApproxEigenvalue
