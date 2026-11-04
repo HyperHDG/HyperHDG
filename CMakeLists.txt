@@ -146,8 +146,11 @@ endif()
 ## Add the examples subdirectory (after enable_testing, so that the examples are run as tests)
 add_subdirectory(examples)
 
-## Build documentation if requested through the BUILD_DOC option (default: ON)
-if(BUILD_DOC)
+## The target doxygen (doxygen/Doxyfile, if Doxygen is found). HyperHDG's own option: BUILD_DOC is
+## an option of the submodules TPP and TPCC, which build no documentation of their own as
+## subprojects.
+option(HYPERHDG_BUILD_DOC "Add the target doxygen for the documentation (doxygen/Doxyfile)" ON)
+if(HYPERHDG_BUILD_DOC)
   add_subdirectory(doxygen)
 endif()
 
