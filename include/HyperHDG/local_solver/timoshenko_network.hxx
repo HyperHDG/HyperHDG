@@ -19,7 +19,7 @@ namespace LocalSolver
  *
  * There is no closed-form solution to this problem, so analytic_result_u and analytic_result_phi
  * are zero and errors() returns the norm of the discrete solution. Convergence studies use their
- * own parameters, cf. reproducibles_python/parameters/timoshenko.hxx. The functions receive a
+ * own parameters, cf. tests/parameters/timoshenko.hxx. The functions receive a
  * point and a direction and return the component of the vector field along that direction.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.

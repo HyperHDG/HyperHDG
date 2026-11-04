@@ -9,8 +9,8 @@
  * \file    timoshenko.hxx
  * \brief   Test problems for the Timoshenko beam solver on networks of straight beams.
  *
- * Copied from reproducibles_python/parameters/timoshenko.hxx (notation of Hauck, Malqvist, Rupp,
- * "Arbitrary order approximations at constant cost for Timoshenko beam network models" (2024),
+ * From the former reproducibles_python/parameters/timoshenko.hxx (notation of Hauck, Malqvist,
+ *Rupp, "Arbitrary order approximations at constant cost for Timoshenko beam network models" (2024),
  * eq. (2.2)): on an edge with unit tangent i, the displacement u, rotation r, stress resultant n
  * and moment m satisfy, with unit coefficients,
  *   -(d_x u + i x r) = n,   -d_x r = m,   d_x n = f,   d_x m + i x n = g,
