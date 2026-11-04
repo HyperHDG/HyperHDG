@@ -11,9 +11,6 @@ its successor if there is one.
 - reproducibles_python/timoshenko_convergence_cross.py -> tests/timoshenko.cxx
 - tests_c++/point_functions.cxx, tests_c++/qr_handedness.cxx -> tests/dense_la.cxx
 - tests_python/nanobind_bindings.py -> tests/hyperhdg_jit.py (its Elliptic checks retired)
-
-## Moved, not yet reconsidered
-
 - tests_c++/{diffusion_plotting, plot_simple, plot_refined, plot_vtkhdf, domain_hdf5}.cxx ->
   tests/plotting/ (plotting runner); tests_c++/plot_vtkhdf_paraview.py -> tests/plotting/check_plots.py
 
@@ -69,18 +66,6 @@ its successor if there is one.
 
 - tests_python/CMakeLists.txt
 - tests_python/local_solvers/run.py
-
-### python/
-
-- python/README.md
-- python/geo2h5.py
-- python/hyperhdg.py
-
-### examples/
-
-- examples/CMakeLists.txt
-- examples/diffusion_elliptic.cxx
-- examples/parameters/diffusion.hxx
 
 ### cython/
 
