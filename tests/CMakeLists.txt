@@ -107,3 +107,9 @@ if(TARGET SuiteSparse::CHOLMOD)
   add_hyperhdg_test(sparse_direct sparse_direct.cxx)
   target_link_libraries(sparse_direct PRIVATE SuiteSparse::CHOLMOD)
 endif()
+
+# Performance tests (nanobench; not part of CI, see tests/performance/README.md).
+option(HYPERHDG_PERFORMANCE_TESTS "Benchmarks in tests/performance (build with Release)" OFF)
+if(HYPERHDG_PERFORMANCE_TESTS)
+  add_subdirectory(performance)
+endif()
