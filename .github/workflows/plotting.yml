@@ -33,6 +33,8 @@ jobs:
   plotting:
     name: Plotting and domain files with g++-14 on ubuntu-24.04
     runs-on: ubuntu-24.04
+    outputs:
+      plots: ${{ steps.plots.outputs.list }}
     env:
       CXX: g++-14
       # Only the submodules the build needs (not docker.git).
@@ -68,7 +70,8 @@ jobs:
         sudo apt-get update
         sudo apt-get install -y --no-install-recommends libopenblas-serial-dev libhdf5-dev \
           libgl1 libx11-6 libxcb1
-        # libgl1, libx11-6, libxcb1: system libraries ParaView links (with libc6, libcrypt1, libgomp1)
+        # libgl1, libx11-6, libxcb1: system libraries ParaView links (besides libc6, libcrypt1 and
+        # libgomp1)
     - name: Restore ParaView
       id: paraview
       uses: actions/cache@v4
@@ -89,14 +92,42 @@ jobs:
       run: cmake --build build --target plotting_tests -j $(nproc)
     - name: Test
       run: ctest --test-dir build -L plotting --output-on-failure -j $(nproc)
-    # The rendered plots (output/plots/*.png) and the files they show, downloadable from the run.
+    # The rendered plots (output/plots/*.png) and the files they show, as one zip; the job
+    # plot-files below adds every plot as an artifact of its own.
     - name: Upload plots
       if: always()
-      uses: actions/upload-artifact@v4
+      uses: actions/upload-artifact@v7
       with:
         name: plots
         path: |
           output/plots/
           output/plot_exact-*.vtu
           output/plot_vtkhdf-*.vtkhdf
+        retention-days: 14
+    - name: List plots
+      id: plots
+      if: always()
+      run: echo "list=$(cd output/plots 2> /dev/null && ls *.png | jq -R . | jq -cs .)" >> $GITHUB_OUTPUT
+
+  # Every rendered plot as an artifact of its own, not zipped (an unzipped artifact holds one
+  # file), so that it opens in the browser from the run's page.
+  plot-files:
+    needs: plotting
+    if: always() && needs.plotting.outputs.plots != '' && needs.plotting.outputs.plots != '[]'
+    strategy:
+      matrix:
+        plot: ${{ fromJSON(needs.plotting.outputs.plots) }}
+    name: ${{ matrix.plot }}
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Download plots
+      uses: actions/download-artifact@v8
+      with:
+        name: plots
+        path: plots
+    - name: Upload ${{ matrix.plot }}
+      uses: actions/upload-artifact@v7
+      with:
+        path: plots/plots/${{ matrix.plot }}
+        archive: false
         retention-days: 14
