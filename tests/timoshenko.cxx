@@ -3,7 +3,8 @@
 // subintervals per beam and check that the L2 error of the displacement converges with order
 // degree + 1 on the last refinement. The assembled matrix is also solved directly: it must be
 // non-singular, and the direct solution must agree with the matrix-free CG. One executable per
-// DEGREE, set by CMake (tests/CMakeLists.txt).
+// DEGREE, set by CMake (tests/CMakeLists.txt). The records are checked against
+// tests/expected/timoshenko_p<DEGREE>.yaml (tests/records.hxx).
 #include <HyperHDG/geometry/file.hxx>
 #include <HyperHDG/global_loop/generic.hxx>
 #include <HyperHDG/local_solver/timoshenko_network.hxx>
@@ -13,6 +14,7 @@
 
 #include <tests/direct_solve.hxx>
 #include <tests/parameters/timoshenko.hxx>
+#include <tests/records.hxx>
 
 #include <algorithm>
 #include <cmath>
@@ -60,8 +62,8 @@ int main()
       SparseLA::cg([&](const std::vector<double>& in, std::vector<double>& out)
                    { loop.apply(in, out); }, rhs, x, options);
     const double error = loop.errors(x)[0];
-    std::printf("- {degree: %u, n: %u, dofs: %u, cg: %s, iterations: %u, error: %.6e}\n", degree, n,
-                size, SparseLA::to_string(cg.reason), cg.iterations, error);
+    tests::record("- {degree: %u, n: %u, dofs: %u, cg: %s, iterations: %u, error: %.6e}\n", degree,
+                  n, size, SparseLA::to_string(cg.reason), cg.iterations, error);
     if (!cg.converged())
     {
       std::printf("  FAIL: CG did not converge\n");
@@ -97,5 +99,5 @@ int main()
     }
     previous = error;
   }
-  return failures;
+  return tests::check(failures);
 }

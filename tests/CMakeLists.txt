@@ -1,9 +1,16 @@
+# RECORDS: the test checks its record lines against expected/<name>.yaml (tests/records.hxx);
+# HYPERHDG_RECORD=1 ctest -R <name> writes that file instead.
 function(add_hyperhdg_test name source)
+  cmake_parse_arguments(PARSE_ARGV 2 arg "RECORDS" "" "")
   add_executable(${name} ${source})
   # Debug builds keep the assertions but optimize: at -O0 the solves dominate the CI job.
   target_compile_options(${name} PRIVATE $<$<CONFIG:Debug>:-O2>)
   target_link_libraries(${name} PRIVATE HyperHDG)
   target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR})
+  if(arg_RECORDS)
+    target_compile_definitions(
+      ${name} PRIVATE RECORDS_FILE="${CMAKE_CURRENT_SOURCE_DIR}/expected/${name}.yaml")
+  endif()
   add_test(NAME ${name} COMMAND ${name})
   set_tests_properties(${name} PROPERTIES ENVIRONMENT "${HYPERHDG_TEST_ENVIRONMENT}")
 endfunction()
@@ -14,7 +21,7 @@ function(add_hyperhdg_ladder_test source)
   get_filename_component(test ${source} NAME_WE)
   foreach(dim 1 2 3)
     foreach(degree 1 2 3)
-      add_hyperhdg_test(${test}_d${dim}_p${degree} ${source})
+      add_hyperhdg_test(${test}_d${dim}_p${degree} ${source} RECORDS)
       target_compile_definitions(${test}_d${dim}_p${degree} PRIVATE DIM=${dim} DEGREE=${degree})
     endforeach()
   endforeach()
@@ -23,6 +30,7 @@ endfunction()
 add_hyperhdg_test(cg cg.cxx)
 add_hyperhdg_test(dense_la dense_la.cxx)
 add_hyperhdg_test(generic generic.cxx)
+add_hyperhdg_test(records records.cxx)
 add_hyperhdg_ladder_test(diffusion_elliptic.cxx)
 
 # Hyperedges of dimension 1 embedded in spaces of dimension 1 to 5 (domains/simplex_1_*.geo).
@@ -35,13 +43,13 @@ endforeach()
 
 # Single precision: one case, 2D degree 1, whose errors stay well above the round-off floor of the
 # solve in float (degree 2 reaches it at n = 8: its error there depends on the rounding).
-add_hyperhdg_test(diffusion_elliptic_float_d2_p1 diffusion_elliptic.cxx)
+add_hyperhdg_test(diffusion_elliptic_float_d2_p1 diffusion_elliptic.cxx RECORDS)
 target_compile_definitions(diffusion_elliptic_float_d2_p1 PRIVATE DIM=2 DEGREE=1 REAL=float)
 
 # DiffusionTensor (sum factorization) on the same convergence ladder.
 foreach(dim 1 2 3)
   foreach(degree 1 2 3)
-    add_hyperhdg_test(diffusion_tensor_d${dim}_p${degree} diffusion_elliptic.cxx)
+    add_hyperhdg_test(diffusion_tensor_d${dim}_p${degree} diffusion_elliptic.cxx RECORDS)
     target_compile_definitions(diffusion_tensor_d${dim}_p${degree}
                                PRIVATE DIM=${dim} DEGREE=${degree} SOLVER=DiffusionTensor)
   endforeach()
@@ -97,7 +105,7 @@ endif()
 # The Timoshenko beam solver on Generic (cross of beams, domains/cross.geo; run in the source tree),
 # one executable per degree.
 foreach(degree 1 2 3)
-  add_hyperhdg_test(timoshenko_p${degree} timoshenko.cxx)
+  add_hyperhdg_test(timoshenko_p${degree} timoshenko.cxx RECORDS)
   target_compile_definitions(timoshenko_p${degree} PRIVATE DEGREE=${degree})
   set_tests_properties(timoshenko_p${degree} PROPERTIES WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 endforeach()

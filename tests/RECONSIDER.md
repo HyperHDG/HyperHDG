@@ -7,8 +7,6 @@ its successor if there is one.
 
 ## Replaced (successor in tests/, oracle check pending)
 
-- reproducibles_python/diffusion_convergence_elliptic.py -> tests/diffusion_elliptic.cxx
-- reproducibles_python/timoshenko_convergence_cross.py -> tests/timoshenko.cxx
 - tests_c++/point_functions.cxx, tests_c++/qr_handedness.cxx -> tests/dense_la.cxx
 - tests_python/nanobind_bindings.py -> tests/hyperhdg_jit.py (its Elliptic checks retired)
 - tests_c++/{diffusion_plotting, plot_simple, plot_refined, plot_vtkhdf, domain_hdf5}.cxx ->
@@ -60,7 +58,6 @@ its successor if there is one.
 - reproducibles_python/parameters/bilaplacian.hxx
 - reproducibles_python/parameters/diffusion.hxx
 - reproducibles_python/parameters/diffusion_advection_reaction.hxx
-- reproducibles_python/parameters/timoshenko.hxx
 
 ### tests_python/
 

@@ -1,0 +1,3 @@
+- {degree: 1, n: 2, dofs: 54, cg: converged_rtol, iterations: 9, error: 5.753522e-01}
+- {degree: 1, n: 4, dofs: 102, cg: converged_rtol, iterations: 24, error: 1.509870e-01}
+- {degree: 1, n: 8, dofs: 198, cg: converged_rtol, iterations: 48, error: 3.855598e-02}

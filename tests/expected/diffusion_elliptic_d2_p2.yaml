@@ -1,0 +1,3 @@
+- {solver: Diffusion, dim: 2, degree: 2, n: 2, dofs: 36, cg: converged_rtol, iterations: 7, error: 7.740424e-04}
+- {solver: Diffusion, dim: 2, degree: 2, n: 4, dofs: 120, cg: converged_rtol, iterations: 29, error: 1.185884e-04}
+- {solver: Diffusion, dim: 2, degree: 2, n: 8, dofs: 432, cg: converged_rtol, iterations: 65, error: 1.660193e-05}
