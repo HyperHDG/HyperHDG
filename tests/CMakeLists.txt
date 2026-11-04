@@ -90,3 +90,7 @@ if(HYPERHDG_QUAD_TESTS)
     message(WARNING "HYPERHDG_QUAD_TESTS: the compiler has no std::float128_t, quad left out.")
   endif()
 endif()
+
+# The Timoshenko beam solver on Generic (cross of beams, domains/cross.geo; run in the source tree).
+add_hyperhdg_test(timoshenko timoshenko.cxx)
+set_tests_properties(timoshenko PROPERTIES WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})

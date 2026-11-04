@@ -2,7 +2,9 @@
 
 #include <HyperHDG/compile_time_tricks.hxx>
 #include <HyperHDG/dense_la.hxx>
+#include <HyperHDG/global_loop/kinds.hxx>
 #include <HyperHDG/hypercube.hxx>
+#include <HyperHDG/local_solver/local_operator.hxx>
 #include <tpp/quadrature/tensorial.hxx>
 #include <tpp/shape_function/shape_function.hxx>
 
@@ -197,7 +199,8 @@ template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
           template <unsigned int, typename> typename parametersT = TimoschenkoBeamParametersDefault,
-          typename lSol_float_t = double>
+          typename lSol_float_t = double,
+          class LayoutT = LocalOperator::Condensed>
 class TimoshenkoBeam
 {
  public:
@@ -680,6 +683,127 @@ class TimoshenkoBeam
 
     return result;
   }
+
+  // -----------------------------------------------------------------------------------------------
+  // Local-operator protocol of GlobalLoop::Generic
+  // -----------------------------------------------------------------------------------------------
+  //
+  // The blocks of the local problem, A x = B lambda + l, flux = C x + D lambda, with lambda the
+  // traces in the frame of the nodes (as the global loop stores them): A is assemble_loc_matrix;
+  // B, C and D are the legacy maps applied to unit vectors -- the rotation into the frame of the
+  // beam with assemble_rhs_from_lambda (B), extract_fluxes_from_coeffs with the rotation back (C),
+  // and -tau lambda in the frame of the beam, rotated back (D) -- so the operator is that of
+  // trace_to_flux / residual_flux by construction. The leading 2 space_dim n_shape_fct_ unknowns,
+  // the stress resultants n and m, have a diagonal mass block (Legendre basis, coefficients
+  // constant on a beam) and are eliminated by the factorization. Dirichlet values enter through
+  // the local load; constraining the trace on Dirichlet nodes is the loop's business.
+
+  struct Args
+  {
+    lSol_float_t time = 0.;
+  };
+  static constexpr unsigned int n_loc = 2 * hyEdge_dimT * n_glob_dofs_per_node();
+  using Load = SmallVec<n_loc_dofs_, lSol_float_t>;
+  using Blocks =
+    LocalOperator::Blocks<n_loc_dofs_, n_loc, lSol_float_t, 2 * space_dim * n_shape_fct_>;
+
+  template <unsigned int space_dimT>
+  static constexpr bool constrained_node(const unsigned int node_type)
+  {
+    return is_dirichlet<parametersT<space_dimT, lSol_float_t>>(node_type);
+  }
+  template <class Edge>
+  Blocks local_blocks(Edge& edge, GlobalLoop::Stiffness, const Args& args) const
+  {
+    static_assert(hyEdge_dimT == 1, "TimoshenkoBeam is implemented for beams (hyEdge_dimT = 1).");
+    constexpr unsigned int n_node = n_glob_dofs_per_node();
+    using Trace = std::array<std::array<lSol_float_t, n_node>, 2 * hyEdge_dimT>;
+    Blocks blocks;
+    blocks.A = assemble_loc_matrix(edge, args.time);
+    for (unsigned int col = 0; col < n_loc; ++col)
+    {
+      Trace unit{};
+      unit[col / n_node][col % n_node] = 1.;
+      const auto local = node_dof_to_edge_dof(unit, edge);
+      const Load rhs = assemble_rhs_from_lambda(local, edge);
+      for (unsigned int row = 0; row < n_loc_dofs_; ++row)
+        blocks.B(row, col) = rhs[row];
+      Trace local_flux{}, flux{};
+      for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+        for (unsigned int k = 0; k < n_node; ++k)
+          local_flux[face][k] = -tau_ * local[face][k];
+      edge_dof_to_node_dof(local_flux, flux, edge);
+      for (unsigned int row = 0; row < n_loc; ++row)
+        blocks.D(row, col) = flux[row / n_node][row % n_node];
+    }
+    for (unsigned int i = 0; i < n_loc_dofs_; ++i)
+    {
+      Load unit;
+      unit[i] = 1.;
+      const auto bdr_values = extract_fluxes_from_coeffs(unit, edge);
+      Trace local_flux{}, flux{};
+      for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+        for (unsigned int k = 0; k < n_node; ++k)
+          local_flux[face][k] = bdr_values(face, k);
+      edge_dof_to_node_dof(local_flux, flux, edge);
+      for (unsigned int row = 0; row < n_loc; ++row)
+        blocks.C(row, i) = flux[row / n_node][row % n_node];
+    }
+    return blocks;
+  }
+  template <class Edge>
+  auto local_operator(Edge& edge, GlobalLoop::Stiffness kind, const Args& args) const
+  {
+    return LayoutT::make(local_blocks(edge, kind, args));
+  }
+  template <class Edge>
+  auto local_operator(Edge& edge,
+                      GlobalLoop::Stiffness kind,
+                      const Args& args,
+                      GlobalLoop::Streaming) const
+  {
+    if constexpr (requires(const Blocks& blocks) { LayoutT::make_streaming(blocks); })
+      return LayoutT::make_streaming(local_blocks(edge, kind, args));
+    else
+      return local_operator(edge, kind, args);
+  }
+  template <class Edge>
+  Load local_load(Edge& edge, const Args& args) const
+  {
+    return assemble_rhs_from_global_rhs(edge, args.time);
+  }
+  /*!***********************************************************************************************
+   * \brief   Squared L2 error of the displacement on one beam, as errors() computes it.
+   ************************************************************************************************/
+  template <class Edge, class OperatorT>
+  SmallVec<1, lSol_float_t> error_sq(Edge& edge,
+                                     const OperatorT& op,
+                                     const SmallVec<n_loc, lSol_float_t>& lambda,
+                                     const Args& args) const
+  {
+    using parameters = parametersT<decltype(Edge::geometry)::space_dim(), lSol_float_t>;
+    const Load load = local_load(edge, args);
+    Load coefficients;
+    if constexpr (requires { op.local_solution(edge, lambda, load, args); })
+      coefficients = op.local_solution(edge, lambda, load, args);
+    else
+      coefficients =
+        LocalOperator::Factored::make(local_blocks(edge, GlobalLoop::Stiffness{}, args))
+          .local_solution(edge, lambda, load, args);
+    SmallVec<1, lSol_float_t> error;
+    std::array<lSol_float_t, n_shape_fct_> coeffs;
+    const int components[3] = {1, -1, -2};  // as errors(): u along the tangent and the normals
+    for (unsigned int c = 0; c < 3; ++c)
+    {
+      for (unsigned int i = 0; i < coeffs.size(); ++i)
+        coeffs[i] = coefficients[i + (2 * space_dim + c) * n_shape_fct_];
+      error[0] += integrator::template integrate_vol_diffsquare_discanacomp<
+        Point<decltype(Edge::geometry)::space_dim(), lSol_float_t>, decltype(Edge::geometry),
+        parameters::analytic_result_u, Point<hyEdge_dimT, lSol_float_t>>(coeffs, components[c],
+                                                                         edge.geometry, args.time);
+    }
+    return error;
+  }
 };  // end of class LengtheningBernoulliBendingBeam
 
 // -------------------------------------------------------------------------------------------------
@@ -692,13 +816,14 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           template <unsigned int, typename>
           typename parametersT,
-          typename lSol_float_t>
+          typename lSol_float_t,
+          class LayoutT>
 template <typename hyEdgeT>
 inline SmallSquareMat<
-  TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
+  TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t, LayoutT>::
     n_loc_dofs_,
   lSol_float_t>
-TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
+TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t, LayoutT>::
   assemble_loc_matrix(hyEdgeT& hyper_edge, const lSol_float_t time) const
 {
   // using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
@@ -799,13 +924,14 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           template <unsigned int, typename>
           typename parametersT,
-          typename lSol_float_t>
+          typename lSol_float_t,
+          class LayoutT>
 template <typename hyEdgeT, typename SmallMatT>
 inline SmallVec<
-  TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
+  TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t, LayoutT>::
     n_loc_dofs_,
   lSol_float_t>
-TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
+TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t, LayoutT>::
   assemble_rhs_from_lambda(const SmallMatT& lambda_values, hyEdgeT& hyper_edge) const
 {
   static_assert(std::is_same<typename SmallMatT::value_type::value_type, lSol_float_t>::value,
@@ -854,13 +980,14 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           template <unsigned int, typename>
           typename parametersT,
-          typename lSol_float_t>
+          typename lSol_float_t,
+          class LayoutT>
 template <typename hyEdgeT>
 inline SmallVec<
-  TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
+  TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t, LayoutT>::
     n_loc_dofs_,
   lSol_float_t>
-TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t>::
+TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_float_t, LayoutT>::
   assemble_rhs_from_global_rhs(hyEdgeT& hyper_edge, const unsigned int dim) const
 {
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
