@@ -218,10 +218,7 @@ inline Comparison compare(const std::vector<std::string>& printed_lines,
 /*!*************************************************************************************************
  * \brief   Print a record line (printf format) and keep it for check.
  **************************************************************************************************/
-#if defined(__GNUC__)
-__attribute__((format(printf, 1, 2)))
-#endif
-inline void record(const char* format, ...)
+[[gnu::format(printf, 1, 2)]] inline void record(const char* format, ...)
 {
   std::va_list args, copy;
   va_start(args, format);
