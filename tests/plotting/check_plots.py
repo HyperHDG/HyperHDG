@@ -13,7 +13,7 @@ import os
 import sys
 
 from paraview import servermanager
-from paraview.simple import (ColorBy, GetActiveCamera, GetActiveViewOrCreate,
+from paraview.simple import (ColorBy, Delete, GetActiveViewOrCreate,
                              GetColorTransferFunction, OpenDataFile, ResetCamera, SaveScreenshot,
                              Show)
 from vtkmodules.numpy_interface import dataset_adapter as dsa
@@ -52,12 +52,19 @@ for path in sys.argv[1:]:
     lut.VectorComponent = values.shape[1] - 1
   display.RescaleTransferFunctionToDataRange(False, True)
   display.SetScalarBarVisibility(view, True)
-  ResetCamera(view)
-  if data.Points[:, 2].max() > data.Points[:, 2].min() or data.Points[:, 1].max() > 0:
-    GetActiveCamera().Azimuth(30.)  # oblique, so that every coordinate direction shows
-    GetActiveCamera().Elevation(25.)
+  # The camera is shared by all files, so it is set from scratch: oblique for data in 3D, from
+  # above otherwise. ResetCamera keeps the direction and fits the data.
+  view.CameraFocalPoint = [0.5, 0.5, 0.5]
+  if data.Points[:, 2].max() > data.Points[:, 2].min():
+    view.CameraPosition, view.CameraViewUp = [2.4, -1.4, 1.9], [0., 0., 1.]
+  else:
+    view.CameraPosition, view.CameraViewUp = [0.5, 0.5, 3.], [0., 1., 0.]
   ResetCamera(view)
   SaveScreenshot(f"output/plots/{name}.png", view)
-  display.Visibility = 0
+  # The colour map "values" is shared by all files: release it before the next file, whose values
+  # may have fewer components (ParaView crashes updating a scalar bar for a missing component).
+  display.SetScalarBarVisibility(view, False)
+  lut.VectorMode = "Magnitude"
+  Delete(reader)
 
 sys.exit(1 if failed else 0)
