@@ -227,20 +227,24 @@ SolverResult cg(OperatorT&& apply,
                 const SolverOptions& options = SolverOptions())
 {
   using value_t = std::remove_cvref_t<decltype(b[0])>;
+  // inner products, alpha and beta in at least double; in a wider type (e.g. std::float128_t)
+  // in that one, so that the iteration keeps its precision. Norms are reported as double.
+  using acc_t = std::common_type_t<value_t, double>;
   const std::size_t n = b.size();
   hy_assert(x.size() == n, "Solution and right-hand side must be of the same size.");
   auto dot = [n](const std::vector<value_t>& u, const std::vector<value_t>& v)
   {
-    double sum = 0.;
+    acc_t sum = 0.;
     for (std::size_t i = 0; i < n; ++i)
-      sum += (double)u[i] * (double)v[i];
+      sum += (acc_t)u[i] * (acc_t)v[i];
     return sum;
   };
+  auto norm = [](const acc_t square) { return (double)std::sqrt(square); };
 
   std::vector<value_t> r(n), d(n), z(n);
   for (std::size_t i = 0; i < n; ++i)
     r[i] = b[i];
-  const double rhs_norm = std::sqrt(dot(r, r));
+  const double rhs_norm = norm(dot(r, r));
   bool zero_guess = true;
   for (std::size_t i = 0; i < n; ++i)
     zero_guess = zero_guess && x[i] == (value_t)0.;
@@ -254,8 +258,8 @@ SolverResult cg(OperatorT&& apply,
   }
   for (std::size_t i = 0; i < n; ++i)
     d[i] = r[i];
-  double r_square = dot(r, r);
-  const double initial_residual_norm = std::sqrt(r_square);
+  acc_t r_square = dot(r, r);
+  const double initial_residual_norm = norm(r_square);
   const double target = std::max(options.rtol * rhs_norm, options.atol);
 
   SolverResult result{StopReason::diverged_max_iterations, 0, initial_residual_norm,
@@ -269,7 +273,7 @@ SolverResult cg(OperatorT&& apply,
   };
   for (;; ++result.iterations)
   {
-    result.residual_norm = std::sqrt(r_square);
+    result.residual_norm = norm(r_square);
     if (!std::isfinite(result.residual_norm))
       return stop(StopReason::diverged_nan);
     if (result.residual_norm <= target)
@@ -283,20 +287,20 @@ SolverResult cg(OperatorT&& apply,
       options.monitor(result.iterations, result.residual_norm);
 
     apply(d, z);
-    const double curvature = dot(d, z);
-    if (!std::isfinite(curvature))
+    const acc_t curvature = dot(d, z);
+    if (!std::isfinite((double)curvature))
       return stop(StopReason::diverged_nan);
-    if (curvature == 0.)
+    if (curvature == (acc_t)0.)
       return stop(StopReason::diverged_breakdown);
-    const value_t alpha = r_square / curvature;
+    const value_t alpha = (value_t)(r_square / curvature);
     for (std::size_t i = 0; i < n; ++i)
     {
       x[i] += alpha * d[i];
       r[i] -= alpha * z[i];
     }
-    const double r_square_old = r_square;
+    const acc_t r_square_old = r_square;
     r_square = dot(r, r);
-    const value_t beta = r_square / r_square_old;
+    const value_t beta = (value_t)(r_square / r_square_old);
     for (std::size_t i = 0; i < n; ++i)
       d[i] = r[i] + beta * d[i];
   }
