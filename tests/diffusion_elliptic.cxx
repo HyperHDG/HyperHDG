@@ -4,7 +4,7 @@
 // matrix is also solved directly: it must be non-singular, and the direct solution must agree with
 // the matrix-free CG. One executable per (DIM, DEGREE), set by CMake (tests/CMakeLists.txt);
 // REAL = float makes the geometry, the solver and the vectors single precision (one case, 2D degree
-// 2, whose errors stay well above single-precision round-off).
+// 1, whose errors stay well above the round-off floor of the solve in float).
 #include <HyperHDG/geometry/unit_cube.hxx>
 #include <HyperHDG/global_loop/generic.hxx>
 #include <HyperHDG/local_solver/diffusion_ldgh.hxx>

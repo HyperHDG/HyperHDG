@@ -33,9 +33,10 @@ foreach(space_dim 1 2 3 4 5)
                                                                    ${PROJECT_SOURCE_DIR})
 endforeach()
 
-# Single precision: one case, 2D degree 2, whose errors stay well above float round-off.
-add_hyperhdg_test(diffusion_elliptic_float_d2_p2 diffusion_elliptic.cxx)
-target_compile_definitions(diffusion_elliptic_float_d2_p2 PRIVATE DIM=2 DEGREE=2 REAL=float)
+# Single precision: one case, 2D degree 1, whose errors stay well above the round-off floor of the
+# solve in float (degree 2 reaches it at n = 8: its error there depends on the rounding).
+add_hyperhdg_test(diffusion_elliptic_float_d2_p1 diffusion_elliptic.cxx)
+target_compile_definitions(diffusion_elliptic_float_d2_p1 PRIVATE DIM=2 DEGREE=1 REAL=float)
 
 # The Python side (nanobind is set up in the top-level CMakeLists.txt):
 # - bindings.py: the NumPy bindings of Generic on a module built here (bindings_module.cxx).
