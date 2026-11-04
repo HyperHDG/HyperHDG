@@ -5,6 +5,7 @@
 #include <array>
 #include <cmath>
 #include <ostream>
+#include <utility>
 #include <vector>  // Allows explicit converion from vector to SmallMat!
 
 // #include <exception>
@@ -987,6 +988,138 @@ using Point = SmallVec<n_rows, mat_entry_t>;
 // introduced in LapackWrapper.hxx!
 
 // -------------------------------------------------------------------------------------------------
+// LU factorization: LAPACK where it has the scalar type, a generic implementation otherwise
+// -------------------------------------------------------------------------------------------------
+
+/*!*************************************************************************************************
+ * \brief   LU factorization with partial pivoting for any scalar type.
+ *
+ * factorize, solve_factored and solve call LAPACK (Wrapper) if it has the scalar type (float,
+ * double, std::complex<double>), and the generic implementations below otherwise, e.g. for long
+ * double or std::float128_t. The generic ones follow LAPACK's conventions (getrf, getrs, gesv):
+ * column-major matrices, 1-based pivots, Wrapper::LAPACKexception for a singular matrix.
+ **************************************************************************************************/
+namespace LU
+{
+/*!*************************************************************************************************
+ * \brief   P A = L U in place, as getrf.
+ **************************************************************************************************/
+template <typename T>
+void generic_factorize(const unsigned int n, T* a, int* ipiv)
+{
+  auto magnitude = [](const T x) { return x < (T)0. ? -x : x; };
+  for (unsigned int k = 0; k < n; ++k)
+  {
+    unsigned int p = k;
+    for (unsigned int i = k + 1; i < n; ++i)
+      if (magnitude(a[i + k * n]) > magnitude(a[p + k * n]))
+        p = i;
+    ipiv[k] = p + 1;
+    if (a[p + k * n] == (T)0.)
+      throw Wrapper::LAPACKexception();
+    if (p != k)
+      for (unsigned int j = 0; j < n; ++j)
+        std::swap(a[k + j * n], a[p + j * n]);
+    for (unsigned int i = k + 1; i < n; ++i)
+      a[i + k * n] /= a[k + k * n];
+    for (unsigned int j = k + 1; j < n; ++j)
+      for (unsigned int i = k + 1; i < n; ++i)
+        a[i + j * n] -= a[i + k * n] * a[k + j * n];
+  }
+}
+/*!*************************************************************************************************
+ * \brief   b = A^-1 b (trans = 'N') or A^-T b (trans = 'T') for n_rhs columns, as getrs.
+ **************************************************************************************************/
+template <typename T>
+void generic_solve_factored(const unsigned int n,
+                            const unsigned int n_rhs,
+                            const T* lu,
+                            const int* ipiv,
+                            T* b,
+                            const char trans = 'N')
+{
+  for (unsigned int c = 0; c < n_rhs; ++c)
+  {
+    T* x = b + c * n;
+    if (trans == 'N')  // L U x = P b
+    {
+      for (unsigned int i = 0; i < n; ++i)
+        std::swap(x[i], x[ipiv[i] - 1]);
+      for (unsigned int i = 0; i < n; ++i)
+        for (unsigned int j = 0; j < i; ++j)
+          x[i] -= lu[i + j * n] * x[j];
+      for (unsigned int i = n; i-- > 0;)
+      {
+        for (unsigned int j = i + 1; j < n; ++j)
+          x[i] -= lu[i + j * n] * x[j];
+        x[i] /= lu[i + i * n];
+      }
+    }
+    else  // A^T = U^T L^T P: U^T y = b, L^T z = y, x = P^T z
+    {
+      for (unsigned int i = 0; i < n; ++i)
+      {
+        for (unsigned int j = 0; j < i; ++j)
+          x[i] -= lu[j + i * n] * x[j];
+        x[i] /= lu[i + i * n];
+      }
+      for (unsigned int i = n; i-- > 0;)
+        for (unsigned int j = i + 1; j < n; ++j)
+          x[i] -= lu[j + i * n] * x[j];
+      for (unsigned int i = n; i-- > 0;)
+        std::swap(x[i], x[ipiv[i] - 1]);
+    }
+  }
+}
+/*!*************************************************************************************************
+ * \brief   P A = L U in place (getrf).
+ **************************************************************************************************/
+template <unsigned int n, typename T>
+void factorize(std::array<T, n * n>& a, std::array<int, n>& ipiv)
+{
+  if constexpr (requires { Wrapper::lapack_factorize((int)n, a.data(), ipiv.data()); })
+    Wrapper::lapack_factorize((int)n, a.data(), ipiv.data());
+  else
+    generic_factorize(n, a.data(), ipiv.data());
+}
+/*!*************************************************************************************************
+ * \brief   b = A^-1 b or A^-T b from the factors of factorize (getrs).
+ **************************************************************************************************/
+template <unsigned int n, unsigned int n_rhs, typename T>
+void solve_factored(const std::array<T, n * n>& lu,
+                    const std::array<int, n>& ipiv,
+                    std::array<T, n * n_rhs>& b,
+                    const char trans = 'N')
+{
+  // getrs reads the factors and pivots only; the wrapper takes non-const pointers.
+  T* lu_ptr = const_cast<T*>(lu.data());
+  int* ipiv_ptr = const_cast<int*>(ipiv.data());
+  if constexpr (requires {
+                  Wrapper::lapack_solve_factored((int)n, (int)n_rhs, lu_ptr, ipiv_ptr, b.data(),
+                                                 trans);
+                })
+    Wrapper::lapack_solve_factored((int)n, (int)n_rhs, lu_ptr, ipiv_ptr, b.data(), trans);
+  else
+    generic_solve_factored(n, n_rhs, lu.data(), ipiv.data(), b.data(), trans);
+}
+/*!*************************************************************************************************
+ * \brief   b = A^-1 b; a is overwritten by its factors (gesv).
+ **************************************************************************************************/
+template <unsigned int n, unsigned int n_rhs, typename T>
+void solve(std::array<T, n * n>& a, std::array<T, n * n_rhs>& b)
+{
+  if constexpr (requires { Wrapper::lapack_solve((int)n, (int)n_rhs, a.data(), b.data()); })
+    Wrapper::lapack_solve((int)n, (int)n_rhs, a.data(), b.data());
+  else
+  {
+    std::array<int, n> ipiv;
+    generic_factorize(n, a.data(), ipiv.data());
+    generic_solve_factored(n, n_rhs, a.data(), ipiv.data(), b.data());
+  }
+}
+}  // end of namespace LU
+
+// -------------------------------------------------------------------------------------------------
 // Solve linear systems of equations:
 // -------------------------------------------------------------------------------------------------
 
@@ -994,9 +1127,9 @@ using Point = SmallVec<n_rows, mat_entry_t>;
  * \brief   Solve linear system of equations A * x = b <=> x = A / b.
  *
  * Small diagonal matrices (e.g. the transformation matrices of axis-parallel geometries) are
- * treated without calling LAPACK. For these, LAPACK's LU decomposition with partial pivoting does
- * not pivot and reduces to dividing by the diagonal entries. Singular matrices are still handed to
- * LAPACK such that the corresponding exception is thrown.
+ * treated without an LU decomposition: with partial pivoting it would not pivot and reduce to
+ * dividing by the diagonal entries. Everything else goes to LU::solve (LAPACK where it has the
+ * scalar type), which throws for singular matrices.
  **************************************************************************************************/
 template <unsigned int n_rowsA, unsigned int n_colsB, typename mat_entry_t>
 SmallMat<n_rowsA, n_colsB, mat_entry_t> operator/(SmallMat<n_rowsA, n_colsB, mat_entry_t>& b,
@@ -1016,7 +1149,8 @@ SmallMat<n_rowsA, n_colsB, mat_entry_t> operator/(SmallMat<n_rowsA, n_colsB, mat
       return b;
     }
   }
-  return Wrapper::lapack_solve<n_rowsA, n_colsB, mat_entry_t>(A.data(), b.data());
+  LU::solve<n_rowsA, n_colsB, mat_entry_t>(A.data(), b.data());
+  return b;
 }
 /*!*************************************************************************************************
  * \brief   Solve linear system of equations A * x = b <=> x = A / b.

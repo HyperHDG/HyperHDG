@@ -4,6 +4,7 @@
 // NDEBUG.
 #include <HyperHDG/dense_la.hxx>
 
+#include <algorithm>
 #include <array>
 #include <cmath>
 #include <cstdio>
@@ -174,6 +175,55 @@ void test_qr_handedness()
   }
 }
 
+// The generic LU of dense_la.hxx (LU::generic_*) against LAPACK (Wrapper) in double: factors,
+// pivots and the solutions with A and A^T agree, and a singular matrix throws.
+void test_generic_lu()
+{
+  constexpr unsigned int n = 7, n_rhs = 3;
+  std::mt19937 generator(7);
+  std::uniform_real_distribution<double> uniform(-1., 1.);
+  std::array<double, n * n> a;
+  std::array<double, n * n_rhs> b;
+  for (double& value : a)
+    value = uniform(generator);
+  for (double& value : b)
+    value = uniform(generator);
+  std::array<double, n * n> lu_generic = a, lu_lapack = a;
+  std::array<int, n> ipiv_generic, ipiv_lapack;
+  LU::generic_factorize(n, lu_generic.data(), ipiv_generic.data());
+  Wrapper::lapack_factorize((int)n, lu_lapack.data(), ipiv_lapack.data());
+  double deviation = 0.;
+  for (unsigned int i = 0; i < n * n; ++i)
+    deviation = std::max(deviation, std::abs(lu_generic[i] - lu_lapack[i]));
+  bool ok = deviation < 1e-13 && ipiv_generic == ipiv_lapack;
+  for (const char trans : {'N', 'T'})
+  {
+    std::array<double, n * n_rhs> x_generic = b, x_lapack = b;
+    LU::generic_solve_factored(n, n_rhs, lu_generic.data(), ipiv_generic.data(), x_generic.data(),
+                               trans);
+    Wrapper::lapack_solve_factored((int)n, (int)n_rhs, lu_lapack.data(), ipiv_lapack.data(),
+                                   x_lapack.data(), trans);
+    for (unsigned int i = 0; i < n * n_rhs; ++i)
+      deviation = std::max(deviation, std::abs(x_generic[i] - x_lapack[i]));
+  }
+  ok = ok && deviation < 1e-12;
+  bool thrown = false;
+  std::array<double, 4> singular{1., 2., 2., 4.};
+  std::array<int, 2> ipiv;
+  try
+  {
+    LU::generic_factorize(2, singular.data(), ipiv.data());
+  }
+  catch (Wrapper::LAPACKexception&)
+  {
+    thrown = true;
+  }
+  if (!ok || !thrown)
+    std::printf("FAIL  generic LU: deviation from LAPACK %.1e, singular matrix %s\n", deviation,
+                thrown ? "throws" : "does not throw");
+  failures += !ok + !thrown;
+}
+
 int main()
 {
   [&]<unsigned int... d>(std::integer_sequence<unsigned int, d...>)
@@ -182,6 +232,7 @@ int main()
     (test_point<d + 1, float>("float"), ...);
   }(std::make_integer_sequence<unsigned int, 10>());
   test_qr_handedness();
+  test_generic_lu();
   std::printf("%s: %d failed checks\n", failures ? "FAILED" : "ok", failures);
   return failures;
 }

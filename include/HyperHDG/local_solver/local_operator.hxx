@@ -62,7 +62,8 @@ struct Blocks
 namespace detail
 {
 /*!*************************************************************************************************
- * \brief   rhs = M^-1 rhs (trans = 'N') or M^-T rhs (trans = 'T'), from LU factors of M (getrs).
+ * \brief   rhs = M^-1 rhs (trans = 'N') or M^-T rhs (trans = 'T'), from LU factors of M (getrs;
+ *          LAPACK or the generic LU of dense_la.hxx, by the scalar type).
  **************************************************************************************************/
 template <unsigned int n, unsigned int k, typename T, std::size_t n_ipiv>
 void lu_solve(const SmallSquareMat<n, T>& lu,
@@ -71,9 +72,7 @@ void lu_solve(const SmallSquareMat<n, T>& lu,
               const char trans = 'N')
 {
   static_assert(n_ipiv == n, "One pivot per row.");
-  // getrs reads the factors and pivots only; the wrapper takes non-const pointers.
-  Wrapper::lapack_solve_factored(n, k, const_cast<T*>(lu.data().data()),
-                                 const_cast<int*>(ipiv.data()), rhs.data().data(), trans);
+  LU::solve_factored<n, k, T>(lu.data(), ipiv, rhs.data(), trans);
 }
 
 /*!*************************************************************************************************
@@ -109,7 +108,7 @@ struct Factors
             i == j ||
               std::abs(a(i, j)) <= 100 * std::numeric_limits<T>::epsilon() * std::abs(a(i, i)),
             "Eliminated unknowns must form a diagonal block of the local matrix, but entry ("
-              << i << ", " << j << ") is " << a(i, j) << ".");
+              << i << ", " << j << ") is " << (double)std::abs(a(i, j)) << " in magnitude.");
       d_inv[i] = (T)1. / a(i, i);
       for (unsigned int j = 0; j < n_r; ++j)
       {
@@ -125,7 +124,7 @@ struct Factors
           schur -= a_rd(i, k) * d_inv[k] * a_dr(k, j);
         lu(i, j) = schur;
       }
-    Wrapper::lapack_factorize<n_r, T>(lu.data(), ipiv);
+    LU::factorize<n_r, T>(lu.data(), ipiv);
   }
 
   /*!
@@ -195,10 +194,7 @@ struct Factors<n, 0, T>
   std::array<int, n> ipiv;
 
   Factors() = default;
-  explicit Factors(const SmallSquareMat<n, T>& a) : lu(a)
-  {
-    Wrapper::lapack_factorize<n, T>(lu.data(), ipiv);
-  }
+  explicit Factors(const SmallSquareMat<n, T>& a) : lu(a) { LU::factorize<n, T>(lu.data(), ipiv); }
   template <unsigned int k>
   void solve(SmallMat<n, k, T>& rhs, const char trans = 'N') const
   {
