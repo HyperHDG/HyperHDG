@@ -133,6 +133,18 @@ endif()
 ## -DHYPERHDG_LEGACY_TESTS=OFF leaves them out.
 include(CTest)
 option(HYPERHDG_LEGACY_TESTS "Build and run tests_c++ and tests_python" ON)
+## nanobind, for the Python modules that tests/ and examples/ build (their tests need NumPy and SciPy
+## at run time; -DNOPYTHONTESTS=ON leaves them out). nanobind looks up Python as "Python": use the
+## interpreter found as "Python3" above.
+if(NOT NOPYTHONTESTS)
+  if(Python3_EXECUTABLE AND NOT Python_EXECUTABLE)
+    set(Python_EXECUTABLE ${Python3_EXECUTABLE})
+  endif()
+  find_package(Python 3.9 COMPONENTS Interpreter Development.Module)
+  if(Python_FOUND AND NOT TARGET nanobind-static)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/submodules/nanobind.git ${CMAKE_BINARY_DIR}/nanobind)
+  endif()
+endif()
 ## Every single run is serial (no BLAS or OpenMP threads); ctest -j runs the tests in parallel.
 set(HYPERHDG_TEST_ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1")
 if(BUILD_TESTING)

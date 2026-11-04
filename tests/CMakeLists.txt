@@ -37,12 +37,25 @@ endforeach()
 add_hyperhdg_test(diffusion_elliptic_float_d2_p2 diffusion_elliptic.cxx)
 target_compile_definitions(diffusion_elliptic_float_d2_p2 PRIVATE DIM=2 DEGREE=2 REAL=float)
 
-# python/hyperhdg.py and the bindings of Generic; compiles its modules just in time.
-if(NOT NOPYTHONTESTS AND Python3_Interpreter_FOUND)
+# The Python side (nanobind is set up in the top-level CMakeLists.txt):
+# - bindings.py: the NumPy bindings of Generic on a module built here (bindings_module.cxx).
+# - hyperhdg_jit.py: python/hyperhdg.py on trivial modules, which it compiles just in time; a CMake
+#   configure and build per module, so ctest -j starts it first and runs the others meanwhile.
+if(NOT NOPYTHONTESTS AND Python_FOUND)
+  nanobind_add_module(hyperhdg_bindings_test NOMINSIZE bindings_module.cxx)
+  target_link_libraries(hyperhdg_bindings_test PRIVATE HyperHDG)
+  target_include_directories(hyperhdg_bindings_test PRIVATE ${PROJECT_SOURCE_DIR})
+  set_target_properties(hyperhdg_bindings_test PROPERTIES LIBRARY_OUTPUT_DIRECTORY
+                                                          ${CMAKE_CURRENT_BINARY_DIR})
+  add_test(NAME bindings_py COMMAND Python::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/bindings.py)
+  set_tests_properties(bindings_py PROPERTIES
+    ENVIRONMENT "PYTHONPATH=${CMAKE_CURRENT_BINARY_DIR};${HYPERHDG_TEST_ENVIRONMENT}")
+
   add_test(NAME hyperhdg_jit_py
-           COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/hyperhdg_jit.py
+           COMMAND Python::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/hyperhdg_jit.py
            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
-  set_tests_properties(hyperhdg_jit_py PROPERTIES ENVIRONMENT "${HYPERHDG_TEST_ENVIRONMENT}")
+  set_tests_properties(hyperhdg_jit_py PROPERTIES ENVIRONMENT "${HYPERHDG_TEST_ENVIRONMENT}"
+                                                  COST 100)
 endif()
 
 # Plotting and domain files: their own runner (.github/workflows/plotting.yml), off by default.
