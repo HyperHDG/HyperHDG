@@ -21,7 +21,12 @@ function(add_hyperhdg_ladder_test source)
   get_filename_component(test ${source} NAME_WE)
   foreach(dim 1 2 3)
     foreach(degree 1 2 3)
-      add_hyperhdg_test(${test}_d${dim}_p${degree} ${source})
+      # d3: no Cython seed (the study stopped at dimension 2)
+      if(dim LESS 3)
+        add_hyperhdg_test(${test}_d${dim}_p${degree} ${source} RECORDS)
+      else()
+        add_hyperhdg_test(${test}_d${dim}_p${degree} ${source})
+      endif()
       target_compile_definitions(${test}_d${dim}_p${degree} PRIVATE DIM=${dim} DEGREE=${degree})
     endforeach()
   endforeach()
@@ -43,13 +48,17 @@ endforeach()
 
 # Single precision: one case, 2D degree 1, whose errors stay well above the round-off floor of the
 # solve in float (degree 2 reaches it at n = 8: its error there depends on the rounding).
-add_hyperhdg_test(diffusion_elliptic_float_d2_p1 diffusion_elliptic.cxx)
+add_hyperhdg_test(diffusion_elliptic_float_d2_p1 diffusion_elliptic.cxx RECORDS)
 target_compile_definitions(diffusion_elliptic_float_d2_p1 PRIVATE DIM=2 DEGREE=1 REAL=float)
 
 # DiffusionTensor (sum factorization) on the same convergence ladder.
 foreach(dim 1 2 3)
   foreach(degree 1 2 3)
-    add_hyperhdg_test(diffusion_tensor_d${dim}_p${degree} diffusion_elliptic.cxx)
+    if(dim LESS 3)
+      add_hyperhdg_test(diffusion_tensor_d${dim}_p${degree} diffusion_elliptic.cxx RECORDS)
+    else()
+      add_hyperhdg_test(diffusion_tensor_d${dim}_p${degree} diffusion_elliptic.cxx)
+    endif()
     target_compile_definitions(diffusion_tensor_d${dim}_p${degree}
                                PRIVATE DIM=${dim} DEGREE=${degree} SOLVER=DiffusionTensor)
   endforeach()
@@ -105,7 +114,7 @@ endif()
 # The Timoshenko beam solver on Generic (cross of beams, domains/cross.geo; run in the source tree),
 # one executable per degree.
 foreach(degree 1 2 3)
-  add_hyperhdg_test(timoshenko_p${degree} timoshenko.cxx)
+  add_hyperhdg_test(timoshenko_p${degree} timoshenko.cxx RECORDS)
   target_compile_definitions(timoshenko_p${degree} PRIVATE DEGREE=${degree})
   set_tests_properties(timoshenko_p${degree} PROPERTIES WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
 endforeach()
