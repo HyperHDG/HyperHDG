@@ -113,8 +113,8 @@ jobs:
         path: ${{ env.CCACHE_DIR }}
         key: ccache-${{ matrix.comp.cxx }}-${{ github.sha }}
         restore-keys: ccache-${{ matrix.comp.cxx }}-
-    # tests/ and examples/ only: tests_c++ and tests_python are being migrated (tests/RECONSIDER.md),
-    # and HDF5 (reading .geo.h5, VTKHDF plots) is not needed by them.
+    # tests/ and examples/ only: tests_python is being migrated (tests/RECONSIDER.md), and HDF5
+    # (reading .geo.h5, VTKHDF plots) is not needed by them.
     - name: Configure
       run: >
         ccache --zero-stats &&

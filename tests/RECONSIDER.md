@@ -65,14 +65,6 @@ its successor if there is one.
 - reproducibles_python/parameters/diffusion_advection_reaction.hxx
 - reproducibles_python/parameters/timoshenko.hxx
 
-### tests_c++/
-
-- tests_c++/CMakeLists.txt
-- tests_c++/diffusion_dimensions.cxx (DiffusionUniform on graphs in space dimensions 1 to 5, stays
-  legacy with it; its Diffusion part is gone, tests/diffusion_embedded.cxx covers it)
-- tests_c++/diffusion_floatings.cxx (DiffusionUniform in float, stays legacy with it; float on
-  Generic + Diffusion: tests/diffusion_elliptic_float_d2_p2)
-
 ### tests_python/
 
 - tests_python/CMakeLists.txt

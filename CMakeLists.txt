@@ -128,11 +128,11 @@ if(HYPERHDG_OPENMP)
   endif()
 endif()
 
-## Add tests if requested through the BUILD_TESTING option (default: ON). tests_c++ and
-## tests_python predate tests/ and are being migrated there (tests/RECONSIDER.md);
-## -DHYPERHDG_LEGACY_TESTS=OFF leaves them out.
+## Add tests if requested through the BUILD_TESTING option (default: ON). tests_python predates
+## tests/ and is being migrated there (tests/RECONSIDER.md); -DHYPERHDG_LEGACY_TESTS=OFF leaves it
+## out.
 include(CTest)
-option(HYPERHDG_LEGACY_TESTS "Build and run tests_c++ and tests_python" ON)
+option(HYPERHDG_LEGACY_TESTS "Run tests_python" ON)
 ## nanobind, for the Python modules that tests/ and examples/ build (their tests need NumPy and SciPy
 ## at run time; -DNOPYTHONTESTS=ON leaves them out). nanobind looks up Python as "Python": use the
 ## interpreter found as "Python3" above.
@@ -150,9 +150,6 @@ set(HYPERHDG_TEST_ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_
 if(BUILD_TESTING)
   enable_testing()
   add_subdirectory(tests)
-  if(HYPERHDG_LEGACY_TESTS)
-    add_subdirectory(tests_c++)
-  endif()
 endif()
 
 ## Add the examples subdirectory (after enable_testing, so that the examples are run as tests)
