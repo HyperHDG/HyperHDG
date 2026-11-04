@@ -6,6 +6,7 @@
 // (tests/CMakeLists.txt): SOLVER is Diffusion or DiffusionTensor (sum factorization); REAL = float
 // makes the geometry, the solver and the vectors single precision (one case, 2D degree 1, whose
 // errors stay well above the round-off floor of the solve in float).
+// The records are checked against tests/expected/<ctest name>.yaml (tests/records.hxx).
 #include <HyperHDG/geometry/unit_cube.hxx>
 #include <HyperHDG/global_loop/generic.hxx>
 #include <HyperHDG/local_solver/diffusion_ldgh.hxx>
@@ -16,6 +17,7 @@
 
 #include <tests/direct_solve.hxx>
 #include <tests/parameters/diffusion.hxx>
+#include <tests/records.hxx>
 
 #include <algorithm>
 #include <cmath>
@@ -78,7 +80,7 @@ int main()
       SparseLA::cg([&](const std::vector<real>& in, std::vector<real>& out)
                    { loop.apply(in, out); }, rhs, x, options);
     const double error = loop.errors(x)[0];
-    std::printf(
+    tests::record(
       "- {solver: %s, dim: %u, degree: %u, n: %u, dofs: %u, cg: %s, iterations: %u, "
       "error: %.6e}\n",
       STRINGIFY(SOLVER), dim, degree, n, size, SparseLA::to_string(cg.reason), cg.iterations,
@@ -119,5 +121,6 @@ int main()
     }
     previous = error;
   }
-  return failures;
+  // float: its errors are those of double to about 5e-4, and CG needs fewer iterations
+  return single ? tests::check(failures, 1e-3, 0.5) : tests::check(failures);
 }
