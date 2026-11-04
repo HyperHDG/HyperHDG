@@ -8,6 +8,7 @@ its successor if there is one.
 ## Replaced (successor in tests/, oracle check pending)
 
 - reproducibles_python/diffusion_convergence_elliptic.py -> tests/diffusion_elliptic.cxx
+- tests_c++/point_functions.cxx, tests_c++/qr_handedness.cxx -> tests/dense_la.cxx
 
 ## Open
 
@@ -69,8 +70,6 @@ its successor if there is one.
 - tests_c++/plot_simple.cxx
 - tests_c++/plot_vtkhdf.cxx
 - tests_c++/plot_vtkhdf_paraview.py
-- tests_c++/point_functions.cxx
-- tests_c++/qr_handedness.cxx
 
 ### tests_python/
 

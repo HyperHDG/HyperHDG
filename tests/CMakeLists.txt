@@ -21,5 +21,6 @@ function(add_hyperhdg_ladder_test source)
 endfunction()
 
 add_hyperhdg_test(cg cg.cxx)
+add_hyperhdg_test(dense_la dense_la.cxx)
 add_hyperhdg_test(generic generic.cxx)
 add_hyperhdg_ladder_test(diffusion_elliptic.cxx)
