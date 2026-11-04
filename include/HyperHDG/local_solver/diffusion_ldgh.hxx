@@ -4,6 +4,7 @@
 #include <HyperHDG/dense_la.hxx>
 #include <HyperHDG/global_loop/kinds.hxx>
 #include <HyperHDG/hypercube.hxx>
+#include <HyperHDG/local_solver/local_operator.hxx>
 #include <tpp/quadrature/tensorial.hxx>
 #include <tpp/shape_function/shape_function.hxx>
 
@@ -98,6 +99,8 @@ struct DiffusionParametersDefault
  *                        contains static parameter functions.
  *                        Defaults to above functions included in \c DiffusionParametersDefault.
  * \tparam  lSol_float_t  The floating point type calculations are executed in. Defaults to double.
+ * \tparam  LayoutT       What GlobalLoop::Generic stores of a local problem (local_operator.hxx):
+ *                        LocalOperator::Condensed (default) or Factored, or a layout of one's own.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2019--2020.
  * \authors   Andreas Rupp, Heidelberg University, 2019--2020.
@@ -106,7 +109,8 @@ template <unsigned int hyEdge_dimT,
           unsigned int poly_deg,
           unsigned int quad_deg,
           template <unsigned int, typename> typename parametersT = DiffusionParametersDefault,
-          typename lSol_float_t = double>
+          typename lSol_float_t = double,
+          class LayoutT = LocalOperator::Condensed>
 class Diffusion
 {
  public:
@@ -1015,13 +1019,14 @@ class Diffusion
   // Local-operator protocol of GlobalLoop::Generic
   // -----------------------------------------------------------------------------------------------
   //
-  // local_operator(edge, Stiffness, args) assembles and LU-factorizes the local matrix once and
-  // tabulates the coupling blocks B (trace -> local rhs), C (local solution -> flux) and the
-  // diagonal D (-tau * face area), i.e. the boundary integrals are evaluated once per operator. The
-  // condensed operator is S = C A^{-1} B + D. Operator::apply<k> applies S to k traces at once
-  // (assembly uses k = n_loc with the identity), Operator::residual adds the local load before the
-  // solve. As in the methods above, Dirichlet values enter through the local load; constraining the
-  // trace on Dirichlet nodes is the loop's business, no boundary masking happens here.
+  // local_blocks(edge, Stiffness, args) sets up the local problem of one hyperedge as the blocks
+  // A x = B lambda + l, flux = C x + D lambda (A: the local matrix, B: trace -> local rhs, C: local
+  // solution -> flux, D: -tau * face area on the diagonal); the boundary integrals are evaluated
+  // once per operator. local_operator turns them into the operator the loop stores, as LayoutT
+  // says (local_operator.hxx: by default the condensed S = C A^-1 B + D and K = C A^-1), and into
+  // a cheaper one for a single use (Streaming). As in the methods above, Dirichlet values enter
+  // through the local load; constraining the trace on Dirichlet nodes is the loop's business, no
+  // boundary masking happens here.
 
   /*!***********************************************************************************************
    * \brief   Runtime arguments forwarded by the loop to every call.
@@ -1033,6 +1038,7 @@ class Diffusion
 
   static constexpr unsigned int n_loc = 2 * hyEdge_dimT * n_shape_bdr_;
   using Load = SmallVec<n_loc_dofs_, lSol_float_t>;
+  using Blocks = LocalOperator::Blocks<n_loc_dofs_, n_loc, lSol_float_t>;
 
   /*!***********************************************************************************************
    * \brief   Default constraint predicate: Dirichlet node types of the parameters.
@@ -1044,74 +1050,46 @@ class Diffusion
   }
 
   /*!***********************************************************************************************
-   * \brief   The immutable per-edge operator: LU factors of A plus the coupling blocks.
-   ************************************************************************************************/
-  struct Operator
-  {
-    SmallSquareMat<n_loc_dofs_, lSol_float_t> lu;
-    std::array<int, n_loc_dofs_> ipiv;
-    SmallMat<n_loc_dofs_, n_loc, lSol_float_t> B;
-    SmallMat<n_loc, n_loc_dofs_, lSol_float_t> C;
-    SmallVec<n_loc, lSol_float_t> D;
-
-    template <unsigned int k, class Edge>
-    void apply(const Edge&,
-               const SmallMat<n_loc, k, lSol_float_t>& in,
-               const Args&,
-               SmallMat<n_loc, k, lSol_float_t>& out) const
-    {
-      SmallMat<n_loc_dofs_, k, lSol_float_t> coeffs = B * in;
-      solve(coeffs);
-      out = C * coeffs;
-      for (unsigned int col = 0; col < k; ++col)
-        for (unsigned int row = 0; row < n_loc; ++row)
-          out(row, col) += D[row] * in(row, col);
-    }
-    template <class Edge>
-    void residual(const Edge&,
-                  const SmallVec<n_loc, lSol_float_t>& lambda,
-                  const Load& load,
-                  const Args&,
-                  SmallVec<n_loc, lSol_float_t>& r) const
-    {
-      SmallVec<n_loc_dofs_, lSol_float_t> coeffs = B * lambda + load;
-      solve(coeffs);
-      r = C * coeffs;
-      for (unsigned int row = 0; row < n_loc; ++row)
-        r[row] += D[row] * lambda[row];
-    }
-    template <class Edge>
-    SmallVec<n_loc_dofs_, lSol_float_t> local_solution(const Edge&,
-                                                       const SmallVec<n_loc, lSol_float_t>& lambda,
-                                                       const Load& load,
-                                                       const Args&) const
-    {
-      SmallVec<n_loc_dofs_, lSol_float_t> coeffs = B * lambda + load;
-      solve(coeffs);
-      return coeffs;
-    }
-
-   private:
-    template <unsigned int k>
-    void solve(SmallMat<n_loc_dofs_, k, lSol_float_t>& rhs) const
-    {
-      // dgetrs reads the factors and pivots only; the wrapper takes non-const pointers.
-      Wrapper::lapack_solve_factored(n_loc_dofs_, k, const_cast<lSol_float_t*>(lu.data().data()),
-                                     const_cast<int*>(ipiv.data()), rhs.data().data());
-    }
-  };
-
-  /*!***********************************************************************************************
-   * \brief   Build the operator of one hyperedge: factorize A, tabulate B, C, D.
+   * \brief   The blocks of the local problem of one hyperedge: A, and B, C, D tabulated.
    ************************************************************************************************/
   template <class Edge>
-  Operator local_operator(Edge& edge, GlobalLoop::Stiffness, const Args& args) const
+  Blocks local_blocks(Edge& edge, GlobalLoop::Stiffness, const Args& args) const
   {
-    Operator op;
-    op.lu = assemble_loc_matrix(tau_, edge, args.time);
+    Blocks blocks;
+    blocks.A = assemble_loc_matrix(tau_, edge, args.time);
+    for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
+    {
+      const auto normal = edge.geometry.local_normal(face);
+      for (unsigned int j = 0; j < n_shape_bdr_; ++j)
+      {
+        const unsigned int col = face * n_shape_bdr_ + j;
+        blocks.D(col, col) = -tau_ * edge.geometry.face_area(face);
+        for (unsigned int i = 0; i < n_shape_fct_; ++i)
+        {
+          const lSol_float_t integral =
+            integrator::template integrate_bdr_phipsi<decltype(Edge::geometry)>(i, j, face,
+                                                                                edge.geometry);
+          blocks.B(hyEdge_dimT * n_shape_fct_ + i, col) += tau_ * integral;
+          blocks.C(col, hyEdge_dimT * n_shape_fct_ + i) += tau_ * integral;
+          for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
+          {
+            blocks.B(dim * n_shape_fct_ + i, col) -= normal[dim] * integral;
+            blocks.C(col, dim * n_shape_fct_ + i) += normal[dim] * integral;
+          }
+        }
+      }
+    }
+    return blocks;
+  }
+  /*!***********************************************************************************************
+   * \brief   Build an operator; a failed factorization reports as in the methods above.
+   ************************************************************************************************/
+  template <class BuildT>
+  static auto checked(BuildT&& build)
+  {
     try
     {
-      Wrapper::lapack_factorize<n_loc_dofs_, lSol_float_t>(op.lu.data(), op.ipiv);
+      return build();
     }
     catch (Wrapper::LAPACKexception& exc)
     {
@@ -1119,30 +1097,28 @@ class Diffusion
                                    << "This can happen if quadrature is too inaccurate!");
       throw exc;
     }
-
-    for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
-    {
-      const auto normal = edge.geometry.local_normal(face);
-      for (unsigned int j = 0; j < n_shape_bdr_; ++j)
-      {
-        const unsigned int col = face * n_shape_bdr_ + j;
-        op.D[col] = -tau_ * edge.geometry.face_area(face);
-        for (unsigned int i = 0; i < n_shape_fct_; ++i)
-        {
-          const lSol_float_t integral =
-            integrator::template integrate_bdr_phipsi<decltype(Edge::geometry)>(i, j, face,
-                                                                                edge.geometry);
-          op.B(hyEdge_dimT * n_shape_fct_ + i, col) += tau_ * integral;
-          op.C(col, hyEdge_dimT * n_shape_fct_ + i) += tau_ * integral;
-          for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
-          {
-            op.B(dim * n_shape_fct_ + i, col) -= normal[dim] * integral;
-            op.C(col, dim * n_shape_fct_ + i) += normal[dim] * integral;
-          }
-        }
-      }
-    }
-    return op;
+  }
+  /*!***********************************************************************************************
+   * \brief   The operator the loop stores for one hyperedge, as the layout makes it of the blocks.
+   ************************************************************************************************/
+  template <class Edge>
+  auto local_operator(Edge& edge, GlobalLoop::Stiffness kind, const Args& args) const
+  {
+    return checked([&] { return LayoutT::make(local_blocks(edge, kind, args)); });
+  }
+  /*!***********************************************************************************************
+   * \brief   The operator for a single use (a sweep without prepare): the layout's cheap form.
+   ************************************************************************************************/
+  template <class Edge>
+  auto local_operator(Edge& edge,
+                      GlobalLoop::Stiffness kind,
+                      const Args& args,
+                      GlobalLoop::Streaming) const
+  {
+    if constexpr (requires(const Blocks& blocks) { LayoutT::make_streaming(blocks); })
+      return checked([&] { return LayoutT::make_streaming(local_blocks(edge, kind, args)); });
+    else
+      return local_operator(edge, kind, args);
   }
   /*!***********************************************************************************************
    * \brief   Share one operator among congruent hyperedges (opt-in by the parameters).
@@ -1178,16 +1154,28 @@ class Diffusion
   }
   /*!***********************************************************************************************
    * \brief   Squared L2 error of the primal unknown on one hyperedge (SmallVec: has operator+).
+   *
+   * Needs the local solution: from the operator if its layout keeps the factors (Factored), else
+   * from the factored operator built for this evaluation (Condensed keeps none).
    ************************************************************************************************/
-  template <class Edge>
+  template <class Edge, class OperatorT>
   SmallVec<1, lSol_float_t> error_sq(Edge& edge,
-                                     const Operator& op,
+                                     const OperatorT& op,
                                      const SmallVec<n_loc, lSol_float_t>& lambda,
                                      const Args& args) const
   {
     using parameters = parametersT<decltype(Edge::geometry)::space_dim(), lSol_float_t>;
-    const SmallVec<n_loc_dofs_, lSol_float_t> coefficients =
-      op.local_solution(edge, lambda, local_load(edge, args), args);
+    const Load load = local_load(edge, args);
+    SmallVec<n_loc_dofs_, lSol_float_t> coefficients;
+    if constexpr (requires { op.local_solution(edge, lambda, load, args); })
+      coefficients = op.local_solution(edge, lambda, load, args);
+    else
+      coefficients =
+        checked(
+          [&] {
+            return LocalOperator::Factored::make(local_blocks(edge, GlobalLoop::Stiffness{}, args));
+          })
+          .local_solution(edge, lambda, load, args);
     std::array<lSol_float_t, n_shape_fct_> coeffs;
     for (unsigned int i = 0; i < coeffs.size(); ++i)
       coeffs[i] = coefficients[i + hyEdge_dimT * n_shape_fct_];
@@ -1221,12 +1209,13 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           template <unsigned int, typename>
           typename parametersT,
-          typename lSol_float_t>
+          typename lSol_float_t,
+          class LayoutT>
 template <typename hyEdgeT>
 inline SmallSquareMat<
-  Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
+  Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, LayoutT>::n_loc_dofs_,
   lSol_float_t>
-Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_loc_matrix(
+Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, LayoutT>::assemble_loc_matrix(
   const lSol_float_t tau,
   hyEdgeT& hyper_edge,
   const lSol_float_t time) const
@@ -1286,13 +1275,14 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           template <unsigned int, typename>
           typename parametersT,
-          typename lSol_float_t>
+          typename lSol_float_t,
+          class LayoutT>
 template <typename hyEdgeT, typename SmallMatT>
-inline SmallVec<Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
-                lSol_float_t>
-Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_rhs_from_lambda(
-  const SmallMatT& lambda_values,
-  hyEdgeT& hyper_edge) const
+inline SmallVec<
+  Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, LayoutT>::n_loc_dofs_,
+  lSol_float_t>
+Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, LayoutT>::
+  assemble_rhs_from_lambda(const SmallMatT& lambda_values, hyEdgeT& hyper_edge) const
 {
   static_assert(std::is_same<typename SmallMatT::value_type::value_type, lSol_float_t>::value,
                 "Lambda values should have same floating point arithmetics as local solver!");
@@ -1330,13 +1320,14 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           template <unsigned int, typename>
           typename parametersT,
-          typename lSol_float_t>
+          typename lSol_float_t,
+          class LayoutT>
 template <typename hyEdgeT>
-inline SmallVec<Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
-                lSol_float_t>
-Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_rhs_from_global_rhs(
-  hyEdgeT& hyper_edge,
-  const lSol_float_t time) const
+inline SmallVec<
+  Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, LayoutT>::n_loc_dofs_,
+  lSol_float_t>
+Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, LayoutT>::
+  assemble_rhs_from_global_rhs(hyEdgeT& hyper_edge, const lSol_float_t time) const
 {
   using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
@@ -1373,13 +1364,14 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           template <unsigned int, typename>
           typename parametersT,
-          typename lSol_float_t>
+          typename lSol_float_t,
+          class LayoutT>
 template <typename hyEdgeT, typename SmallVecT>
-inline SmallVec<Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_loc_dofs_,
-                lSol_float_t>
-Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::assemble_rhs_from_coeffs(
-  const SmallVecT& coeffs,
-  hyEdgeT& hyper_edge) const
+inline SmallVec<
+  Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, LayoutT>::n_loc_dofs_,
+  lSol_float_t>
+Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, LayoutT>::
+  assemble_rhs_from_coeffs(const SmallVecT& coeffs, hyEdgeT& hyper_edge) const
 {
   SmallVec<n_loc_dofs_, lSol_float_t> right_hand_side;
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
@@ -1400,12 +1392,14 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           template <unsigned int, typename>
           typename parametersT,
-          typename lSol_float_t>
+          typename lSol_float_t,
+          class LayoutT>
 template <typename hyEdgeT>
-inline SmallMat<2 * hyEdge_dimT,
-                Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_shape_bdr_,
-                lSol_float_t>
-Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::primal_at_boundary(
+inline SmallMat<
+  2 * hyEdge_dimT,
+  Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, LayoutT>::n_shape_bdr_,
+  lSol_float_t>
+Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, LayoutT>::primal_at_boundary(
   const SmallVec<n_loc_dofs_, lSol_float_t>& coeffs,
   hyEdgeT& hyper_edge) const
 {
@@ -1431,12 +1425,14 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           template <unsigned int, typename>
           typename parametersT,
-          typename lSol_float_t>
+          typename lSol_float_t,
+          class LayoutT>
 template <typename hyEdgeT>
-inline SmallMat<2 * hyEdge_dimT,
-                Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::n_shape_bdr_,
-                lSol_float_t>
-Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::dual_at_boundary(
+inline SmallMat<
+  2 * hyEdge_dimT,
+  Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, LayoutT>::n_shape_bdr_,
+  lSol_float_t>
+Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, LayoutT>::dual_at_boundary(
   const SmallVec<n_loc_dofs_, lSol_float_t>& coeffs,
   hyEdgeT& hyper_edge) const
 {
@@ -1466,14 +1462,16 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           template <unsigned int, typename>
           typename parametersT,
-          typename lSol_float_t>
+          typename lSol_float_t,
+          class LayoutT>
 template <typename abscissa_float_t,
           std::size_t abscissas_sizeT,
           class input_array_t,
           typename hyEdgeT>
-std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
-           Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
-Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk_values(
+std::array<
+  std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
+  Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, LayoutT>::system_dim>
+Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, LayoutT>::bulk_values(
   const std::array<abscissa_float_t, abscissas_sizeT>& abscissas,
   const input_array_t& lambda_values,
   hyEdgeT& hyper_edge,
@@ -1484,8 +1482,9 @@ Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::bulk_valu
   SmallVec<n_shape_fct_, lSol_float_t> coeffs;
   SmallVec<static_cast<unsigned int>(abscissas_sizeT), abscissa_float_t> helper(abscissas);
 
-  std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
-             Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t>::system_dim>
+  std::array<
+    std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(abscissas_sizeT)>,
+    Diffusion<hyEdge_dimT, poly_deg, quad_deg, parametersT, lSol_float_t, LayoutT>::system_dim>
     point_vals;
 
   for (unsigned int d = 0; d < system_dim; ++d)

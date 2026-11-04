@@ -262,10 +262,15 @@ allocates global vectors: every entry point takes vector-like inputs and outputs
 `std::span`). Serial; parallel sweeps are a separate step.
 
 `LocalSolver::Diffusion` (`include/HyperHDG/local_solver/diffusion_ldgh.hxx`) implements the
-protocol next to its legacy interface: LU of the local matrix plus the coupling blocks B, C, D
-tabulated once per operator (S = C A⁻¹ B + D); congruent elements share one operator when the
-parameters declare `constant_coefficients` (key: rounded span vectors). Operators are trivially
-copyable (`SmallMat` copy/move defaulted), the store is one contiguous array.
+protocol next to its legacy interface. It sets up the blocks of the local problem, A x = B λ + l,
+flux = C x + D λ (`local_blocks`), and its layout, a template parameter, decides what the
+operator keeps (`include/HyperHDG/local_solver/local_operator.hxx`): by default
+`LocalOperator::Condensed`, S = C A⁻¹ B + D and K = C A⁻¹ (apply is S λ, the residual S λ + K l),
+or `LocalOperator::Factored`, the LU of A with B, C, D, or a layout of one's own. A sweep without
+`prepare` uses the cheaper form to build (`Streaming`: the factors), and `errors` builds the
+operator with the local solution once per shared operator. Congruent elements share one operator
+when the parameters declare `constant_coefficients` (key: rounded span vectors). Operators are
+trivially copyable (`SmallMat` copy/move defaulted), the store is one contiguous array.
 
 Bindings (`bind_python.hxx`, `requires`-guarded as before): NumPy in and out. The prototype's
 `apply(x, y)`, `residual(x, r)` and `assemble(rows, cols, vals)` write into caller-allocated

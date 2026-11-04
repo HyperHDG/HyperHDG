@@ -1,7 +1,9 @@
 // The interface of GlobalLoop::Generic on one small instantiation (2D, degree 1, 3 x 3 elements):
 // properties a solve does not check by itself, such as that the streaming sweeps (no prepare)
 // agree with the prepared ones, that the assembled matrix is the matrix-free operator in both
-// modes, and how constraints, the store and reductions behave.
+// modes, and how constraints, the store and reductions behave. Run for every layout of the local
+// operator (local_solver/local_operator.hxx): Condensed (the default), Factored, and a layout of
+// one's own defined here (SinglePrecision); the layouts must agree with each other.
 #include <HyperHDG/geometry/unit_cube.hxx>
 #include <HyperHDG/global_loop/generic.hxx>
 #include <HyperHDG/local_solver/diffusion_ldgh.hxx>
@@ -16,10 +18,65 @@
 #include <random>
 #include <vector>
 
-using Loop = GlobalLoop::Generic<Topology::Cubic<2, 2>,
-                                 Geometry::UnitCube<2, 2, double>,
-                                 NodeDescriptor::Cubic<2, 2>,
-                                 LocalSolver::Diffusion<2, 1, 2, tests::DiffusionSin, double> >;
+// A layout of one's own: the condensed operator stored in single precision (half the memory of
+// Condensed) and applied in double. A layout is any type with make(blocks) returning an operator
+// with apply and residual; this one has no make_streaming, so it also serves sweeps without
+// prepare, and no local_solution, so errors factorize on the fly.
+struct SinglePrecision
+{
+  template <unsigned int n_ldofs, unsigned int n_loc, typename T>
+  struct Operator
+  {
+    SmallSquareMat<n_loc, float> S;
+    SmallMat<n_loc, n_ldofs, float> K;
+
+    template <unsigned int k, class Edge, class Args>
+    void apply(const Edge&,
+               const SmallMat<n_loc, k, T>& in,
+               const Args&,
+               SmallMat<n_loc, k, T>& out) const
+    {
+      for (unsigned int col = 0; col < k; ++col)
+        for (unsigned int row = 0; row < n_loc; ++row)
+        {
+          T sum = 0.;
+          for (unsigned int j = 0; j < n_loc; ++j)
+            sum += (T)S(row, j) * in(j, col);
+          out(row, col) = sum;
+        }
+    }
+    template <class Edge, class Args>
+    void residual(const Edge& edge,
+                  const SmallVec<n_loc, T>& lambda,
+                  const SmallVec<n_ldofs, T>& load,
+                  const Args& args,
+                  SmallVec<n_loc, T>& r) const
+    {
+      apply(edge, lambda, args, r);
+      for (unsigned int row = 0; row < n_loc; ++row)
+        for (unsigned int j = 0; j < n_ldofs; ++j)
+          r[row] += (T)K(row, j) * load[j];
+    }
+  };
+  template <unsigned int n_ldofs, unsigned int n_loc, typename T>
+  static Operator<n_ldofs, n_loc, T> make(const LocalOperator::Blocks<n_ldofs, n_loc, T>& blocks)
+  {
+    const auto condensed = LocalOperator::Condensed::make(blocks);
+    Operator<n_ldofs, n_loc, T> op;
+    for (unsigned int i = 0; i < n_loc * n_loc; ++i)
+      op.S[i] = (float)condensed.S[i];
+    for (unsigned int i = 0; i < n_loc * n_ldofs; ++i)
+      op.K[i] = (float)condensed.K[i];
+    return op;
+  }
+};
+
+template <class LayoutT>
+using LoopT =
+  GlobalLoop::Generic<Topology::Cubic<2, 2>,
+                      Geometry::UnitCube<2, 2, double>,
+                      NodeDescriptor::Cubic<2, 2>,
+                      LocalSolver::Diffusion<2, 1, 2, tests::DiffusionSin, double, LayoutT> >;
 using Vec = std::vector<double>;
 
 int failures = 0;
@@ -35,12 +92,14 @@ double max_difference(const Vec& a, const Vec& b)
     difference = std::max(difference, std::abs(a[i] - b[i]));
   return difference;
 }
+template <class Loop>
 Vec product(Loop& loop, const Vec& x)
 {
   Vec y(x.size());
   loop.apply(x, y);
   return y;
 }
+template <class Loop>
 Vec residual_of(Loop& loop, const Vec& x)
 {
   Vec r(x.size());
@@ -48,12 +107,13 @@ Vec residual_of(Loop& loop, const Vec& x)
   return r;
 }
 // Dense column-major matrix from the triplets of assemble; duplicate entries are summed.
+template <class Loop>
 Vec assembled(Loop& loop, const bool identity_rows)
 {
   const std::size_t n = loop.size_of_system(), m = loop.n_triplets(identity_rows);
   std::vector<unsigned int> rows(m), cols(m);
   Vec vals(m), dense(n * n, 0.);
-  loop.assemble(Loop::Args(), identity_rows, rows, cols, vals);
+  loop.assemble(typename Loop::Args(), identity_rows, rows, cols, vals);
   for (std::size_t k = 0; k < m; ++k)
     dense[cols[k] * n + rows[k]] += vals[k];
   return dense;
@@ -67,9 +127,18 @@ Vec multiply(const Vec& dense, const Vec& x)
   return y;
 }
 
-int main()
+// What every layout must agree on: the prepared apply, residual, matrix and error at x.
+struct Results
 {
-  const double tol = 1e-12;
+  Vec y, r, a;
+  double error;
+};
+
+template <class LayoutT>
+Results test(const char* layout, const double tol)
+{
+  std::printf("---- %s\n", layout);
+  using Loop = LoopT<LayoutT>;
   Loop loop(std::vector<unsigned int>{3, 3});
   const unsigned int n = loop.size_of_system();
   check(loop.n_hyEdges() == 9, "9 hyperedges");
@@ -144,15 +213,41 @@ int main()
   check(max_difference(assembled(loop, true), a_stream) <= tol,
         "prepared assemble = streaming assemble");
   const double error_prepared = loop.errors(x)[0];
+  const Results results{product(loop, x), residual_of(loop, x), assembled(loop, true),
+                        error_prepared};
 
   // ---- reductions, release
   const double count =
-    loop.reduce(x, Loop::Args(), [](auto&, const auto&, const auto&) { return 1.; }, 0.);
+    loop.reduce(x, typename Loop::Args(), [](auto&, const auto&, const auto&) { return 1.; }, 0.);
   check(count == 9., "reduce visits every hyperedge once");
   loop.release();
   check(!loop.prepared() && loop.n_operators() == 0, "release empties the store");
   check(std::abs(loop.errors(x)[0] - error_prepared) <= tol * error_prepared,
         "errors: streaming = prepared");
+  return results;
+}
 
+int main()
+{
+  const Results condensed =
+    test<LocalOperator::Condensed>("Condensed (S, K; Factored streaming)", 1e-12);
+  const Results factored = test<LocalOperator::Factored>("Factored (LU, B, C, D)", 1e-12);
+  const Results single = test<SinglePrecision>("SinglePrecision (a layout of one's own)", 1e-5);
+
+  std::printf("---- layouts against each other\n");
+  auto agree = [](const Results& a, const Results& b, const double tol)
+  {
+    auto relative = [](const Vec& u, const Vec& v)
+    {
+      double scale = 0.;
+      for (const double value : v)
+        scale = std::max(scale, std::abs(value));
+      return max_difference(u, v) / scale;
+    };
+    return relative(a.y, b.y) <= tol && relative(a.r, b.r) <= tol && relative(a.a, b.a) <= tol &&
+           std::abs(a.error - b.error) <= tol * b.error;
+  };
+  check(agree(condensed, factored, 1e-12), "Condensed = Factored: apply, residual, matrix, error");
+  check(agree(single, condensed, 1e-6), "SinglePrecision = Condensed up to float rounding");
   return failures;
 }

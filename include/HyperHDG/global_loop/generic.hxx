@@ -17,6 +17,35 @@
 
 namespace GlobalLoop
 {
+namespace detail
+{
+/*!*************************************************************************************************
+ * \brief   Whether the local solver has a Streaming form of its operator, and the operator type of
+ *a sweep without prepare (the Streaming form if there is one).
+ **************************************************************************************************/
+template <class SolverT, class EdgeT, class ArgsT>
+concept has_streaming_operator = requires(const SolverT& solver, EdgeT& edge, const ArgsT& args) {
+  solver.local_operator(edge, Stiffness{}, args, Streaming{});
+};
+template <class SolverT, class EdgeT, class ArgsT>
+struct streaming_operator
+{
+  using type = std::remove_cvref_t<
+    decltype(std::declval<const SolverT&>()
+               .local_operator(std::declval<EdgeT&>(), Stiffness{}, std::declval<const ArgsT&>()))>;
+};
+template <class SolverT, class EdgeT, class ArgsT>
+  requires has_streaming_operator<SolverT, EdgeT, ArgsT>
+struct streaming_operator<SolverT, EdgeT, ArgsT>
+{
+  using type = std::remove_cvref_t<decltype(std::declval<const SolverT&>().local_operator(
+    std::declval<EdgeT&>(),
+    Stiffness{},
+    std::declval<const ArgsT&>(),
+    Streaming{}))>;
+};
+}  // end of namespace detail
+
 /*!*************************************************************************************************
  * \brief   Prototype of the single global loop built on local operators.
  *
@@ -29,14 +58,18 @@ namespace GlobalLoop
  * Local solver protocol (cf. doc/local_operator_design.md):
  * - \c Args: runtime parameters (time, ...) forwarded to every call,
  * - \c local_operator(edge, Stiffness, args): builds the immutable per-edge operator with
- *   \c apply<k>(edge, in, args, out) and \c residual(edge, lambda, load, args, r),
+ *   \c apply<k>(edge, in, args, out) and \c residual(edge, lambda, load, args, r); its layout,
+ *   i.e. what is computed and kept, is the solver's (e.g. local_solver/local_operator.hxx),
+ * - optional \c local_operator(edge, Stiffness, args, Streaming): the operator for a single use (a
+ *   sweep without prepare), if the stored form is expensive to build,
  * - \c local_load(edge, args): the local right-hand side (loads, Dirichlet data) used by residual,
  * - \c error_sq(edge, op, lambda, args): per-edge error contribution; its type needs operator+,
  * - optional \c operator_key(edge, Stiffness, args): share one operator among equal edges,
  * - optional \c constrained_node<space_dim>(node_type): default predicate for constrain_dirichlet.
  *
  * Store: after \c prepare the operators live in a contiguous vector (one per distinct key) until
- * \c release. Without prepare every sweep streams: build, use, drop per hyperedge. Every public
+ * \c release. Without prepare every sweep streams: build (the Streaming form), use, drop per
+ * hyperedge. Every public
  * sweep takes that decision once and runs a branch-free per-edge body for the chosen mode.
  *
  * Constraints: a sorted index set of global dofs owned by the loop. apply is the identity there,
@@ -70,6 +103,8 @@ class Generic
   using Operator = std::remove_cvref_t<
     decltype(std::declval<const LocalSolverT&>()
                .local_operator(std::declval<Edge&>(), Stiffness{}, std::declval<const Args&>()))>;
+  // The operator of a sweep without prepare: the solver's Streaming form, if it has one.
+  using StreamingOperator = typename detail::streaming_operator<LocalSolverT, Edge, Args>::type;
   template <unsigned int k>
   using Traces = SmallMat<n_loc, k, dof_value_t>;
   using error_t = std::remove_cvref_t<decltype(std::declval<const LocalSolverT&>().error_sq(
@@ -253,7 +288,7 @@ class Generic
       [&](auto mode)
       {
         sweep<mode.value>(args,
-                          [&](std::size_t, Edge& edge, const Operator& op, const Dofs& dofs)
+                          [&](std::size_t, Edge& edge, const auto& op, const Dofs& dofs)
                           {
                             Traces<1> in, res;
                             gather(dofs, x, in);
@@ -276,7 +311,7 @@ class Generic
       [&](auto mode)
       {
         sweep<mode.value>(args,
-                          [&](std::size_t, Edge& edge, const Operator& op, const Dofs& dofs)
+                          [&](std::size_t, Edge& edge, const auto& op, const Dofs& dofs)
                           {
                             Traces<1> in, res;
                             gather(dofs, x, in);
@@ -355,7 +390,7 @@ class Generic
         [&](auto mode)
         {
           sweep<mode.value>(args,
-                            [&](std::size_t e, Edge& edge, const Operator& op, const Dofs& dofs)
+                            [&](std::size_t e, Edge& edge, const auto& op, const Dofs& dofs)
                             {
                               Traces<n_loc> loc_mat;
                               op.apply(edge, identity, args, loc_mat);
@@ -384,7 +419,7 @@ class Generic
       [&](auto mode)
       {
         sweep<mode.value>(args,
-                          [&](std::size_t, Edge& edge, const Operator& op, const Dofs& dofs)
+                          [&](std::size_t, Edge& edge, const auto& op, const Dofs& dofs)
                           {
                             Traces<1> in;
                             gather(dofs, x, in);
@@ -400,7 +435,7 @@ class Generic
   error_t errors(const VecT& x, const Args& args = Args())
   {
     error_t sum = reduce(
-      x, args, [&](Edge& edge, const Operator& op, const Traces<1>& lam)
+      x, args, [&](Edge& edge, const auto& op, const Traces<1>& lam)
       { return local_solver_.error_sq(edge, op, lam, args); }, error_t());
     for (unsigned int k = 0; k < sum.size(); ++k)
       sum[k] = std::sqrt(sum[k]);
@@ -468,6 +503,16 @@ class Generic
    * \brief   Run body(e, edge, operator, dofs) over all hyperedges; the operator comes from the
    *store or is built on the fly, decided at compile time.
    ************************************************************************************************/
+  /*!***********************************************************************************************
+   * \brief   The operator of one hyperedge for a single use: the solver's Streaming form, if any.
+   ************************************************************************************************/
+  StreamingOperator streaming_operator(Edge& edge, const Args& args) const
+  {
+    if constexpr (detail::has_streaming_operator<LocalSolverT, Edge, Args>)
+      return local_solver_.local_operator(edge, Stiffness{}, args, Streaming{});
+    else
+      return local_solver_.local_operator(edge, Stiffness{}, args);
+  }
   template <bool use_store, class Body>
   void sweep(const Args& args, Body body)
   {
@@ -481,7 +526,7 @@ class Generic
         body(e, edge, store_[slot_[e]], dofs);
       else
       {
-        const Operator op = local_solver_.local_operator(edge, Stiffness{}, args);
+        const StreamingOperator op = streaming_operator(edge, args);
         body(e, edge, op, dofs);
       }
     }
