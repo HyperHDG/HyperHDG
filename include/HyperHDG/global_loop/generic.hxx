@@ -123,6 +123,8 @@ class Generic
   std::vector<Operator> store_;              // one operator per distinct key (prepared only)
   std::vector<std::size_t> slot_;            // hyperedge -> index into store_
   std::vector<std::size_t> representative_;  // slot -> a hyperedge with that key
+  std::vector<std::size_t> slot_begin_;      // slot -> its first entry in slot_edges_
+  std::vector<std::size_t> slot_edges_;      // the hyperedges, grouped by slot
   bool prepared_ = false;
 
   std::vector<dof_index_t> constraints_;  // sorted global dof indices
@@ -260,6 +262,16 @@ class Generic
       release();
       throw;
     }
+    // the hyperedges of every slot, for reductions that build one operator per slot
+    slot_begin_.assign(representative_.size() + 1, 0);
+    for (std::size_t e = 0; e < n_edges; ++e)
+      ++slot_begin_[slot_[e] + 1];
+    for (std::size_t s = 0; s < representative_.size(); ++s)
+      slot_begin_[s + 1] += slot_begin_[s];
+    slot_edges_.resize(n_edges);
+    std::vector<std::size_t> next(slot_begin_.begin(), slot_begin_.end() - 1);
+    for (std::size_t e = 0; e < n_edges; ++e)
+      slot_edges_[next[slot_[e]]++] = e;
     prepared_ = true;
   }
   void release()
@@ -268,6 +280,8 @@ class Generic
     store_.shrink_to_fit();
     slot_.clear();
     representative_.clear();
+    slot_begin_.clear();
+    slot_edges_.clear();
     prepared_ = false;
   }
   bool prepared() const { return prepared_; }
@@ -434,9 +448,36 @@ class Generic
   template <class VecT>
   error_t errors(const VecT& x, const Args& args = Args())
   {
-    error_t sum = reduce(
-      x, args, [&](Edge& edge, const auto& op, const Traces<1>& lam)
-      { return local_solver_.error_sq(edge, op, lam, args); }, error_t());
+    auto error_sq = [&](Edge& edge, const auto& op, const Traces<1>& lam)
+    { return local_solver_.error_sq(edge, op, lam, args); };
+    error_t sum = error_t();
+    if constexpr (!requires(const Operator& op, Edge& e, const Traces<1>& lam, const Args& a) {
+                    op.local_solution(e, lam, local_solver_.local_load(e, a), a);
+                  })
+      if (prepared_)
+      {
+        // The stored operators lack the local solution (e.g. LocalOperator::Condensed): one
+        // Streaming operator per slot, shared by the slot's hyperedges, instead of the solver
+        // setting up the local problem again for every hyperedge.
+        for (std::size_t s = 0; s < representative_.size(); ++s)
+        {
+          Edge representative = hyper_graph_[representative_[s]];
+          const StreamingOperator op = streaming_operator(representative, args);
+          for (std::size_t k = slot_begin_[s]; k < slot_begin_[s + 1]; ++k)
+          {
+            Edge edge = hyper_graph_[slot_edges_[k]];
+            Dofs dofs;
+            local_dof_indices(edge, dofs);
+            Traces<1> lam;
+            gather(dofs, x, lam);
+            sum = sum + error_sq(edge, op, lam);
+          }
+        }
+        for (unsigned int k = 0; k < sum.size(); ++k)
+          sum[k] = std::sqrt(sum[k]);
+        return sum;
+      }
+    sum = reduce(x, args, error_sq, error_t());
     for (unsigned int k = 0; k < sum.size(); ++k)
       sum[k] = std::sqrt(sum[k]);
     return sum;
