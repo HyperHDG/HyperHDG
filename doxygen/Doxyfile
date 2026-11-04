@@ -1,0 +1,31 @@
+# HyperHDG's documentation. Run from the source root, after Doxyfile.tpp and Doxyfile.tpcc (their
+# tag files link TPP and TPCC types to their pages), with the output directory in the environment:
+#
+#   DOXYGEN_OUTPUT_DIRECTORY=build/doxygen doxygen doxygen/Doxyfile     # -> build/doxygen/html
+#
+# as the CMake target doxygen and .github/workflows/make_doxygen.yml do. Only the settings that
+# differ from Doxygen's defaults are listed. The submodules are not documented here: TPP and TPCC
+# get pages of their own (html/tpp, html/tpcc), nanobind has its own documentation (see
+# doxygen/include/external.md).
+
+PROJECT_NAME         = HyperHDG
+OUTPUT_DIRECTORY     = $(DOXYGEN_OUTPUT_DIRECTORY)
+INPUT                = .
+RECURSIVE            = YES
+EXCLUDE              = submodules build output .hyperhdg-cache python/.hyperhdg-cache
+EXCLUDE_PATTERNS     = */.git/* */CMakeFiles/* CMakeLists.txt CMakeCache.txt
+EXAMPLE_PATH         = examples
+TAGFILES             = $(DOXYGEN_OUTPUT_DIRECTORY)/tpp.tag=tpp \
+                       $(DOXYGEN_OUTPUT_DIRECTORY)/tpcc.tag=tpcc
+
+TAB_SIZE             = 2
+TOC_INCLUDE_HEADINGS = 0
+EXTRACT_ALL          = YES
+EXTRACT_PRIVATE      = YES
+EXTRACT_STATIC       = YES
+MACRO_EXPANSION      = YES
+EXPAND_ONLY_PREDEF   = YES
+USE_MATHJAX          = YES
+GENERATE_LATEX       = NO
+HAVE_DOT             = YES
+CALL_GRAPH           = YES
