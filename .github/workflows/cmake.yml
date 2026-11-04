@@ -131,11 +131,14 @@ jobs:
       if: always()
       run: ccache --show-stats --verbose
     # Which compiler calls missed the cache, and why ccache could not use its direct mode for some.
+    # CMake's configure checks (CMakeScratch/TryCompile-<random>) always miss: they are counted only.
     - name: ccache misses
       if: always()
       run: |
-        awk '/Source file:/ {src[$2] = $NF} /Result:/ {print $NF, src[$2]}' ccache.log \
-          | sort | uniq -c | sort -rn | grep -v '_hit ' | head -60
+        awk '/Source file:/ {src[$2] = $NF} /Result: cache_miss/ {print src[$2]}' ccache.log \
+          > misses.txt
+        echo "$(grep -c CMakeScratch/TryCompile misses.txt) misses of CMake configure checks; others:"
+        grep -v CMakeScratch/TryCompile misses.txt | sort | uniq -c | sort -rn | head -60
         grep -hoE 'Disabling direct mode.*|[Tt]oo new.*' ccache.log | sort | uniq -c | head -20
     - name: Upload ccache log
       if: always()
