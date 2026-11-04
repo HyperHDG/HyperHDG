@@ -29,6 +29,9 @@ jobs:
       CMAKE_CXX_COMPILER_LAUNCHER: ccache
       CCACHE_DIR: ${{ github.workspace }}/.ccache
       CCACHE_MAXSIZE: 500M
+      # One line per compiler call with its result; summarized by the step "ccache misses".
+      CCACHE_LOGFILE: ${{ github.workspace }}/ccache.log
+      APT: libopenblas-serial-dev ccache ${{ matrix.comp.pkg }}
 
       # Only the submodules the build needs (not docker.git).
       SUBMODULES: >-
@@ -62,14 +65,40 @@ jobs:
       uses: actions/setup-python@v5
       with:
         python-version: '3.13'
-        cache: pip
-        cache-dependency-path: .github/workflows/cmake.yml
-    - name: Install dependencies
+    # The installed packages, not only the downloaded wheels (unpacking and byte-compiling numpy
+    # and scipy took most of the step): keyed by the interpreter's location, which contains its
+    # exact version, and the package list.
+    - name: Restore Python packages
+      uses: actions/cache@v4
+      with:
+        path: ${{ env.pythonLocation }}/lib/python3.13/site-packages
+        key: site-packages-${{ env.pythonLocation }}-${{ env.PYTHON }}
+    - name: Install Python packages
+      run: python3 -m pip install ${{ env.PYTHON }}
+    # The .deb files apt would download, keyed by the runner image: on a hit, neither apt-get update
+    # nor a download, only dpkg (which runs the packages' scripts, e.g. the alternatives below).
+    - name: Runner image
+      id: image
+      run: echo "version=$ImageOS-$ImageVersion" >> $GITHUB_OUTPUT
+    - name: Restore apt packages
+      uses: actions/cache@v4
+      with:
+        path: ~/apt-debs
+        key: apt-${{ steps.image.outputs.version }}-${{ env.APT }}
+    - name: Install apt packages
       run: |
-        python3 -m pip install ${{ env.PYTHON }}
-        sudo apt-get update
-        sudo apt-get install -y --no-install-recommends \
-          libopenblas-serial-dev ccache ${{ matrix.comp.pkg }}
+        if ! ls ~/apt-debs/*.deb > /dev/null 2>&1; then
+          # only what this image lacks, into a directory of its own
+          mkdir -p ~/apt-debs/partial
+          sudo apt-get update
+          sudo apt-get install -y --no-install-recommends --download-only \
+            -o Dir::Cache::archives="$HOME/apt-debs" $APT
+          # apt ran as root: its lock and partial/ must not end up in the cache, which the runner
+          # user saves
+          sudo rm -rf ~/apt-debs/partial ~/apt-debs/lock
+          sudo chown -R "$USER" ~/apt-debs
+        fi
+        sudo dpkg -i ~/apt-debs/*.deb
         # The serial OpenBLAS (no threads, every test run is serial) is the system libblas.so and
         # liblapack.so through Debian's alternatives, instead of the reference implementations.
         readlink -f /usr/lib/x86_64-linux-gnu/libblas.so /usr/lib/x86_64-linux-gnu/liblapack.so
@@ -100,4 +129,18 @@ jobs:
         key: ccache-${{ matrix.comp.cxx }}-${{ github.sha }}
     - name: ccache statistics
       if: always()
-      run: ccache --show-stats
+      run: ccache --show-stats --verbose
+    # Which compiler calls missed the cache, and why ccache could not use its direct mode for some.
+    - name: ccache misses
+      if: always()
+      run: |
+        awk '/Source file:/ {src[$2] = $NF} /Result:/ {print $NF, src[$2]}' ccache.log \
+          | sort | uniq -c | sort -rn | grep -v '_hit ' | head -60
+        grep -hoE 'Disabling direct mode.*|[Tt]oo new.*' ccache.log | sort | uniq -c | head -20
+    - name: Upload ccache log
+      if: always()
+      uses: actions/upload-artifact@v4
+      with:
+        name: ccache-log-${{ matrix.comp.cxx }}
+        path: ccache.log
+        retention-days: 7
