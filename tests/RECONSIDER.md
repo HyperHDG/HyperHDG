@@ -15,6 +15,11 @@ its successor if there is one.
   solution of -u'' = 0 with Kirchhoff's law is 1 / (1 + sqrt 2), which Elliptic and Generic both
   give with Dirichlet data from the parameters)
 
+## Moved, not yet reconsidered
+
+- tests_c++/{diffusion_plotting, plot_simple, plot_refined, plot_vtkhdf, domain_hdf5}.cxx ->
+  tests/plotting/ (plotting runner); tests_c++/plot_vtkhdf_paraview.py -> tests/plotting/check_plots.py
+
 ## Open
 
 ### reproducibles_python/
@@ -70,12 +75,6 @@ its successor if there is one.
 - tests_c++/diffusion_dimensions.cxx
 - tests_c++/diffusion_floatings.cxx (DiffusionUniform in float, stays legacy with it; float on
   Generic + Diffusion: tests/diffusion_elliptic_float_d2_p2)
-- tests_c++/diffusion_plotting.cxx
-- tests_c++/domain_hdf5.cxx
-- tests_c++/plot_refined.cxx
-- tests_c++/plot_simple.cxx
-- tests_c++/plot_vtkhdf.cxx
-- tests_c++/plot_vtkhdf_paraview.py
 
 ### tests_python/
 

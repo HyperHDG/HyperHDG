@@ -44,3 +44,10 @@ if(NOT NOPYTHONTESTS AND Python3_Interpreter_FOUND)
            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
   set_tests_properties(hyperhdg_jit_py PROPERTIES ENVIRONMENT "${HYPERHDG_TEST_ENVIRONMENT}")
 endif()
+
+# Plotting and domain files: their own runner (.github/workflows/plotting.yml), off by default.
+option(HYPERHDG_PLOTTING_TESTS "Plotting and .geo.h5 tests (HDF5; pvbatch for the ParaView check)"
+       OFF)
+if(HYPERHDG_PLOTTING_TESTS)
+  add_subdirectory(plotting)
+endif()
