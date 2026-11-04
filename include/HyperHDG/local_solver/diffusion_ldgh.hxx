@@ -10,6 +10,7 @@
 
 #include <algorithm>
 #include <tuple>
+#include <type_traits>
 
 namespace LocalSolver
 {
@@ -1038,7 +1039,32 @@ class Diffusion
 
   static constexpr unsigned int n_loc = 2 * hyEdge_dimT * n_shape_bdr_;
   using Load = SmallVec<n_loc_dofs_, lSol_float_t>;
-  using Blocks = LocalOperator::Blocks<n_loc_dofs_, n_loc, lSol_float_t>;
+  /*!***********************************************************************************************
+   * \brief   How many leading local unknowns the factorization may eliminate explicitly.
+   *
+   * The flux unknowns come first (dim * n_shape_fct_ + i); their block of the local matrix is the
+   * mass matrix weighted with the inverse diffusion coefficient, the same for every component.
+   * With the orthonormal Legendre basis on affine hyperedges it is diagonal if the coefficient is
+   * constant on the hyperedge, which the parameters declare by constant_coefficients (as for
+   * operator_key). Then the factorization eliminates the fluxes and factorizes the Schur
+   * complement of the primal unknowns only (LocalOperator::detail::Factors; debug builds check the
+   * block is diagonal); otherwise it factorizes the whole local matrix.
+   ************************************************************************************************/
+  template <unsigned int space_dim>
+  static constexpr unsigned int n_eliminate()
+  {
+    using parameters = parametersT<space_dim, lSol_float_t>;
+    if constexpr (requires { parameters::constant_coefficients; })
+      return parameters::constant_coefficients ? hyEdge_dimT * n_shape_fct_ : 0;
+    else
+      return 0;
+  }
+  template <class Edge>
+  using Blocks = LocalOperator::Blocks<
+    n_loc_dofs_,
+    n_loc,
+    lSol_float_t,
+    n_eliminate<std::remove_cvref_t<decltype(Edge::geometry)>::space_dim()>()>;
 
   /*!***********************************************************************************************
    * \brief   Default constraint predicate: Dirichlet node types of the parameters.
@@ -1053,9 +1079,9 @@ class Diffusion
    * \brief   The blocks of the local problem of one hyperedge: A, and B, C, D tabulated.
    ************************************************************************************************/
   template <class Edge>
-  Blocks local_blocks(Edge& edge, GlobalLoop::Stiffness, const Args& args) const
+  Blocks<Edge> local_blocks(Edge& edge, GlobalLoop::Stiffness, const Args& args) const
   {
-    Blocks blocks;
+    Blocks<Edge> blocks;
     blocks.A = assemble_loc_matrix(tau_, edge, args.time);
     for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
     {
@@ -1115,7 +1141,7 @@ class Diffusion
                       const Args& args,
                       GlobalLoop::Streaming) const
   {
-    if constexpr (requires(const Blocks& blocks) { LayoutT::make_streaming(blocks); })
+    if constexpr (requires(const Blocks<Edge>& blocks) { LayoutT::make_streaming(blocks); })
       return checked([&] { return LayoutT::make_streaming(local_blocks(edge, kind, args)); });
     else
       return local_operator(edge, kind, args);

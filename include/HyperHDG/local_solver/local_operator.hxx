@@ -1,10 +1,13 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/dense_la.hxx>
+#include <HyperHDG/hy_assert.hxx>
 #include <HyperHDG/wrapper/lapack.hxx>
 
 #include <array>
+#include <cmath>
 #include <cstddef>
+#include <limits>
 
 /*!*************************************************************************************************
  * \brief   Layouts of local operators: what a local solver stores of its condensed local problem.
@@ -15,10 +18,15 @@
  *   A x = B lambda + l,    flux = C x + D lambda,
  *
  * with the local unknowns x (n_ldofs), the trace lambda (n_loc), and the local load l, which
- * depends on the hyperedge, the time and the data (local_load of the solver). A layout turns the
- * blocks into the operator GlobalLoop::Generic applies: any type with
+ * depends on the hyperedge, the time and the data (local_load of the solver). If the leading
+ * n_eliminate unknowns form a diagonal block of A (e.g. the flux unknowns of an LDG-H method with
+ * an orthonormal basis, affine elements and coefficients constant on the element), the solver says
+ * so in the type of its blocks; the factorization then eliminates them explicitly and factorizes
+ * the Schur complement of the others only (\c detail::Factors), in every layout.
  *
- *   template <unsigned n_ldofs, unsigned n_loc, typename T> static auto make(Blocks<...>);
+ * A layout turns the blocks into the operator GlobalLoop::Generic applies: any type with
+ *
+ *   template <class BlocksT> static auto make(const BlocksT&);
  *
  * returning an operator with apply<k>(edge, in, args, out), residual(edge, lambda, load, args, r)
  * and optionally local_solution(edge, lambda, load, args). It may also provide make_streaming, a
@@ -28,16 +36,23 @@
  *
  * Provided: \c Condensed (the default of Diffusion) stores S = C A^-1 B + D and K = C A^-1, so
  * that apply is S lambda and residual is S lambda + K l, without factors; \c Factored stores the
- * LU factors of A with B, C, D, as the local problem is set up, and also provides local_solution.
+ * factors of A with B, C, D, as the local problem is set up, and also provides local_solution.
  **************************************************************************************************/
 namespace LocalOperator
 {
 /*!*************************************************************************************************
  * \brief   The blocks of a condensed local problem, A x = B lambda + l, flux = C x + D lambda.
+ *
+ * \tparam  n_eliminateT  The leading n_eliminateT unknowns form a diagonal block of A, uncoupled
+ *                        among themselves, and are eliminated explicitly; 0: factorize A whole.
  **************************************************************************************************/
-template <unsigned int n_ldofs, unsigned int n_loc, typename T>
+template <unsigned int n_ldofsT, unsigned int n_locT, typename T, unsigned int n_eliminateT = 0>
 struct Blocks
 {
+  static constexpr unsigned int n_ldofs = n_ldofsT, n_loc = n_locT, n_eliminate = n_eliminateT;
+  using value_type = T;
+  static_assert(n_eliminate < n_ldofs, "At least one unknown is left to the factorization.");
+
   SmallSquareMat<n_ldofs, T> A;
   SmallMat<n_ldofs, n_loc, T> B;
   SmallMat<n_loc, n_ldofs, T> C;
@@ -47,42 +62,169 @@ struct Blocks
 namespace detail
 {
 /*!*************************************************************************************************
- * \brief   LU factors of A (getrf), in place.
- **************************************************************************************************/
-template <unsigned int n, typename T, std::size_t n_ipiv>
-void factorize(SmallSquareMat<n, T>& lu, std::array<int, n_ipiv>& ipiv)
-{
-  static_assert(n_ipiv == n, "One pivot per row.");
-  Wrapper::lapack_factorize<n, T>(lu.data(), ipiv);
-}
-/*!*************************************************************************************************
- * \brief   rhs = A^-1 rhs (trans = 'N') or A^-T rhs (trans = 'T'), from the LU factors.
+ * \brief   rhs = M^-1 rhs (trans = 'N') or M^-T rhs (trans = 'T'), from LU factors of M (getrs).
  **************************************************************************************************/
 template <unsigned int n, unsigned int k, typename T, std::size_t n_ipiv>
-void solve(const SmallSquareMat<n, T>& lu,
-           const std::array<int, n_ipiv>& ipiv,
-           SmallMat<n, k, T>& rhs,
-           const char trans = 'N')
+void lu_solve(const SmallSquareMat<n, T>& lu,
+              const std::array<int, n_ipiv>& ipiv,
+              SmallMat<n, k, T>& rhs,
+              const char trans = 'N')
 {
+  static_assert(n_ipiv == n, "One pivot per row.");
   // getrs reads the factors and pivots only; the wrapper takes non-const pointers.
   Wrapper::lapack_solve_factored(n, k, const_cast<T*>(lu.data().data()),
                                  const_cast<int*>(ipiv.data()), rhs.data().data(), trans);
 }
+
+/*!*************************************************************************************************
+ * \brief   Factors of the local matrix A, with the diagonal block of the leading n_eliminate
+ *          unknowns eliminated explicitly.
+ *
+ * With A = [D_A, A_DR; A_RD, A_RR] (D_A diagonal, of size n_eliminate), A x = b is
+ *   x_R = S^-1 (b_R - A_RD D_A^-1 b_D),  x_D = D_A^-1 (b_D - A_DR x_R),
+ * with the Schur complement S = A_RR - A_RD D_A^-1 A_DR, of which LU factors are kept. Building
+ * costs about 2 n_D n_R^2 + 2/3 n_R^3 instead of 2/3 n^3 flops, a solve about 2 n_R^2 + 4 n_D n_R
+ * instead of 2 n^2 per right-hand side, and the factors (2 n_D + n_R) n_R + n_D numbers instead of
+ * n^2. Debug builds check that D_A is diagonal (up to 100 epsilon of T, relative).
+ **************************************************************************************************/
+template <unsigned int n, unsigned int n_eliminate, typename T>
+struct Factors
+{
+  static constexpr unsigned int n_d = n_eliminate, n_r = n - n_eliminate;
+
+  SmallVec<n_d, T> d_inv;
+  SmallMat<n_d, n_r, T> a_dr;
+  SmallMat<n_r, n_d, T> a_rd;
+  SmallSquareMat<n_r, T> lu;
+  std::array<int, n_r> ipiv;
+
+  Factors() = default;
+  explicit Factors(const SmallSquareMat<n, T>& a)
+  {
+    for (unsigned int i = 0; i < n_d; ++i)
+    {
+      if constexpr (hy_debug_mode)
+        for (unsigned int j = 0; j < n_d; ++j)
+          hy_assert(
+            i == j ||
+              std::abs(a(i, j)) <= 100 * std::numeric_limits<T>::epsilon() * std::abs(a(i, i)),
+            "Eliminated unknowns must form a diagonal block of the local matrix, but entry ("
+              << i << ", " << j << ") is " << a(i, j) << ".");
+      d_inv[i] = (T)1. / a(i, i);
+      for (unsigned int j = 0; j < n_r; ++j)
+      {
+        a_dr(i, j) = a(i, n_d + j);
+        a_rd(j, i) = a(n_d + j, i);
+      }
+    }
+    for (unsigned int j = 0; j < n_r; ++j)
+      for (unsigned int i = 0; i < n_r; ++i)
+      {
+        T schur = a(n_d + i, n_d + j);
+        for (unsigned int k = 0; k < n_d; ++k)
+          schur -= a_rd(i, k) * d_inv[k] * a_dr(k, j);
+        lu(i, j) = schur;
+      }
+    Wrapper::lapack_factorize<n_r, T>(lu.data(), ipiv);
+  }
+
+  /*!
+   * rhs = A^-1 rhs (trans = 'N') or A^-T rhs (trans = 'T'); with A^T the roles of A_DR and A_RD
+   * swap and S is solved transposed.
+   */
+  template <unsigned int k>
+  void solve(SmallMat<n, k, T>& rhs, const char trans = 'N') const
+  {
+    if (trans == 'N')
+      solve_impl<false>(rhs);
+    else
+      solve_impl<true>(rhs);
+  }
+
+ private:
+  template <bool transposedT, unsigned int k>
+  void solve_impl(SmallMat<n, k, T>& rhs) const
+  {
+    // the blocks of A (or of A^T) below and above the eliminated diagonal block
+    auto lower = [this](const unsigned int i, const unsigned int j)
+    {
+      if constexpr (transposedT)
+        return a_dr(j, i);
+      else
+        return a_rd(i, j);
+    };
+    auto upper = [this](const unsigned int i, const unsigned int j)
+    {
+      if constexpr (transposedT)
+        return a_rd(j, i);
+      else
+        return a_dr(i, j);
+    };
+    SmallMat<n_r, k, T> x_r;
+    for (unsigned int col = 0; col < k; ++col)
+      for (unsigned int i = 0; i < n_r; ++i)
+      {
+        T value = rhs(n_d + i, col);
+        for (unsigned int j = 0; j < n_d; ++j)
+          value -= lower(i, j) * d_inv[j] * rhs(j, col);
+        x_r(i, col) = value;
+      }
+    lu_solve(lu, ipiv, x_r, transposedT ? 'T' : 'N');
+    for (unsigned int col = 0; col < k; ++col)
+    {
+      for (unsigned int i = 0; i < n_d; ++i)
+      {
+        T value = rhs(i, col);
+        for (unsigned int j = 0; j < n_r; ++j)
+          value -= upper(i, j) * x_r(j, col);
+        rhs(i, col) = d_inv[i] * value;
+      }
+      for (unsigned int i = 0; i < n_r; ++i)
+        rhs(n_d + i, col) = x_r(i, col);
+    }
+  }
+};
+
+/*!*************************************************************************************************
+ * \brief   Factors of the whole local matrix A (no unknowns eliminated): its LU factors.
+ **************************************************************************************************/
+template <unsigned int n, typename T>
+struct Factors<n, 0, T>
+{
+  SmallSquareMat<n, T> lu;
+  std::array<int, n> ipiv;
+
+  Factors() = default;
+  explicit Factors(const SmallSquareMat<n, T>& a) : lu(a)
+  {
+    Wrapper::lapack_factorize<n, T>(lu.data(), ipiv);
+  }
+  template <unsigned int k>
+  void solve(SmallMat<n, k, T>& rhs, const char trans = 'N') const
+  {
+    lu_solve(lu, ipiv, rhs, trans);
+  }
+};
+
+template <class BlocksT>
+using FactorsOf = Factors<BlocksT::n_ldofs, BlocksT::n_eliminate, typename BlocksT::value_type>;
 }  // end of namespace detail
 
 /*!*************************************************************************************************
- * \brief   The blocks as the local problem is set up: LU factors of A, B, C, D.
+ * \brief   The blocks as the local problem is set up: the factors of A, B, C, D.
  *
  * Cheap to build (one factorization), expensive to apply (a solve with A per application), and
  * it provides local_solution. Used for streaming by Condensed.
  **************************************************************************************************/
 struct Factored
 {
-  template <unsigned int n_ldofs, unsigned int n_loc, typename T>
+  template <class BlocksT>
   struct Operator
   {
-    SmallSquareMat<n_ldofs, T> lu;
-    std::array<int, n_ldofs> ipiv;
+    static constexpr unsigned int n_ldofs = BlocksT::n_ldofs, n_loc = BlocksT::n_loc;
+    using T = typename BlocksT::value_type;
+
+    detail::FactorsOf<BlocksT> factors;
     SmallMat<n_ldofs, n_loc, T> B;
     SmallMat<n_loc, n_ldofs, T> C;
     SmallSquareMat<n_loc, T> D;
@@ -94,7 +236,7 @@ struct Factored
                SmallMat<n_loc, k, T>& out) const
     {
       SmallMat<n_ldofs, k, T> x = B * in;
-      detail::solve(lu, ipiv, x);
+      factors.solve(x);
       out = C * x + D * in;
     }
     template <class Edge, class Args>
@@ -113,21 +255,15 @@ struct Factored
                                         const Args&) const
     {
       SmallVec<n_ldofs, T> x = B * lambda + load;
-      detail::solve(lu, ipiv, x);
+      factors.solve(x);
       return x;
     }
   };
 
-  template <unsigned int n_ldofs, unsigned int n_loc, typename T>
-  static Operator<n_ldofs, n_loc, T> make(const Blocks<n_ldofs, n_loc, T>& blocks)
+  template <class BlocksT>
+  static Operator<BlocksT> make(const BlocksT& blocks)
   {
-    Operator<n_ldofs, n_loc, T> op;
-    op.lu = blocks.A;
-    detail::factorize(op.lu, op.ipiv);
-    op.B = blocks.B;
-    op.C = blocks.C;
-    op.D = blocks.D;
-    return op;
+    return Operator<BlocksT>{detail::FactorsOf<BlocksT>(blocks.A), blocks.B, blocks.C, blocks.D};
   }
 };
 
@@ -142,9 +278,12 @@ struct Factored
  **************************************************************************************************/
 struct Condensed
 {
-  template <unsigned int n_ldofs, unsigned int n_loc, typename T>
+  template <class BlocksT>
   struct Operator
   {
+    static constexpr unsigned int n_ldofs = BlocksT::n_ldofs, n_loc = BlocksT::n_loc;
+    using T = typename BlocksT::value_type;
+
     SmallSquareMat<n_loc, T> S;
     SmallMat<n_loc, n_ldofs, T> K;
 
@@ -167,24 +306,22 @@ struct Condensed
     }
   };
 
-  template <unsigned int n_ldofs, unsigned int n_loc, typename T>
-  static Operator<n_ldofs, n_loc, T> make(const Blocks<n_ldofs, n_loc, T>& blocks)
+  template <class BlocksT>
+  static Operator<BlocksT> make(const BlocksT& blocks)
   {
-    SmallSquareMat<n_ldofs, T> lu = blocks.A;
-    std::array<int, n_ldofs> ipiv;
-    detail::factorize(lu, ipiv);
-    Operator<n_ldofs, n_loc, T> op;
-    SmallMat<n_ldofs, n_loc, T> ainv_b = blocks.B;
-    detail::solve(lu, ipiv, ainv_b);
+    const detail::FactorsOf<BlocksT> factors(blocks.A);
+    Operator<BlocksT> op;
+    auto ainv_b = blocks.B;
+    factors.solve(ainv_b);
     op.S = blocks.C * ainv_b + blocks.D;
     // K = C A^-1, i.e. K^T = A^-T C^T: one solve with the transposed factors
-    SmallMat<n_ldofs, n_loc, T> kt = transposed(blocks.C);
-    detail::solve(lu, ipiv, kt, 'T');
+    auto kt = transposed(blocks.C);
+    factors.solve(kt, 'T');
     op.K = transposed(kt);
     return op;
   }
-  template <unsigned int n_ldofs, unsigned int n_loc, typename T>
-  static auto make_streaming(const Blocks<n_ldofs, n_loc, T>& blocks)
+  template <class BlocksT>
+  static auto make_streaming(const BlocksT& blocks)
   {
     return Factored::make(blocks);
   }

@@ -24,9 +24,12 @@
 // prepare, and no local_solution, so errors factorize on the fly.
 struct SinglePrecision
 {
-  template <unsigned int n_ldofs, unsigned int n_loc, typename T>
+  template <class BlocksT>
   struct Operator
   {
+    static constexpr unsigned int n_ldofs = BlocksT::n_ldofs, n_loc = BlocksT::n_loc;
+    using T = typename BlocksT::value_type;
+
     SmallSquareMat<n_loc, float> S;
     SmallMat<n_loc, n_ldofs, float> K;
 
@@ -58,25 +61,32 @@ struct SinglePrecision
           r[row] += (T)K(row, j) * load[j];
     }
   };
-  template <unsigned int n_ldofs, unsigned int n_loc, typename T>
-  static Operator<n_ldofs, n_loc, T> make(const LocalOperator::Blocks<n_ldofs, n_loc, T>& blocks)
+  template <class BlocksT>
+  static Operator<BlocksT> make(const BlocksT& blocks)
   {
     const auto condensed = LocalOperator::Condensed::make(blocks);
-    Operator<n_ldofs, n_loc, T> op;
-    for (unsigned int i = 0; i < n_loc * n_loc; ++i)
+    Operator<BlocksT> op;
+    for (unsigned int i = 0; i < BlocksT::n_loc * BlocksT::n_loc; ++i)
       op.S[i] = (float)condensed.S[i];
-    for (unsigned int i = 0; i < n_loc * n_ldofs; ++i)
+    for (unsigned int i = 0; i < BlocksT::n_loc * BlocksT::n_ldofs; ++i)
       op.K[i] = (float)condensed.K[i];
     return op;
   }
 };
 
-template <class LayoutT>
-using LoopT =
-  GlobalLoop::Generic<Topology::Cubic<2, 2>,
-                      Geometry::UnitCube<2, 2, double>,
-                      NodeDescriptor::Cubic<2, 2>,
-                      LocalSolver::Diffusion<2, 1, 2, tests::DiffusionSin, double, LayoutT> >;
+// The same problem with the coefficients declared as varying: the local matrix is factorized
+// whole (no fluxes eliminated) and every hyperedge has an operator of its own (no operator_key).
+template <unsigned int space_dimT, typename param_float_t = double>
+struct DiffusionSinVarying : tests::DiffusionSin<space_dimT, param_float_t>
+{
+  static constexpr bool constant_coefficients = false;
+};
+
+template <class LayoutT, template <unsigned int, typename> class ParametersT = tests::DiffusionSin>
+using LoopT = GlobalLoop::Generic<Topology::Cubic<2, 2>,
+                                  Geometry::UnitCube<2, 2, double>,
+                                  NodeDescriptor::Cubic<2, 2>,
+                                  LocalSolver::Diffusion<2, 1, 2, ParametersT, double, LayoutT> >;
 using Vec = std::vector<double>;
 
 int failures = 0;
@@ -227,6 +237,23 @@ Results test(const char* layout, const double tol)
   return results;
 }
 
+// The Results of test() on the same x, without the checks (for the varying parameters).
+template <class Loop>
+Results results_only()
+{
+  Loop loop(std::vector<unsigned int>{3, 3});
+  const unsigned int n = loop.size_of_system();
+  std::mt19937 generator(1);
+  std::uniform_real_distribution<double> uniform(-1., 1.);
+  Vec x(n), z(n);
+  for (unsigned int i = 0; i < n; ++i)
+    x[i] = uniform(generator), z[i] = uniform(generator);
+  loop.constrain_dirichlet_nodes();
+  loop.prepare();
+  check(loop.n_operators() == loop.n_hyEdges(), "varying coefficients: an operator per hyperedge");
+  return Results{product(loop, x), residual_of(loop, x), assembled(loop, true), loop.errors(x)[0]};
+}
+
 int main()
 {
   const Results condensed =
@@ -248,6 +275,12 @@ int main()
            std::abs(a.error - b.error) <= tol * b.error;
   };
   check(agree(condensed, factored, 1e-12), "Condensed = Factored: apply, residual, matrix, error");
+  // with the fluxes eliminated (constant coefficients) and without (declared varying)
+  const Results whole = results_only<LoopT<LocalOperator::Factored, DiffusionSinVarying> >();
+  const Results whole_condensed =
+    results_only<LoopT<LocalOperator::Condensed, DiffusionSinVarying> >();
+  check(agree(factored, whole, 1e-12), "fluxes eliminated = whole local matrix factorized");
+  check(agree(whole_condensed, whole, 1e-12), "and Condensed = Factored without elimination");
   check(agree(single, condensed, 1e-6), "SinglePrecision = Condensed up to float rounding");
   return failures;
 }
