@@ -9,6 +9,10 @@ its successor if there is one.
 
 - reproducibles_python/diffusion_convergence_elliptic.py -> tests/diffusion_elliptic.cxx
 - tests_c++/point_functions.cxx, tests_c++/qr_handedness.cxx -> tests/dense_la.cxx
+- tests_c++/diffusion_dimensions.cxx, its Diffusion part -> tests/diffusion_embedded.cxx (the
+  DiffusionUniform part stays legacy; its do_test_standard expects 0.5 at the free nodes, the
+  solution of -u'' = 0 with Kirchhoff's law is 1 / (1 + sqrt 2), which Elliptic and Generic both
+  give with Dirichlet data from the parameters)
 
 ## Open
 

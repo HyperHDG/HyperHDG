@@ -24,3 +24,11 @@ add_hyperhdg_test(cg cg.cxx)
 add_hyperhdg_test(dense_la dense_la.cxx)
 add_hyperhdg_test(generic generic.cxx)
 add_hyperhdg_ladder_test(diffusion_elliptic.cxx)
+
+# Hyperedges of dimension 1 embedded in spaces of dimension 1 to 5 (domains/simplex_1_*.geo).
+foreach(space_dim 1 2 3 4 5)
+  add_hyperhdg_test(diffusion_embedded_s${space_dim} diffusion_embedded.cxx)
+  target_compile_definitions(diffusion_embedded_s${space_dim} PRIVATE SPACE_DIM=${space_dim})
+  set_tests_properties(diffusion_embedded_s${space_dim} PROPERTIES WORKING_DIRECTORY
+                                                                   ${PROJECT_SOURCE_DIR})
+endforeach()
