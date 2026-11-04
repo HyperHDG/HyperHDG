@@ -38,6 +38,12 @@ endforeach()
 add_hyperhdg_test(diffusion_elliptic_float_d2_p1 diffusion_elliptic.cxx)
 target_compile_definitions(diffusion_elliptic_float_d2_p1 PRIVATE DIM=2 DEGREE=1 REAL=float)
 
+# DiffusionTensor (sum factorization) against Diffusion, one executable per dimension.
+foreach(dim 1 2 3)
+  add_hyperhdg_test(diffusion_tensor_d${dim} diffusion_tensor.cxx)
+  target_compile_definitions(diffusion_tensor_d${dim} PRIVATE DIM=${dim})
+endforeach()
+
 # The Python side (nanobind is set up in the top-level CMakeLists.txt):
 # - bindings.py: the NumPy bindings of Generic on a module built here (bindings_module.cxx).
 # - hyperhdg_jit.py: python/hyperhdg.py on trivial modules, which it compiles just in time; a CMake
