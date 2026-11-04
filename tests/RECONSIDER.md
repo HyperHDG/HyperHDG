@@ -5,10 +5,14 @@ simpler test in tests/, moved to examples/, or deleted. None of them is a reason
 change code; a file that breaks is fixed or retired. Strike an entry when it is settled, and name
 its successor if there is one.
 
-## Replaced (successor in tests/, oracle check pending)
+## Replaced and checked (the successor's tests/expected/ were seeded from the script's numbers)
 
 - reproducibles_python/diffusion_convergence_elliptic.py -> tests/diffusion_elliptic.cxx
-- reproducibles_python/timoshenko_convergence_cross.py -> tests/timoshenko.cxx
+  (Diffusion and DiffusionTensor, d1 and d2; the script can go)
+- reproducibles_python/timoshenko_convergence_cross.py -> tests/timoshenko.cxx (the script can go)
+
+## Replaced (successor in tests/, oracle check pending)
+
 - tests_c++/point_functions.cxx, tests_c++/qr_handedness.cxx -> tests/dense_la.cxx
 - tests_python/nanobind_bindings.py -> tests/hyperhdg_jit.py (its Elliptic checks retired)
 - tests_c++/{diffusion_plotting, plot_simple, plot_refined, plot_vtkhdf, domain_hdf5}.cxx ->
