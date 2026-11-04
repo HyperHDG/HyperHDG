@@ -94,3 +94,16 @@ endif()
 # The Timoshenko beam solver on Generic (cross of beams, domains/cross.geo; run in the source tree).
 add_hyperhdg_test(timoshenko timoshenko.cxx)
 set_tests_properties(timoshenko PROPERTIES WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+
+# Sparse direct solver (CHOLMOD) against CG, if SuiteSparse is found (not on the CI runners).
+# CHOLMOD's CMake config looks up OpenMP for C, so C is enabled where a C compiler exists.
+include(CheckLanguage)
+check_language(C)
+if(CMAKE_C_COMPILER)
+  enable_language(C)
+  find_package(CHOLMOD CONFIG QUIET)
+endif()
+if(TARGET SuiteSparse::CHOLMOD)
+  add_hyperhdg_test(sparse_direct sparse_direct.cxx)
+  target_link_libraries(sparse_direct PRIVATE SuiteSparse::CHOLMOD)
+endif()
