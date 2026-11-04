@@ -82,7 +82,7 @@ jobs:
       run: >
         cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
         -DHYPERHDG_LEGACY_TESTS=OFF -DNOPYTHONTESTS=ON -DHYPERHDG_PLOTTING_TESTS=ON
-        -DPVBATCH_EXECUTABLE=$HOME/paraview/bin/pvbatch
+        -DPVBATCH_EXECUTABLE=$HOME/paraview/bin/pvbatch -DPVBATCH_OPTIONS=--mesa
     - name: Build
       run: cmake --build build --target plotting_tests -j $(nproc)
     - name: Test

@@ -40,9 +40,13 @@ endif()
 # ParaView reads every plot back (values checked at every point) and renders it to
 # output/plots/<name>.png.
 find_program(PVBATCH_EXECUTABLE pvbatch)
+# Kitware's headless (OSMesa) builds need --mesa: their launcher then puts lib/mesa, where
+# libOSMesa finds libglapi, on LD_LIBRARY_PATH. A pvbatch of a distribution takes no options.
+set(PVBATCH_OPTIONS "" CACHE STRING "Options of pvbatch, e.g. --mesa for Kitware's OSMesa build")
 if(PVBATCH_EXECUTABLE)
   add_test(NAME plot_paraview
-           COMMAND ${PVBATCH_EXECUTABLE} ${CMAKE_CURRENT_SOURCE_DIR}/check_plots.py ${plot_files}
+           COMMAND ${PVBATCH_EXECUTABLE} ${PVBATCH_OPTIONS} ${CMAKE_CURRENT_SOURCE_DIR}/check_plots.py
+                   ${plot_files}
            WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
   set_tests_properties(plot_paraview PROPERTIES LABELS plotting DEPENDS "${plot_writers}")
 else()
