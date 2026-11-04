@@ -1,12 +1,13 @@
-// Quadruple precision (std::float128_t) end to end: DiffusionTensor on the unit square, degree 2,
-// with an exact solution in the discrete space (u = x_0^2 + x_0 x_1 + x_1^2), which LDG-H
-// reproduces exactly, so the error measures round-off only: about 1e-15 in double, about 1e-30 in
-// std::float128_t. That needs the quadrature, the local operator, CG and the error integration in
-// the wide type (no LAPACK: DiffusionTensor factorizes nothing, its eigensolver is generic).
-// Built only with -DHYPERHDG_QUAD_TESTS=ON and a compiler with std::float128_t (GCC >= 13).
+// Quadruple precision (std::float128_t) end to end: Diffusion on the unit square, degree 2, with
+// an exact solution in the discrete space (u = x_0^2 + x_0 x_1 + x_1^2), which LDG-H reproduces
+// exactly, so the error measures round-off only: about 1e-15 in double, about 1e-30 in
+// std::float128_t. That needs the quadrature, the local factorization, CG and the error
+// integration in the wide type; LAPACK has no std::float128_t, so the factorization runs on the
+// generic LU of dense_la.hxx (namespace LU). Built only with -DHYPERHDG_QUAD_TESTS=ON and a
+// compiler with std::float128_t (GCC >= 13).
 #include <HyperHDG/geometry/unit_cube.hxx>
 #include <HyperHDG/global_loop/generic.hxx>
-#include <HyperHDG/local_solver/diffusion_tensor.hxx>
+#include <HyperHDG/local_solver/diffusion_ldgh.hxx>
 #include <HyperHDG/node_descriptor/cubic.hxx>
 #include <HyperHDG/sparse_la.hxx>
 #include <HyperHDG/topology/cubic.hxx>
@@ -60,7 +61,7 @@ double error(const double rtol)
 {
   using Loop = GlobalLoop::Generic<Topology::Cubic<2, 2>, Geometry::UnitCube<2, 2, T>,
                                    NodeDescriptor::Cubic<2, 2>,
-                                   LocalSolver::DiffusionTensor<2, 2, 4, Quadratic, T>, T>;
+                                   LocalSolver::Diffusion<2, 2, 4, Quadratic, T>, T>;
   Loop loop(std::vector<unsigned int>{4, 4});
   loop.constrain_dirichlet_nodes();
   loop.prepare();
