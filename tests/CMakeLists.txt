@@ -1,4 +1,7 @@
+# RECORDS: the test checks its record lines against expected/<name>.yaml (tests/records.hxx);
+# HYPERHDG_RECORD=1 ctest -R <name> writes that file instead.
 function(add_hyperhdg_test name source)
+  cmake_parse_arguments(PARSE_ARGV 2 arg "RECORDS" "" "")
   add_executable(${name} ${source})
   # Debug builds keep the assertions but optimize: at -O0 the solves dominate the CI job.
   target_compile_options(${name} PRIVATE $<$<CONFIG:Debug>:-O2>)
@@ -9,6 +12,10 @@ function(add_hyperhdg_test name source)
   target_link_options(${name} PRIVATE $<$<BOOL:${MINGW}>:-Wl,--stack,8388608>)
   target_link_libraries(${name} PRIVATE HyperHDG)
   target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR})
+  if(arg_RECORDS)
+    target_compile_definitions(
+      ${name} PRIVATE RECORDS_FILE="${CMAKE_CURRENT_SOURCE_DIR}/expected/${name}.yaml")
+  endif()
   add_test(NAME ${name} COMMAND ${name})
   set_tests_properties(${name} PROPERTIES ENVIRONMENT "${HYPERHDG_TEST_ENVIRONMENT}")
 endfunction()
@@ -28,6 +35,7 @@ endfunction()
 add_hyperhdg_test(cg cg.cxx)
 add_hyperhdg_test(dense_la dense_la.cxx)
 add_hyperhdg_test(generic generic.cxx)
+add_hyperhdg_test(records records.cxx)
 add_hyperhdg_ladder_test(diffusion_elliptic.cxx)
 
 # Hyperedges of dimension 1 embedded in spaces of dimension 1 to 5 (domains/simplex_1_*.geo).
