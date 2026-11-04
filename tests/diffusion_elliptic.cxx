@@ -11,8 +11,8 @@
 #include <HyperHDG/node_descriptor/cubic.hxx>
 #include <HyperHDG/sparse_la.hxx>
 #include <HyperHDG/topology/cubic.hxx>
-#include <HyperHDG/wrapper/lapack.hxx>
 
+#include <tests/direct_solve.hxx>
 #include <tests/parameters/diffusion.hxx>
 
 #include <algorithm>
@@ -46,20 +46,6 @@ using Loop =
                       NodeDescriptor::Cubic<dim, dim>,
                       LocalSolver::Diffusion<dim, degree, 2 * degree, tests::DiffusionSin, real>,
                       real>;
-
-// Dense LU of the assembled matrix (constrained rows are identity rows, as in apply).
-std::vector<real> direct_solve(Loop& loop, std::vector<real> rhs)
-{
-  const unsigned int size = loop.size_of_system();
-  const std::size_t n_triplets = loop.n_triplets(true);
-  std::vector<unsigned int> rows(n_triplets), cols(n_triplets);
-  std::vector<real> vals(n_triplets), dense((std::size_t)size * size, 0.);
-  loop.assemble(Loop::Args(), true, rows, cols, vals);
-  for (std::size_t k = 0; k < n_triplets; ++k)
-    dense[(std::size_t)cols[k] * size + rows[k]] += vals[k];  // column-major, duplicates summed
-  Wrapper::lapack_solve(size, 1, dense.data(), rhs.data());   // throws if the matrix is singular
-  return rhs;
-}
 
 int main()
 {
@@ -100,7 +86,7 @@ int main()
 
     if (size <= max_direct_dofs)
     {
-      const std::vector<real> x_direct = direct_solve(loop, rhs);
+      const std::vector<real> x_direct = tests::direct_solve(loop, rhs);
       double difference = 0., scale = 0.;
       for (unsigned int i = 0; i < size; ++i)
       {

@@ -91,6 +91,10 @@ if(HYPERHDG_QUAD_TESTS)
   endif()
 endif()
 
-# The Timoshenko beam solver on Generic (cross of beams, domains/cross.geo; run in the source tree).
-add_hyperhdg_test(timoshenko timoshenko.cxx)
-set_tests_properties(timoshenko PROPERTIES WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+# The Timoshenko beam solver on Generic (cross of beams, domains/cross.geo; run in the source tree),
+# one executable per degree.
+foreach(degree 1 2 3)
+  add_hyperhdg_test(timoshenko_p${degree} timoshenko.cxx)
+  target_compile_definitions(timoshenko_p${degree} PRIVATE DEGREE=${degree})
+  set_tests_properties(timoshenko_p${degree} PROPERTIES WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+endforeach()
