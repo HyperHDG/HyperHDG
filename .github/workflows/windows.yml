@@ -2,15 +2,25 @@
 
 name: Windows
 
-on: [push]
+# Portability (MinGW-w64, the Python modules as .pyd) is checked on pull requests, on main, and on
+# demand, not on every push to a branch.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# A new push to a pull request supersedes the run of the previous one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
   PKGS: >-
     mingw-w64-ucrt-x86_64-gcc mingw-w64-ucrt-x86_64-cmake mingw-w64-ucrt-x86_64-ninja
-    mingw-w64-ucrt-x86_64-openblas mingw-w64-ucrt-x86_64-lapack mingw-w64-ucrt-x86_64-hdf5
-    mingw-w64-ucrt-x86_64-python mingw-w64-ucrt-x86_64-cython mingw-w64-ucrt-x86_64-python-numpy
-    mingw-w64-ucrt-x86_64-python-scipy mingw-w64-ucrt-x86_64-python-matplotlib
-    mingw-w64-ucrt-x86_64-python-pandas mingw-w64-ucrt-x86_64-python-joblib
+    mingw-w64-ucrt-x86_64-openblas mingw-w64-ucrt-x86_64-lapack
+    mingw-w64-ucrt-x86_64-python mingw-w64-ucrt-x86_64-python-numpy
+    mingw-w64-ucrt-x86_64-python-scipy
 
 
 jobs:
@@ -19,6 +29,11 @@ jobs:
   build_and_test_windows:
     name: Test code with MinGW-w64 g++ (MSYS2 UCRT64) on windows-latest
     runs-on: windows-latest
+    env:
+      # Only the submodules the build needs (not docker.git).
+      SUBMODULES: >-
+        submodules/tensor_product_chain_complex.git submodules/tensor_product_polynomials.git
+        submodules/nanobind.git
 
     defaults:
       run:
@@ -27,17 +42,40 @@ jobs:
     steps:
     - name: Checkout
       uses: actions/checkout@v4
+    # The submodule repositories are cached by the commits they are pinned to (as in cmake.yml),
+    # fetched with the runner's git before MSYS2 is set up.
+    - name: Submodule pins
+      id: pins
+      shell: bash
+      run: echo "hash=$(git ls-tree HEAD $SUBMODULES | sha256sum | cut -c1-16)" >> $GITHUB_OUTPUT
+    - name: Restore submodules
+      id: submodules
+      uses: actions/cache/restore@v4
       with:
-        submodules: recursive
+        path: .git/modules
+        key: submodules-${{ runner.os }}-${{ steps.pins.outputs.hash }}
+        restore-keys: submodules-${{ runner.os }}-
+    - name: Fetch submodules
+      shell: bash
+      run: git submodule update --init --recursive --depth 1 --jobs 4 -- $SUBMODULES
+    - name: Save submodules
+      if: steps.submodules.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: .git/modules
+        key: submodules-${{ runner.os }}-${{ steps.pins.outputs.hash }}
     - name: Set up MSYS2
       uses: msys2/setup-msys2@v2
       with:
         msystem: UCRT64
         update: true
         install: ${{ env.PKGS }}
+    # tests/ and examples/ only, without HDF5, as in cmake.yml.
     - name: Configure
-      run: cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=g++
+      run: >
+        cmake -S . -B build -G Ninja -DCMAKE_BUILD_TYPE=Debug -DCMAKE_CXX_COMPILER=g++
+        -DHYPERHDG_LEGACY_TESTS=OFF -DHYPERHDG_HDF5=OFF
     - name: Build
       run: cmake --build build --config Debug
     - name: Test
-      run: ctest --test-dir build -C Debug --output-on-failure
+      run: ctest --test-dir build -C Debug --output-on-failure -j $(nproc)

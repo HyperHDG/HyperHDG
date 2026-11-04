@@ -15,7 +15,7 @@
 // Three steps are plotted into one file, which is then read back with HDF5 and checked
 // against the coordinates it contains: steps and times, the values block of every step, the
 // mesh arrays (offsets, types, connectivity) and the Steps bookkeeping ParaView reads.
-// tests_c++/plot_vtkhdf_paraview.py opens the same files through ParaView's reader.
+// tests/plotting/check_plots.py opens the same files through ParaView's reader.
 
 template <unsigned int space_dimT, typename param_float_t = double>
 struct TestParameters

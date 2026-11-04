@@ -1,0 +1,133 @@
+name: Plotting
+
+# Plotting (VTU, VTKHDF) and domain files (.geo, .geo.h5): run when the code that writes or reads
+# them changes, weekly (changes can reach these headers indirectly), and on demand. The main
+# runner (cmake.yml) needs neither HDF5 nor ParaView.
+on:
+  push:
+    paths:
+      - 'include/HyperHDG/plot*.hxx'
+      - 'include/HyperHDG/read_domain*.hxx'
+      - 'include/HyperHDG/geometry/file.hxx'
+      - 'include/HyperHDG/topology/file.hxx'
+      - 'include/HyperHDG/node_descriptor/file.hxx'
+      - 'python/geo2h5.py'
+      - 'domains/**'
+      - 'tests/plotting/**'
+      - '.github/workflows/plotting.yml'
+  schedule:
+    - cron: '0 4 * * 1'
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+env:
+  # Kitware's official headless (OSMesa) build: renders without a display. Cached by version.
+  PARAVIEW: ParaView-5.13.3-osmesa-MPI-Linux-Python3.10-x86_64
+  PARAVIEW_URL: https://www.paraview.org/files/v5.13
+
+
+jobs:
+  plotting:
+    name: Plotting and domain files with g++-14 on ubuntu-24.04
+    runs-on: ubuntu-24.04
+    outputs:
+      plots: ${{ steps.plots.outputs.list }}
+    env:
+      CXX: g++-14
+      # Only the submodules the build needs (not docker.git).
+      SUBMODULES: >-
+        submodules/tensor_product_chain_complex.git submodules/tensor_product_polynomials.git
+        submodules/nanobind.git
+
+    steps:
+    - name: Checkout
+      uses: actions/checkout@v4
+    # The submodule repositories are cached by the commits they are pinned to (as in cmake.yml,
+    # whose caches this job shares).
+    - name: Submodule pins
+      id: pins
+      run: echo "hash=$(git ls-tree HEAD $SUBMODULES | sha256sum | cut -c1-16)" >> $GITHUB_OUTPUT
+    - name: Restore submodules
+      id: submodules
+      uses: actions/cache/restore@v4
+      with:
+        path: .git/modules
+        key: submodules-${{ steps.pins.outputs.hash }}
+        restore-keys: submodules-
+    - name: Fetch submodules
+      run: git submodule update --init --recursive --depth 1 --jobs 4 -- $SUBMODULES
+    - name: Save submodules
+      if: steps.submodules.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: .git/modules
+        key: submodules-${{ steps.pins.outputs.hash }}
+    - name: Install dependencies
+      run: |
+        sudo apt-get update
+        sudo apt-get install -y --no-install-recommends libopenblas-serial-dev libhdf5-dev \
+          libgl1 libx11-6 libxcb1
+        # libgl1, libx11-6, libxcb1: system libraries ParaView links (besides libc6, libcrypt1 and
+        # libgomp1)
+    - name: Restore ParaView
+      id: paraview
+      uses: actions/cache@v4
+      with:
+        path: ~/paraview
+        key: ${{ env.PARAVIEW }}
+    - name: Download ParaView
+      if: steps.paraview.outputs.cache-hit != 'true'
+      run: |
+        mkdir -p ~/paraview
+        curl -sSL "$PARAVIEW_URL/$PARAVIEW.tar.gz" | tar -xz -C ~/paraview --strip-components=1
+    - name: Configure
+      run: >
+        cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
+        -DHYPERHDG_LEGACY_TESTS=OFF -DNOPYTHONTESTS=ON -DHYPERHDG_PLOTTING_TESTS=ON
+        -DPVBATCH_EXECUTABLE=$HOME/paraview/bin/pvbatch -DPVBATCH_OPTIONS=--mesa
+    - name: Build
+      run: cmake --build build --target plotting_tests -j $(nproc)
+    - name: Test
+      run: ctest --test-dir build -L plotting --output-on-failure -j $(nproc)
+    # The rendered plots (output/plots/*.png) and the files they show, as one zip; the job
+    # plot-files below adds every plot as an artifact of its own.
+    - name: Upload plots
+      if: always()
+      uses: actions/upload-artifact@v7
+      with:
+        name: plots
+        path: |
+          output/plots/
+          output/plot_exact-*.vtu
+          output/plot_vtkhdf-*.vtkhdf
+        retention-days: 14
+    - name: List plots
+      id: plots
+      if: always()
+      run: echo "list=$(cd output/plots 2> /dev/null && ls *.png | jq -R . | jq -cs .)" >> $GITHUB_OUTPUT
+
+  # Every rendered plot as an artifact of its own, not zipped (an unzipped artifact holds one
+  # file), so that it opens in the browser from the run's page.
+  plot-files:
+    needs: plotting
+    if: always() && needs.plotting.outputs.plots != '' && needs.plotting.outputs.plots != '[]'
+    strategy:
+      matrix:
+        plot: ${{ fromJSON(needs.plotting.outputs.plots) }}
+    name: ${{ matrix.plot }}
+    runs-on: ubuntu-24.04
+    steps:
+    - name: Download plots
+      uses: actions/download-artifact@v8
+      with:
+        name: plots
+        path: plots
+    - name: Upload ${{ matrix.plot }}
+      uses: actions/upload-artifact@v7
+      with:
+        path: plots/plots/${{ matrix.plot }}
+        archive: false
+        retention-days: 14

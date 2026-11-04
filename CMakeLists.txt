@@ -128,18 +128,38 @@ if(HYPERHDG_OPENMP)
   endif()
 endif()
 
-## Add the examples subdirectory
-add_subdirectory(examples)
-
-## Add tests if requested through the BUILD_TESTING option (default: ON)
+## Add tests if requested through the BUILD_TESTING option (default: ON). tests_python predates
+## tests/ and is being migrated there (tests/RECONSIDER.md); -DHYPERHDG_LEGACY_TESTS=OFF leaves it
+## out.
 include(CTest)
+option(HYPERHDG_LEGACY_TESTS "Run tests_python" ON)
+## nanobind, for the Python modules that tests/ and examples/ build (their tests need NumPy and SciPy
+## at run time; -DNOPYTHONTESTS=ON leaves them out). nanobind looks up Python as "Python": use the
+## interpreter found as "Python3" above.
+if(NOT NOPYTHONTESTS)
+  if(Python3_EXECUTABLE AND NOT Python_EXECUTABLE)
+    set(Python_EXECUTABLE ${Python3_EXECUTABLE})
+  endif()
+  find_package(Python 3.9 COMPONENTS Interpreter Development.Module)
+  if(Python_FOUND AND NOT TARGET nanobind-static)
+    add_subdirectory(${PROJECT_SOURCE_DIR}/submodules/nanobind.git ${CMAKE_BINARY_DIR}/nanobind)
+  endif()
+endif()
+## Every single run is serial (no BLAS or OpenMP threads); ctest -j runs the tests in parallel.
+set(HYPERHDG_TEST_ENVIRONMENT "OMP_NUM_THREADS=1;OPENBLAS_NUM_THREADS=1;MKL_NUM_THREADS=1")
 if(BUILD_TESTING)
   enable_testing()
-  add_subdirectory(tests_c++)
+  add_subdirectory(tests)
 endif()
 
-## Build documentation if requested through the BUILD_DOC option (default: ON)
-if(BUILD_DOC)
+## Add the examples subdirectory (after enable_testing, so that the examples are run as tests)
+add_subdirectory(examples)
+
+## The target doxygen (doxygen/Doxyfile, if Doxygen is found). HyperHDG's own option: BUILD_DOC is
+## an option of the submodules TPP and TPCC, which build no documentation of their own as
+## subprojects.
+option(HYPERHDG_BUILD_DOC "Add the target doxygen for the documentation (doxygen/Doxyfile)" ON)
+if(HYPERHDG_BUILD_DOC)
   add_subdirectory(doxygen)
 endif()
 
@@ -203,7 +223,7 @@ configure_file(
   ${CMAKE_CURRENT_BINARY_DIR}/cmake_cython.cfg
 )
 
-if(NOT NOPYTHONTESTS)
+if(NOT NOPYTHONTESTS AND HYPERHDG_LEGACY_TESTS)
   add_subdirectory(tests_python)
 endif()
 

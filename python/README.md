@@ -3,7 +3,7 @@
 An alternative to the runtime cython compile machinery (`import/` + `cython/`): the user
 writes a small module `.cxx` that spells out the template instantiation it wants, CMake
 builds a plain extension module, python imports it. Both paths drive the very same C++
-classes — they agree bit for bit, see *Correctness anchor* below.
+classes.
 
 Nothing here has to be built ahead of time: `python/hyperhdg.py` generates the CMake project
 for such a module, builds it into a cache directory and imports the result, so an example is
@@ -13,10 +13,15 @@ just a python script.
 
 ```sh
 git submodule update --init --recursive        # nanobind lives in submodules/nanobind.git
-python python/diffusion.py domains/cross.geo --degree 2 --refine 8
+python3 examples/diffusion_elliptic_nb_jit.py --dim 2 --degree 2
 ```
 
-The domain may also be a `.geo.h5` file (the HDF5 counterpart of `.geo`, read and written by
+The examples are `examples/diffusion_elliptic_nb_jit.py` (the module compiled on first use for
+any dimension and degree), `examples/diffusion_elliptic_nb_module.cxx` with
+`examples/diffusion_elliptic_nb_precompiled.py` (the same module built by CMake), all three run
+as ctests.
+
+Domains may also be `.geo.h5` files (the HDF5 counterpart of `.geo`, read and written by
 `include/HyperHDG/read_domain_hdf5.hxx`, with a VTKHDF view for ParaView; `domains/cross.geo.h5`
 is an example), if CMake finds HDF5: through `HDF5_ROOT` or `CMAKE_PREFIX_PATH` (a conda
 environment: `$CONDA_PREFIX`), or `h5cc` on `PATH`.
@@ -63,21 +68,8 @@ ParaView reads the `/VTKHDF` view as an unstructured grid. It picks readers by f
 does not know `.geo.h5`, so choose "VTKHDF Reader" when it asks, or symlink the file to a
 `.vtkhdf` name.
 
-`python/diffusion.py` is a command-line example of the explicit path: LDG-H diffusion on a
-hypergraph of one-dimensional hyperedges read from a domain file, condensed system assembled
-as a COO triplet and solved with scipy's CG. Graph, polynomial degree, refinement level and penalty come from the command
-line — the (space dimension, degree) instantiation is compiled the first time it is asked
-for (~3.5 s) and cached afterwards (~8 ms).
-
-The whole C++ side of the example is this:
-
-```cpp
-using HDG = GlobalLoop::Elliptic<
-  Topology::File<1, 3>, Geometry::File<1, 3>, NodeDescriptor::File<1, 3>,
-  LocalSolver::Diffusion<1, 2, 4, TestParametersSinEllipt, double>, std::vector<double> >;
-
-NB_MODULE(hdg_diffusion, m) { HyperHDG::bind_python<HDG>(m, "Diffusion_D3_P2"); }
-```
+The C++ side of an example is the instantiation and one line of binding, e.g.
+`examples/diffusion_elliptic_nb_module.cxx`.
 
 `HyperHDG::bind_python<GlobalLoopT>(m, name)` (`include/HyperHDG/bind_python.hxx`) binds
 whatever subset of the global-loop protocol the instantiation provides — every method is
@@ -92,63 +84,6 @@ source, and by subscript when the name is assembled at runtime:
 module = hyperhdg.load(code)
 module.Diffusion_D3_P2                     # name known while writing the code
 module[f"Diffusion_D{dim}_P{degree}"]      # name known only while running it
-```
-
-## Convergence
-
-`python/convergence.sh` sweeps the example over degrees and refinement levels and prints the
-observed rates — `diffusion_convergence_elliptic.py` from the shell, on a graph read from
-file (the whole table below takes 12 s from a cold cache):
-
-```
-$ bash python/convergence.sh
-python/diffusion.py on domains/cross.geo
-
- degree  refinement   unknowns          error    rate
-      1           1          5    9.62210e-02       -
-      1           2          9    2.63289e-02    1.87
-      1           4         17    6.96677e-03    1.92
-      1           8         33    1.79621e-03    1.96
-      1          16         65    4.56260e-04    1.98
-      1          32        129    1.14990e-04    1.99
-
-      2           1          5    1.16024e-02       -
-      2           2          9    1.62594e-03    2.84
-      2           4         17    2.14504e-04    2.92
-      2           8         33    2.75150e-05    2.96
-      2          16         65    3.48301e-06    2.98
-      2          32        129    4.38093e-07    2.99
-
-      3           1          5    1.13812e-03       -
-      3           2          9    7.85654e-05    3.86
-      3           4         17    5.13481e-06    3.94
-      3           8         33    3.27742e-07    3.97
-      3          16         65    2.06932e-08    3.99
-      3          32        129    1.29980e-09    3.99
-```
-
-i.e. h^(degree+1). Note that the manufactured solution of `TestParametersSinEllipt` is
-u = sin(pi/2 x) with a right hand side taken from its second derivative along x, so it solves
-the network problem only on hyperedges parallel to the x axis; on a graph with oblique edges
-(`domains/simplex_1_2.geo`, a fiber network) the rate column plateaus — the discretisation
-still converges, but to a different limit.
-
-## Correctness anchor
-
-`python/check_vs_cython.py` runs both bindings over a matrix of (domain, degree, refinement,
-tau) and compares everything that crosses the language boundary — right hand side, condensed
-system matrix, CG solution, error:
-
-```
-simplex_1_2.geo        P1 ref 1 tau 1.0  n      3  error 6.136910361895e-01  max deviation 0.000e+00
-simplex_1_2.geo        P2 ref 1 tau 1.0  n      3  error 6.680898820286e-01  max deviation 0.000e+00
-simplex_1_2.geo        P3 ref 2 tau 1.0  n      6  error 6.659025722979e-01  max deviation 0.000e+00
-injection_test.geo     P2 ref 4 tau 2.0  n     21  error 1.217103173353e+00  max deviation 0.000e+00
-simplex_1_3.geo        P1 ref 1 tau 1.0  n      4  error 5.242802967533e-01  max deviation 0.000e+00
-simplex_1_3.geo        P3 ref 3 tau 0.5  n     16  error 5.818433126717e-01  max deviation 0.000e+00
-cross.geo              P2 ref 8 tau 1.0  n     33  error 2.751495442787e-05  max deviation 0.000e+00
-
-worst deviation over 7 configurations: 0.000e+00
 ```
 
 ## `hyperhdg.py`: compiling a module on demand
@@ -223,10 +158,10 @@ PyDP = HyperHDG.include(const)          # text-substitutes .pyx/.pxd templates,
 hdg  = PyDP("domains/cross.geo")   # runs cython + a C++ compiler, imports the .so
 ```
 
-Same amount of template spelling as the `using HDG = ...` above — but in compiler-checked,
-clangd-completed C++ instead of unchecked python strings. Note the legacy config additionally
-leaks binding internals into user code: `cython_replacements` are raw cython `.pxd` type
-strings.
+Same amount of template spelling as the `using` in `examples/diffusion_elliptic_nb_module.cxx`
+— but in compiler-checked, clangd-completed C++ instead of unchecked python strings. Note the
+legacy config additionally leaks binding internals into user code: `cython_replacements` are raw
+cython `.pxd` type strings.
 
 | Claim | Legacy runtime cython | Explicit nanobind |
 |---|---|---|
@@ -304,13 +239,44 @@ its time. The machinery simply predates the tools that now make its job unnecess
   `find_package` branch of `hyperhdg.py` works by construction but hasn't run against a real
   install, and `find_dependency(nanobind)` in the exported HyperHDG config remains to be
   added.
-- **No ctest.** The examples are run by hand; wiring them into CTest means deciding whether a
-  test may invoke CMake itself.
 
 ## Files
 
 - `include/HyperHDG/bind_python.hxx` — generic, `requires`-guarded binding helper.
 - `python/hyperhdg.py` — compile/load a module source string (generated CMake project, cached).
-- `python/diffusion.py` — the example: graph and parameters from the command line.
-- `python/convergence.sh` — convergence sweep over degrees and refinement levels.
-- `python/check_vs_cython.py` — bit-for-bit comparison against the legacy cython bindings.
+- `examples/diffusion_elliptic_nb_*` — the examples, just in time and precompiled.
+
+## Prototype: one global loop over local operators
+
+`include/HyperHDG/global_loop/generic.hxx` (`GlobalLoop::Generic`) is a prototype of a single
+global loop (design note `doc/local_operator_design.md`): a scatter–gather engine whose only
+knowledge of the physics is an immutable per-hyperedge *local operator* that the local solver
+returns from `local_operator(edge, Kind, args)`. The operator provides `apply<k>` (k traces at
+once; assembly is `apply<n_loc>` of the identity, so the matrix is the matrix-free operator by
+construction) and `residual(…, load, …)` with the load supplied by the solver. The loop owns the store (`prepare` /
+`release`: one operator per distinct `operator_key`; streaming without `prepare`; each public
+sweep decides once and runs a branch-free body), the constraint index set (Dirichlet rows:
+identity in `apply`, masked in `assemble`), `n_triplets` + `assemble` into caller arrays, and
+`reduce` / `errors` (the solver's error type must have `operator+`). Nothing in the loop
+allocates global vectors: every entry point takes vector-like inputs and outputs (`std::vector`,
+`std::span`). Serial; parallel sweeps are a separate step.
+
+`LocalSolver::Diffusion` (`include/HyperHDG/local_solver/diffusion_ldgh.hxx`) implements the
+protocol next to its legacy interface. It sets up the blocks of the local problem, A x = B λ + l,
+flux = C x + D λ (`local_blocks`), and its layout, a template parameter, decides what the
+operator keeps (`include/HyperHDG/local_solver/local_operator.hxx`): by default
+`LocalOperator::Condensed`, S = C A⁻¹ B + D and K = C A⁻¹ (apply is S λ, the residual S λ + K l),
+or `LocalOperator::Factored`, the LU of A with B, C, D, or a layout of one's own. A sweep without
+`prepare` uses the cheaper form to build (`Streaming`: the factors), and `errors` builds the
+operator with the local solution once per shared operator. Congruent elements share one operator
+when the parameters declare `constant_coefficients` (key: rounded span vectors). Operators are
+trivially copyable (`SmallMat` copy/move defaulted), the store is one contiguous array.
+
+Bindings (`bind_python.hxx`, `requires`-guarded as before): NumPy in and out. The prototype's
+`apply(x, y)`, `residual(x, r)` and `assemble(rows, cols, vals)` write into caller-allocated
+arrays; Elliptic's vector methods gained NumPy overloads (lists still work), so both loops cross
+the boundary at the same cost.
+
+Tested by `tests/diffusion_elliptic.cxx` (convergence ladder, direct solve against matrix-free
+CG); the driver, sweeps and roundoff comparison against Elliptic that the prototype started with
+are in the history (`git log -- python/operator_loop.py`).
