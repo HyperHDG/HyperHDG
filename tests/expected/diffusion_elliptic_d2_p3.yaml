@@ -1,3 +1,3 @@
-- {dim: 2, degree: 3, n: 2, error: 4.074028558894336e-05}
-- {dim: 2, degree: 3, n: 4, error: 2.9824163930044415e-06}
-- {dim: 2, degree: 3, n: 8, error: 2.0358610442676541e-07}
+- {solver: Diffusion, dim: 2, degree: 3, n: 2, dofs: 48, cg: converged_rtol, iterations: 9, error: 4.074029e-05}
+- {solver: Diffusion, dim: 2, degree: 3, n: 4, dofs: 160, cg: converged_rtol, iterations: 39, error: 2.982416e-06}
+- {solver: Diffusion, dim: 2, degree: 3, n: 8, dofs: 576, cg: converged_rtol, iterations: 83, error: 2.035861e-07}
