@@ -9,6 +9,7 @@ its successor if there is one.
 
 - reproducibles_python/diffusion_convergence_elliptic.py -> tests/diffusion_elliptic.cxx
 - tests_c++/point_functions.cxx, tests_c++/qr_handedness.cxx -> tests/dense_la.cxx
+- tests_python/nanobind_bindings.py -> tests/hyperhdg_jit.py (its Elliptic checks retired)
 - tests_c++/diffusion_dimensions.cxx, its Diffusion part -> tests/diffusion_embedded.cxx (the
   DiffusionUniform part stays legacy; its do_test_standard expects 0.5 at the free nodes, the
   solution of -u'' = 0 with Kirchhoff's law is 1 / (1 + sqrt 2), which Elliptic and Generic both
@@ -80,7 +81,6 @@ its successor if there is one.
 
 - tests_python/CMakeLists.txt
 - tests_python/local_solvers/run.py
-- tests_python/nanobind_bindings.py
 
 ### python/
 

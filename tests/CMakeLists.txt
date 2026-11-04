@@ -36,3 +36,11 @@ endforeach()
 # Single precision: one case, 2D degree 2, whose errors stay well above float round-off.
 add_hyperhdg_test(diffusion_elliptic_float_d2_p2 diffusion_elliptic.cxx)
 target_compile_definitions(diffusion_elliptic_float_d2_p2 PRIVATE DIM=2 DEGREE=2 REAL=float)
+
+# python/hyperhdg.py and the bindings of Generic; compiles its modules just in time.
+if(NOT NOPYTHONTESTS AND Python3_Interpreter_FOUND)
+  add_test(NAME hyperhdg_jit_py
+           COMMAND Python3::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/hyperhdg_jit.py
+           WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+  set_tests_properties(hyperhdg_jit_py PROPERTIES ENVIRONMENT "${HYPERHDG_TEST_ENVIRONMENT}")
+endif()
