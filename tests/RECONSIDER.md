@@ -67,7 +67,8 @@ its successor if there is one.
 
 - tests_c++/CMakeLists.txt
 - tests_c++/diffusion_dimensions.cxx
-- tests_c++/diffusion_floatings.cxx
+- tests_c++/diffusion_floatings.cxx (DiffusionUniform in float, stays legacy with it; float on
+  Generic + Diffusion: tests/diffusion_elliptic_float_d2_p2)
 - tests_c++/diffusion_plotting.cxx
 - tests_c++/domain_hdf5.cxx
 - tests_c++/plot_refined.cxx

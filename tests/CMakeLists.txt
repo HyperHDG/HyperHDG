@@ -32,3 +32,7 @@ foreach(space_dim 1 2 3 4 5)
   set_tests_properties(diffusion_embedded_s${space_dim} PROPERTIES WORKING_DIRECTORY
                                                                    ${PROJECT_SOURCE_DIR})
 endforeach()
+
+# Single precision: one case, 2D degree 2, whose errors stay well above float round-off.
+add_hyperhdg_test(diffusion_elliptic_float_d2_p2 diffusion_elliptic.cxx)
+target_compile_definitions(diffusion_elliptic_float_d2_p2 PRIVATE DIM=2 DEGREE=2 REAL=float)
