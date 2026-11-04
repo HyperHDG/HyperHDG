@@ -61,10 +61,14 @@ jobs:
       with:
         path: .git/modules
         key: submodules-${{ steps.pins.outputs.hash }}
+    # The exact version: the runner images carry different 3.13 releases (two images can be in use
+    # at once while a new one rolls out), and with another Python.h every nanobind and module
+    # compile misses ccache, and the cached site-packages do not fit. An image without it downloads
+    # it (a few seconds).
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
-        python-version: '3.13'
+        python-version: '3.13.18'
     # The installed packages, not only the downloaded wheels (unpacking and byte-compiling numpy
     # and scipy took most of the step): keyed by the interpreter's location, which contains its
     # exact version, and the package list.
