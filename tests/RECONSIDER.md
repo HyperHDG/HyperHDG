@@ -11,10 +11,6 @@ its successor if there is one.
 - reproducibles_python/timoshenko_convergence_cross.py -> tests/timoshenko.cxx
 - tests_c++/point_functions.cxx, tests_c++/qr_handedness.cxx -> tests/dense_la.cxx
 - tests_python/nanobind_bindings.py -> tests/hyperhdg_jit.py (its Elliptic checks retired)
-- tests_c++/diffusion_dimensions.cxx, its Diffusion part -> tests/diffusion_embedded.cxx (the
-  DiffusionUniform part stays legacy; its do_test_standard expects 0.5 at the free nodes, the
-  solution of -u'' = 0 with Kirchhoff's law is 1 / (1 + sqrt 2), which Elliptic and Generic both
-  give with Dirichlet data from the parameters)
 
 ## Moved, not yet reconsidered
 
@@ -72,7 +68,8 @@ its successor if there is one.
 ### tests_c++/
 
 - tests_c++/CMakeLists.txt
-- tests_c++/diffusion_dimensions.cxx
+- tests_c++/diffusion_dimensions.cxx (DiffusionUniform on graphs in space dimensions 1 to 5, stays
+  legacy with it; its Diffusion part is gone, tests/diffusion_embedded.cxx covers it)
 - tests_c++/diffusion_floatings.cxx (DiffusionUniform in float, stays legacy with it; float on
   Generic + Diffusion: tests/diffusion_elliptic_float_d2_p2)
 
