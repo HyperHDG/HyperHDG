@@ -12,6 +12,7 @@ import os
 import sys
 
 import numpy as np
+import scipy.linalg
 import scipy.sparse as sp
 import scipy.sparse.linalg as spla
 
@@ -100,14 +101,19 @@ class Discretization:
     self.mass = mass[self.keep][:, self.keep].tocsc()
     self.mass_full = mass
 
-  def eigenpairs(self, n_eigs, sigma=0., refinement_steps=2):
+  def eigenpairs(self, n_eigs, sigma=0., refinement_steps=2, extra=4, tol=1e-12):
     """The n_eigs eigenpairs closest to sigma, sorted, with M-orthonormal full-length vectors.
 
     The problem is equilibrated by the symmetric diagonal scaling with diag(A)^(-1/2), which does
     not change the eigenvalues, and the shifted systems are solved by a sparse LU factorization
     with iterative refinement. Both matter for strongly graded and anisotropic meshes, whose
-    matrices have entries of very different magnitude. The eigenvalues are the Rayleigh quotients
-    of the computed eigenvectors.
+    matrices have entries of very different magnitude.
+
+    Lanczos (ARPACK in shift-and-invert mode) computes n_eigs + extra eigenpairs, since the last
+    ones of the requested set are unreliable if they split a cluster of eigenvalues, and starts
+    from a fixed pseudo-random vector, so that runs are reproducible. Since M is singular, the
+    computed vectors are purified by one step of inverse iteration, which removes spurious
+    components in the kernel of M, and the eigenpairs are the Ritz pairs of the purified vectors.
     """
     scaling = sp.diags(1. / np.sqrt(abs(self.stiff.diagonal())))
     stiff = (scaling @ self.stiff @ scaling).tocsc()
@@ -124,15 +130,18 @@ class Discretization:
     n = stiff.shape[0]
     op_inv = spla.LinearOperator((n, n), matvec=solve, dtype=float)
     rank = int(np.count_nonzero(abs(mass).sum(axis=1).A1))
-    ncv = min(max(2 * n_eigs + 1, 20), rank)
-    vals, vecs = spla.eigsh(stiff, k=n_eigs, M=mass, sigma=sigma, which="LM", ncv=ncv, tol=0.,
-                            OPinv=op_inv)
-    vecs = scaling @ vecs[:, np.argsort(vals)]
+    k = min(n_eigs + extra, rank - 1)
+    ncv = min(max(2 * k + 1, 20), rank)
+    start = np.random.default_rng(0).standard_normal(n)
+    vals, vecs = spla.eigsh(stiff, k=k, M=mass, sigma=sigma, which="LM", ncv=ncv, tol=tol,
+                            OPinv=op_inv, v0=start)
+    vecs = vecs[:, np.argsort(vals)]
+    vecs = np.column_stack([solve(mass @ vecs[:, i]) for i in range(k)])  # purification
+    ritz_vals, coeffs = scipy.linalg.eigh(vecs.T @ (stiff @ vecs), vecs.T @ (mass @ vecs))
+    chosen = np.sort(np.argsort(abs(ritz_vals - sigma))[:n_eigs])  # closest to sigma, ascending
+    vals, vecs = ritz_vals[chosen], scaling @ (vecs @ coeffs[:, chosen])
     full = np.zeros((self.size, n_eigs))
-    full[self.keep] = vecs
-    gram = full.T @ (self.mass_full @ full)
-    full = full @ np.linalg.inv(np.linalg.cholesky(gram)).T  # M-orthonormal
-    vals = np.array([full[self.keep, i] @ (self.stiff @ full[self.keep, i]) for i in range(n_eigs)])
+    full[self.keep] = vecs  # M-orthonormal, since the Ritz vectors are
     self.residuals = [np.linalg.norm(self.stiff @ full[self.keep, i] - vals[i] *
                                      (self.mass @ full[self.keep, i])) /
                       np.linalg.norm(self.stiff @ full[self.keep, i]) for i in range(n_eigs)]

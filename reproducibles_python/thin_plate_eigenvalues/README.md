@@ -45,9 +45,10 @@ written to `results/`:
 - `table_hdg_eigenvalue_error.tex`, `table_hdg_gap.tex`, `table_thin_eigenvalue_error.tex`,
   `table_thin_gap.tex`, `table_combined.tex`: the bodies of the tables in the manuscript.
 
-The files in `results/` are those of the manuscript (computed on macOS with Apple clang). Other
-machines reproduce them up to rounding, i.e., up to about `1e-11` for the eigenvalue errors of the
-HDG method and up to about `1e-6` for the thin-domain eigenvalues.
+The files in `results/` are those of the manuscript (computed on macOS with Apple clang). Repeated
+runs give identical results; other machines reproduce them up to rounding errors, which affect the
+eigenvalue errors of the HDG method below about `1e-11` and the thin-domain eigenvalues at about
+`1e-6`.
 
 ## Files
 
@@ -61,8 +62,9 @@ HDG method and up to about `1e-6` for the thin-domain eigenvalues.
   that are graded towards the junction and towards the reentrant corners. The averaging map takes
   thickness averages on the plates (extended into the collar by reflection) and the average over
   the junction cross section. A second computation on refined meshes estimates the accuracy.
-- `common.py`: compilation of the module, `.geo` output, assembly, eigensolver (shift and invert
-  with diagonal equilibration and iterative refinement), Gauss quadrature, and gaps.
+- `common.py`: compilation of the module, `.geo` output, assembly, eigensolver (Lanczos in shift and
+  invert mode with diagonal equilibration, iterative refinement, a fixed start vector, and
+  purification of the eigenvectors, since the mass matrix is singular), Gauss quadrature, and gaps.
 - `run_experiments.py`: runs the studies and writes the results and tables.
 
 The C++ part consists of `LocalSolver::DiffusionEigsWeighted`
