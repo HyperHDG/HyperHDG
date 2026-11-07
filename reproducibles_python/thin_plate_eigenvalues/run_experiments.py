@@ -84,10 +84,13 @@ def thin_study(quick):
       check_values = sorted(float(v) for k in (0, 1) for v in check[k][2])[:4]
       run["check_eigenvalues"] = check_values
       run["check_difference"] = float(np.max(np.abs(np.array(check_values) - values[:4])))
+      run["check_eigenspaces"] = thin.mesh_comparison(eps, sectors, check, reference["degree"])
     runs.append(run)
     print(f"thin eps=2^-{exponent:<2d} " + "  ".join(
       f"{name}: {errors[name]['eigenvalue_error']:.4e} {errors[name]['gap']:.4e}"
-      for name in CLUSTERS) + (f"  check: {run['check_difference']:.1e}" if not quick else "")
+      for name in CLUSTERS) + (f"  check: eigenvalues {run['check_difference']:.1e}, eigenspaces "
+      f"{max(c['eigenspace_gap'] for c in run['check_eigenspaces'].values()):.1e}"
+      if not quick else "")
       + f"  ({time.time() - start:.1f} s)", flush=True)
   return runs
 

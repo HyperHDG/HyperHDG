@@ -254,6 +254,70 @@ def errors(eps, sectors, degree):
   return result
 
 
+def _column_polynomials(r, p, n_quad, degree):
+  """The thickness average p(r) on every column (n_quad consecutive Gauss points) as Legendre
+  coefficients on its interval; p is a polynomial of degree at most `degree` on every column."""
+  abscissas = common.gauss(n_quad)[0]
+  pieces = []
+  for first in range(0, len(r), n_quad):
+    r_col, p_col = r[first:first + n_quad], p[first:first + n_quad]
+    length = (r_col.max() - r_col.min()) / (abscissas[-1] - abscissas[0])
+    start = r_col.min() - length * abscissas[0]
+    t = 2. * (r_col - start) / length - 1.
+    pieces.append((start, start + length, np.polynomial.legendre.legfit(t, p_col, degree)))
+  return pieces
+
+
+def _evaluate_columns(pieces, r):
+  values = np.full(len(r), np.nan)
+  for start, end, coeffs in pieces:
+    inside = (r > start - 1e-14) & (r < end + 1e-14) & np.isnan(values)
+    values[inside] = np.polynomial.legendre.legval(2. * (r[inside] - start) / (end - start) - 1.,
+                                                   coeffs)
+  assert not np.isnan(values).any(), "The fine mesh must refine the coarse mesh along the plates!"
+  return values
+
+
+def mesh_comparison(eps, coarse, fine, degree):
+  """Compare the averaged eigenspaces Pi_eps M_eps of two discretizations of the cross sections.
+
+  coarse and fine are results of thin_eigenpairs (of the same degree), where the fine mesh refines
+  the coarse one. For every cluster, the result contains the gap between the two averaged
+  eigenspaces (with respect to H_0) and the difference of the gaps g_eps to the limit eigenspace.
+  The thickness averages of the coarse discretization are evaluated at the quadrature points of the
+  fine one, which is exact since they are polynomials on the columns of the coarse mesh.
+  """
+  n_quad = degree + 6
+  errors_coarse, errors_fine = errors(eps, coarse, degree), errors(eps, fine, degree)
+  result = {}
+  for name, (k, indices) in CLUSTER_SECTORS.items():
+    av_coarse = ThinAveraging(coarse[k][0], eps, n_quad)
+    av_fine = ThinAveraging(fine[k][0], eps, n_quad)
+    f_coarse = [av_coarse.averages(coarse[k][3][:, i]) for i in indices]
+    f_fine = [av_fine.averages(fine[k][3][:, i]) for i in indices]
+
+    def cross(a, b):
+      value = 0.
+      for plate in range(3):
+        r_a, _, p_a = a[0][plate]
+        r, w, p = b[0][plate]
+        q = _evaluate_columns(_column_polynomials(r_a, p_a, n_quad, degree), r)
+        collar = r < 4. * eps  # reflected to (0, 2 eps)
+        value += limit.D[plate] * (np.dot(w, q * p) + np.dot(w[collar], (q * p)[collar]))
+      return value + limit.MU * a[1] * b[1]
+
+    gram_coarse = np.array([[av_coarse.inner(a, b) for b in f_coarse] for a in f_coarse])
+    gram_fine = np.array([[av_fine.inner(a, b) for b in f_fine] for a in f_fine])
+    mixed = np.array([[cross(a, b) for b in f_fine] for a in f_coarse])
+    result[name] = {
+      "eigenspace_gap": common.gap(gram_coarse, gram_fine, mixed),
+      "gap_difference": abs(errors_coarse[name]["gap"] - errors_fine[name]["gap"]),
+      "gap_zero_extension_difference": abs(errors_coarse[name]["gap_zero_extension"] -
+                                           errors_fine[name]["gap_zero_extension"]),
+    }
+  return result
+
+
 def global_order_ok(sectors, n_check=4):
   """Whether the smallest n_check eigenvalues of the thin domain are ordered as in the limit."""
   merged = sorted([(v, k) for k in (0, 1) for v in sectors[k][2]])[:n_check]

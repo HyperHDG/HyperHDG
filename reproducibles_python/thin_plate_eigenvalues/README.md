@@ -37,7 +37,7 @@ python3 reproducibles_python/thin_plate_eigenvalues/run_experiments.py
 ```
 
 The C++ module is compiled on the first run (into `.hyperhdg-cache/`, which takes about a minute),
-and all studies take about six minutes on a laptop. `--only hdg thin combined` selects studies, and
+and all studies take about seven minutes on a laptop. `--only hdg thin combined` selects studies, and
 `--quick` runs the coarsest levels only (a few seconds, without writing tables). The results are
 written to `output/thin_plate_eigenvalues/results/` (ignored by git), or to the directory given by
 `--output`:
@@ -70,7 +70,9 @@ by `diff -r reproducibles_python/thin_plate_eigenvalues/results output/thin_plat
   T-shaped cross section. These problems are solved by the same HDG method (degree 5) on meshes
   that are graded towards the junction and towards the reentrant corners. The averaging map takes
   thickness averages on the plates (extended into the collar by reflection) and the average over
-  the junction cross section. A second computation on refined meshes estimates the accuracy.
+  the junction cross section. A second computation on refined meshes estimates the accuracy of
+  the eigenvalues and of the averaged eigenspaces (gap between the averaged eigenspaces of both
+  meshes, recorded in `thin.json`).
 - `common.py`: compilation of the module, `.geo` output, assembly, eigensolver (Lanczos in shift and
   invert mode with diagonal equilibration, iterative refinement, a fixed start vector, and
   purification of the eigenvectors, since the mass matrix is singular), Gauss quadrature, and gaps.
