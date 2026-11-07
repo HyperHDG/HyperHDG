@@ -27,8 +27,9 @@ Requirements: a C++20 compiler, CMake 3.18 or newer, LAPACK, Python 3.9 or newer
 SciPy, and the git submodules of HyperHDG (nanobind). Then,
 
 ```sh
-git clone --recursive https://github.com/HyperHDG/HyperHDG.git
+git clone https://github.com/HyperHDG/HyperHDG.git
 cd HyperHDG
+git fetch origin <commit given in the manuscript>
 git checkout <commit given in the manuscript>
 git submodule update --init --recursive
 python3 -m pip install numpy scipy cmake        # if not available otherwise
@@ -36,19 +37,27 @@ python3 reproducibles_python/thin_plate_eigenvalues/run_experiments.py
 ```
 
 The C++ module is compiled on the first run (into `.hyperhdg-cache/`, which takes about a minute),
-and all studies take about five minutes on a laptop. `--only hdg thin combined` selects studies, and
+and all studies take about six minutes on a laptop. `--only hdg thin combined` selects studies, and
 `--quick` runs the coarsest levels only (a few seconds, without writing tables). The results are
-written to `results/`:
+written to `output/thin_plate_eigenvalues/results/` (ignored by git), or to the directory given by
+`--output`:
 
-- `hdg.json`, `thin.json`, `combined.json`: all computed eigenvalues, errors, gaps, and the numbers
-  of unknowns, together with the versions of Python, NumPy, and SciPy,
+- `hdg.json`, `thin.json`, `combined.json`: all computed eigenvalues, errors, gaps, residuals, and
+  the numbers of unknowns,
 - `table_hdg_eigenvalue_error.tex`, `table_hdg_gap.tex`, `table_thin_eigenvalue_error.tex`,
-  `table_thin_gap.tex`, `table_combined.tex`: the bodies of the tables in the manuscript.
+  `table_thin_gap.tex`, `table_combined.tex`: the bodies of the tables in the manuscript,
+- `environment.json`: the versions of Python, NumPy, and SciPy, the platform, and the run times.
 
-The files in `results/` are those of the manuscript (computed on macOS with Apple clang). Repeated
-runs give identical results; other machines reproduce them up to rounding errors, which affect the
-eigenvalue errors of the HDG method below about `1e-11` and the thin-domain eigenvalues at about
-`1e-6`.
+The subdirectory `results/` of this directory contains the results of the manuscript (computed on
+macOS with Apple clang), which are the reference. At the end of a run, the new results are compared
+with the reference, file by file: identical files are reported as such, and for differing JSON
+files the largest absolute deviation is printed. Repeated runs on the same machine give identical
+results; other machines reproduce them up to rounding errors, which affect the eigenvalue errors of
+the HDG method below about `1e-11` and the thin-domain eigenvalues at about `1e-6`. Since the
+result files contain no run times or machine information, they can also be compared directly, e.g.
+by `diff -r reproducibles_python/thin_plate_eigenvalues/results output/thin_plate_eigenvalues/results`
+(which only reports `environment.json` and the files of `--quick` runs). To update the reference, run the script with
+`--output reproducibles_python/thin_plate_eigenvalues/results`.
 
 ## Files
 
@@ -65,7 +74,8 @@ eigenvalue errors of the HDG method below about `1e-11` and the thin-domain eige
 - `common.py`: compilation of the module, `.geo` output, assembly, eigensolver (Lanczos in shift and
   invert mode with diagonal equilibration, iterative refinement, a fixed start vector, and
   purification of the eigenvectors, since the mass matrix is singular), Gauss quadrature, and gaps.
-- `run_experiments.py`: runs the studies and writes the results and tables.
+- `run_experiments.py`: runs the studies, writes the results and tables, and compares them with
+  the reference in `results/`.
 
 The C++ part consists of `LocalSolver::DiffusionEigsWeighted`
 (`include/HyperHDG/local_solver/diffusion_eigs_weighted_ldgh.hxx`), which provides the local
