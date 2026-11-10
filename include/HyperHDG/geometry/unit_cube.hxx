@@ -119,6 +119,18 @@ class UnitCube
       return index;
     }
     /*!*********************************************************************************************
+     * \brief   Binomial coefficient n over k (0 if k > n).
+     **********************************************************************************************/
+    static constexpr unsigned int binomial(const unsigned int n, const unsigned int k)
+    {
+      if (k > n)
+        return 0;
+      unsigned int result = 1;
+      for (unsigned int i = 1; i <= k; ++i)
+        result = result * (n - k + i) / i;
+      return result;
+    }
+    /*!*********************************************************************************************
      * \brief   Refine coarse elememnt.
      **********************************************************************************************/
     void adapt_data(const Wrapper::tpcc_elem_t<hyEdge_dimT, hyEdge_dimT>& elem,
@@ -141,6 +153,29 @@ class UnitCube
      * \brief   Return dimension of the surrounding space.
      **********************************************************************************************/
     static constexpr unsigned int space_dim() { return space_dimT; }
+    /*!*********************************************************************************************
+     * \brief   The number of shapes the hyperedges of a unit cube have.
+     *
+     * All hyperedges that span the same axes are congruent (same lengths along the same axes, in
+     * the same order), so there is one shape per choice of hyEdge_dimT of the space_dimT axes.
+     * Local solvers whose operators depend on the shape only share them by \c shape_class.
+     **********************************************************************************************/
+    static constexpr unsigned int n_shape_classes() { return binomial(space_dimT, hyEdge_dimT); }
+    /*!*********************************************************************************************
+     * \brief   The shape of this hyperedge, in 0, ..., n_shape_classes() - 1: the rank of the set
+     *          of axes it spans (combinatorial number system).
+     **********************************************************************************************/
+    unsigned int shape_class() const
+    {
+      std::array<unsigned int, hyEdge_dimT> axes;
+      for (unsigned int i = 0; i < hyEdge_dimT; ++i)
+        axes[i] = dim_indices[i];
+      std::sort(axes.begin(), axes.end());
+      unsigned int rank = 0;
+      for (unsigned int i = 0; i < hyEdge_dimT; ++i)
+        rank += binomial(axes[i], i + 1);
+      return rank;
+    }
     /*!*********************************************************************************************
      * \brief   Construct a orthotopic hyperedge from its index and the surrounding unit hypercube.
      *
