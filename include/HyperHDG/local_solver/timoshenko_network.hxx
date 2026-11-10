@@ -453,13 +453,14 @@ class TimoshenkoBeam
     return 2 * space_dim * Hypercube<hyEdge_dimT - 1>::pow(poly_deg + 1);
   }
   /*!***********************************************************************************************
-   * \brief   Dimension of of the solution evaluated with respect to a hyperedge.
+   * \brief   Number of components of the solution on a hyperedge, as plotted (bulk_values): the
+   *          stress resultant n, the moment m, the displacement u and the rotation r.
    ************************************************************************************************/
-  static constexpr unsigned int system_dimension() { return space_dim; }
+  static constexpr unsigned int system_dimension() { return 4 * space_dim; }
   /*!***********************************************************************************************
-   * \brief   Dimension of of the solution evaluated with respect to a hypernode.
+   * \brief   Number of components plotted on a hypernode (the same, cf. plot.hxx).
    ************************************************************************************************/
-  static constexpr unsigned int node_system_dimension() { return space_dim; }
+  static constexpr unsigned int node_system_dimension() { return 4 * space_dim; }
 
   template <typename parameters>
   static constexpr bool is_dirichlet(const unsigned int node_type)
@@ -843,7 +844,11 @@ class TimoshenkoBeam
     return std::array<lSol_float_t, 1U>({error});
   }
   /*!***********************************************************************************************
-   * \brief   Evaluate local local reconstruction at tensorial products of abscissas.
+   * \brief   Evaluate the local solution at tensorial products of abscissas.
+   *
+   * The components are those of the local unknowns: n (0 to 2), m (3 to 5), u (6 to 8) and
+   * r (9 to 11). The stress resultant and the moment are given in the frame of the beam (along
+   * its tangent and its two normals), the displacement and the rotation in space.
    *
    * \tparam  absc_float_t      Floating type for the abscissa values.
    * \tparam  abscissas_sizeT   Size of the array of array of abscissas.
@@ -862,48 +867,39 @@ class TimoshenkoBeam
               hyEdgeT& hyper_edge,
               const lSol_float_t time = 0.) const
   {
-    // using parameters = parametersT<decltype(hyEdgeT::geometry)::space_dim(), lSol_float_t>;
-    input_array_t lambda_values_loc = node_dof_to_edge_dof(lambda_values, hyper_edge);
-    SmallVec<n_loc_dofs_, lSol_float_t> coefficients =
-      solve_local_problem(lambda_values_loc, 1U, hyper_edge, time);
+    constexpr unsigned int n_pts = Hypercube<hyEdge_dimT>::pow(sizeT);
+    // the local solution, by the four parts of the local problem
+    const BeamTrace trace = node_dof_to_edge_dof(lambda_values, hyper_edge);
+    const BeamProblem problem = beam_problem(hyper_edge);
+    Load coefficients = problem.rhs(trace);
+    coefficients += assemble_rhs_from_global_rhs(hyper_edge, time);
+    problem.solve(coefficients);
+
     SmallVec<n_shape_fct_, lSol_float_t> coeffs;
     SmallVec<static_cast<unsigned int>(sizeT), abscissa_float_t> helper(abscissas);
-
-    // for(unsigned int i = 0; i < 2; ++i)
-    //   for(unsigned int j = 0; j < 3; ++j)
-    //     std::cout << lambda_values_loc[i][j] << " ";
-    // std::cout << std::endl;
-
-    // std::cout << coefficients;
-
-    std::array<std::array<lSol_float_t, Hypercube<hyEdge_dimT>::pow(sizeT)>, system_dimension()>
-      point_vals, result;
-
-    for (unsigned int dim = 0; dim < space_dim; ++dim)
-    {
-      for (unsigned int i = 0; i < coeffs.size(); ++i)
-        coeffs[i] = coefficients[(2 * space_dim + dim) * n_shape_fct_ + i];
-      for (unsigned int pt = 0; pt < Hypercube<hyEdge_dimT>::pow(sizeT); ++pt)
-        point_vals[dim][pt] = integrator::shape_fun_t::template lin_comb_fct_val<float>(
-          coeffs, Hypercube<hyEdge_dimT>::template tensorial_pt<Point<hyEdge_dimT>>(pt, helper));
-    }
-
-    Point<space_dim, lSol_float_t> normal_vector =
-      (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(0);
-    for (unsigned int dim = 0; dim < result.size(); ++dim)
-      for (unsigned int q = 0; q < result[dim].size(); ++q)
-        result[dim][q] = point_vals[0][q] * normal_vector[dim];
-
-    normal_vector = (Point<space_dim, lSol_float_t>)hyper_edge.geometry.outer_normal(0);
-    for (unsigned int dim = 0; dim < result.size(); ++dim)
-      for (unsigned int q = 0; q < result[dim].size(); ++q)
-        result[dim][q] += point_vals[1][q] * normal_vector[dim];
-
-    normal_vector = (Point<space_dim, lSol_float_t>)hyper_edge.geometry.outer_normal(1);
-    for (unsigned int dim = 0; dim < result.size(); ++dim)
-      for (unsigned int q = 0; q < result[dim].size(); ++q)
-        result[dim][q] += point_vals[2][q] * normal_vector[dim];
-
+    std::array<std::array<lSol_float_t, n_pts>, system_dimension()> result{};
+    for (unsigned int field = 0; field < 4; ++field)  // n, m, u, r
+      for (unsigned int local = 0; local < space_dim; ++local)
+      {
+        for (unsigned int i = 0; i < coeffs.size(); ++i)
+          coeffs[i] = coefficients[(field * space_dim + local) * n_shape_fct_ + i];
+        std::array<lSol_float_t, n_pts> values;
+        for (unsigned int pt = 0; pt < n_pts; ++pt)
+          values[pt] = integrator::shape_fun_t::template lin_comb_fct_val<float>(
+            coeffs, Hypercube<hyEdge_dimT>::template tensorial_pt<Point<hyEdge_dimT>>(pt, helper));
+        if (field < 2)  // in the frame of the beam
+          result[field * space_dim + local] = values;
+        else  // in space: along the tangent (local = 0) or one of the normals
+        {
+          const Point<space_dim, lSol_float_t> direction =
+            local == 0
+              ? (Point<space_dim, lSol_float_t>)hyper_edge.geometry.inner_normal(0)
+              : (Point<space_dim, lSol_float_t>)hyper_edge.geometry.outer_normal(local - 1);
+          for (unsigned int dim = 0; dim < space_dim; ++dim)
+            for (unsigned int pt = 0; pt < n_pts; ++pt)
+              result[field * space_dim + dim][pt] += values[pt] * direction[dim];
+        }
+      }
     return result;
   }
 
