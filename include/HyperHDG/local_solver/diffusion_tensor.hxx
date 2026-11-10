@@ -373,22 +373,14 @@ class DiffusionTensor
     }
     return op;
   }
-  // The operator is a function of the local problem: one per problem class of Diffusion.
+  // The operator is a function of the local problem: shared as those of Diffusion.
   template <class Edge>
-    requires Base::template
-  has_problem_classes<Edge> static constexpr unsigned int n_operator_slots(
-    GlobalLoop::Stiffness kind,
-    const Args& args)
+    requires requires(const Base& base, Edge& edge, const Args& args) {
+      base.operator_slot(edge, GlobalLoop::Stiffness{}, args);
+    }
+  unsigned int operator_slot(Edge& edge, GlobalLoop::Stiffness kind, const Args& args) const
   {
-    return Base::template n_problem_classes<Edge>(kind, args);
-  }
-  template <class Edge>
-    requires Base::template
-  has_problem_classes<Edge> unsigned int operator_slot(Edge& edge,
-                                                       GlobalLoop::Stiffness kind,
-                                                       const Args& args) const
-  {
-    return base_.problem_class(edge, kind, args);
+    return base_.operator_slot(edge, kind, args);
   }
   template <class Edge>
   SmallVec<n_ldofs, T> local_load(Edge& edge, const Args& args) const

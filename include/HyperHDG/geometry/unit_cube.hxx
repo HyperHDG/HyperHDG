@@ -154,18 +154,22 @@ class UnitCube
      **********************************************************************************************/
     static constexpr unsigned int space_dim() { return space_dimT; }
     /*!*********************************************************************************************
-     * \brief   The number of shapes the hyperedges of a unit cube have.
+     * \brief   The number of congruence classes of the hyperedges of a unit cube.
      *
      * All hyperedges that span the same axes are congruent (same lengths along the same axes, in
-     * the same order), so there is one shape per choice of hyEdge_dimT of the space_dimT axes.
-     * Local solvers whose operators depend on the shape only share them by \c shape_class.
+     * the same order), so there is one class per choice of hyEdge_dimT of the space_dimT axes
+     * (for hyperedges of dimension one: one per axis). Local solvers whose operators depend on
+     * the shape of the hyperedge only share them by \c congruence_class.
      **********************************************************************************************/
-    static constexpr unsigned int n_shape_classes() { return binomial(space_dimT, hyEdge_dimT); }
+    static constexpr unsigned int n_congruence_classes()
+    {
+      return binomial(space_dimT, hyEdge_dimT);
+    }
     /*!*********************************************************************************************
-     * \brief   The shape of this hyperedge, in 0, ..., n_shape_classes() - 1: the rank of the set
-     *          of axes it spans (combinatorial number system).
+     * \brief   The congruence class of this hyperedge, in 0, ..., n_congruence_classes() - 1: the
+     *          rank of the set of axes it spans (combinatorial number system).
      **********************************************************************************************/
-    unsigned int shape_class() const
+    unsigned int congruence_class() const
     {
       std::array<unsigned int, hyEdge_dimT> axes;
       for (unsigned int i = 0; i < hyEdge_dimT; ++i)

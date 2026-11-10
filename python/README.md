@@ -1,4 +1,4 @@
-# Explicit python bindings (nanobind)
+#Explicit python bindings(nanobind)
 
 An alternative to the runtime cython compile machinery (`import/` + `cython/`): the user
 writes a small module `.cxx` that spells out the template instantiation it wants, CMake
@@ -94,7 +94,8 @@ import hyperhdg
 module = hyperhdg.load('''
 #include <HyperHDG/bind_python.hxx>
 ...
-NB_MODULE(my_module, m) { HyperHDG::bind_python<HDG>(m, "Diffusion_D2_P4"); }
+NB_MODULE(my_module, m) {
+  HyperHDG::bind_python<HDG>(m, "Diffusion_D2_P4"); }
 ''')
 hdg = module.Diffusion_D2_P4("domains/simplex_1_2.geo", 1.0)
 ```
@@ -206,7 +207,8 @@ CMake and nanobind now provide natively:
 - **Two build trees that don't know about each other.** CMake freezes compiler and flags
   into `cmake_cython.cfg` in *its* binary dir; the python side reads
   `<repo>/build/cmake_cython.cfg` and writes artifacts to
-  `<repo>/build/{cython_files,shared_objects}` — both hardcoded relative to the package
+  `<repo>/build/{
+  cython_files, shared_objects}` — both hardcoded relative to the package
   location (`import_cxx/paths.py`). The two coincide only while everyone configures with
   `-B build`; with CMake presets (`build/<preset>/`) the cfg is no longer found and the
   machinery silently falls back to a hardcoded `g++-10`.
@@ -270,11 +272,10 @@ operator keeps (`include/HyperHDG/local_solver/local_operator.hxx`): by default
 `LocalOperator::Condensed`, S = C A⁻¹ B + D and K = C A⁻¹ (apply is S λ, the residual S λ + K l),
 or `LocalOperator::Factored`, the LU of A with B, C, D, or `LocalOperator::Streaming`, which
 stores nothing and sets up the local problem in every call (one empty operator for all
-hyperedges), or a layout of one's own. The layout also numbers the slots: `Streaming` has one,
-`Condensed` and `Factored` one per problem class of the solver. Diffusion declares problem
-classes when the parameters declare `constant_coefficients` and the geometry numbers the shapes
-of its hyperedges (`shape_class`, as `Geometry::UnitCube`; `Geometry::File` does not, so there
-every hyperedge has its own operator). Operators are
+hyperedges), or a layout of one's own. Diffusion numbers the operators when the parameters
+declare `constant_coefficients` and the geometry gives the congruence class of a hyperedge
+(`congruence_class`, as `Geometry::UnitCube`; `Geometry::File` does not yet, so there every
+hyperedge has its own operator): congruent hyperedges then share one. Operators are
 trivially copyable (`SmallMat` copy/move defaulted), the store is one contiguous array.
 
 Bindings (`bind_python.hxx`, `requires`-guarded as before): NumPy in and out. The prototype's

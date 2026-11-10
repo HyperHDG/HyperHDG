@@ -22,9 +22,8 @@
 // A layout of one's own: the condensed operator stored in single precision (half the memory of
 // Condensed) and applied in double. A layout is any type with make(solver, edge, kind, args)
 // returning an operator with apply and residual; this one has no local_solution, so errors
-// factorize on the fly. It stores the local problem, so its slots are the problem classes of the
-// solver (ByProblemClass); without that base, every hyperedge would have an operator of its own.
-struct SinglePrecision : LocalOperator::ByProblemClass
+// factorize on the fly.
+struct SinglePrecision
 {
   template <class CondensedT>
   struct Operator

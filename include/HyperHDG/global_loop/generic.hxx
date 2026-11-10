@@ -31,15 +31,16 @@ namespace GlobalLoop
  *   \c apply<k>(solver, edge, in, args, out) and \c residual(solver, edge, lambda, args, r); what
  *   it computes and keeps is the solver's business (e.g. local_solver/local_operator.hxx). The
  *   loop hands the solver and the hyperedge to every call of the operator,
- * - optional \c n_operator_slots<Edge>(Stiffness, args) and \c operator_slot(edge, Stiffness,
- *   args): the solver numbers its operators, and hyperedges with the same number share one,
+ * - optional \c operator_slot(edge, Stiffness, args): the solver numbers its operators (0, 1,
+ *   ...), and hyperedges with the same number share one,
  * - optional \c constrained_node<space_dim>(node_type): default predicate for constrain_dirichlet.
  *
  * Store: after \c prepare the operators live in a contiguous vector until \c release, one per
  * slot; without operator_slot, the slot of a hyperedge is its index. A slot names the operator
  * that is stored, not the local problem: hyperedges of one slot read the same operator, whose
- * results may still depend on the hyperedge it is applied to (an operator without state serves
- * all hyperedges from one slot). The loop keeps nothing per hyperedge beyond the operators.
+ * results may still depend on the hyperedge it is applied to. Operators without state (an empty
+ * type) are all the same, so there is one slot for all hyperedges. The loop keeps nothing per
+ * hyperedge beyond the operators.
  * Without prepare every sweep builds the operator of a hyperedge, uses it and drops it. Every
  * public sweep takes that decision once and runs a branch-free per-edge body for the chosen mode.
  *
@@ -182,17 +183,21 @@ class Generic
   {
     release();
     const std::size_t n_edges = hyper_graph_.n_hyEdges();
-    store_.resize(n_operator_slots(args));
-    std::vector<bool> built(store_.size(), false);
     try
     {
+      // The number of slots: the largest one named, plus one.
+      std::size_t n_slots = 0;
+      for (std::size_t e = 0; e < n_edges; ++e)
+      {
+        Edge edge = hyper_graph_[e];
+        n_slots = std::max(n_slots, operator_slot(e, edge, args) + 1);
+      }
+      store_.resize(n_slots);
+      std::vector<bool> built(n_slots, false);
       for (std::size_t e = 0; e < n_edges; ++e)
       {
         Edge edge = hyper_graph_[e];
         const std::size_t slot = operator_slot(e, edge, args);
-        hy_assert(slot < store_.size(), "The local solver has only "
-                                          << store_.size() << " operator slots, but named slot "
-                                          << slot << ".");
         if (!built[slot])
         {
           store_[slot] = local_solver_.local_operator(edge, Stiffness{}, args);
@@ -413,19 +418,14 @@ class Generic
       f(std::false_type{});
   }
   /*!***********************************************************************************************
-   * \brief   The number of operators the store holds, and the one of a hyperedge: as the local
-   *          solver numbers them, else one per hyperedge.
+   * \brief   The slot of the operator of a hyperedge: the only one if operators have no state,
+   *          else as the local solver numbers them, else the index of the hyperedge.
    ************************************************************************************************/
-  std::size_t n_operator_slots(const Args& args) const
-  {
-    if constexpr (requires(Edge& edge) { local_solver_.operator_slot(edge, Stiffness{}, args); })
-      return local_solver_.template n_operator_slots<Edge>(Stiffness{}, args);
-    else
-      return hyper_graph_.n_hyEdges();
-  }
   std::size_t operator_slot(const std::size_t e, Edge& edge, const Args& args) const
   {
-    if constexpr (requires { local_solver_.operator_slot(edge, Stiffness{}, args); })
+    if constexpr (std::is_empty_v<Operator>)
+      return 0;
+    else if constexpr (requires { local_solver_.operator_slot(edge, Stiffness{}, args); })
       return local_solver_.operator_slot(edge, Stiffness{}, args);
     else
       return e;

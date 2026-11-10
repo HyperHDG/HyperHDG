@@ -1133,54 +1133,23 @@ class Diffusion
     return checked([&] { return LayoutT::make(*this, edge, kind, args); });
   }
   /*!***********************************************************************************************
-   * \brief   Whether the solver knows which hyperedges have the same local problem.
+   * \brief   Which hyperedges share a stored operator: the congruent ones, if the parameters
+   *          declare \c constant_coefficients.
    *
-   * It does if the parameters declare \c constant_coefficients and the geometry numbers the
-   * shapes of its hyperedges (\c n_shape_classes and \c shape_class, as Geometry::UnitCube): then
-   * the local problem depends on the shape only (constraints and loads are not part of it), and
-   * the problem class of a hyperedge is its shape class. With constant coefficients on a geometry
-   * that declares no shape classes, there are no problem classes.
+   * Then the local problem depends on the shape of the hyperedge only (constraints and loads are
+   * not part of it), and the slot is the congruence class the geometry gives (\c congruence_class,
+   * as Geometry::UnitCube). Otherwise, and on geometries without congruence classes, the solver
+   * does not number the operators and the loop keeps one per hyperedge.
    ************************************************************************************************/
   template <class Edge>
-  static constexpr bool has_problem_classes = requires {
-    requires parametersT<std::remove_cvref_t<decltype(Edge::geometry)>::space_dim(),
-                         lSol_float_t>::constant_coefficients;
-  } && requires(const std::remove_cvref_t<decltype(Edge::geometry)>& geometry) {
-    std::remove_cvref_t<decltype(Edge::geometry)>::n_shape_classes();
-    geometry.shape_class();
-  };
-  template <class Edge>
-    requires has_problem_classes<Edge>
-  static constexpr unsigned int n_problem_classes(GlobalLoop::Stiffness, const Args&)
-  {
-    return std::remove_cvref_t<decltype(Edge::geometry)>::n_shape_classes();
-  }
-  template <class Edge>
-    requires has_problem_classes<Edge>
-  unsigned int problem_class(Edge& edge, GlobalLoop::Stiffness, const Args&) const
-  {
-    return edge.geometry.shape_class();
-  }
-  /*!***********************************************************************************************
-   * \brief   Which hyperedges read the same stored operator: as the layout says, which knows
-   *          what it stores (cf. local_operator.hxx). Without slots of the layout, the loop keeps
-   *          an operator per hyperedge.
-   ************************************************************************************************/
-  template <class Edge>
-    requires requires(const Diffusion& solver, Edge& edge, const Args& args) {
-      LayoutT::slot(solver, edge, GlobalLoop::Stiffness{}, args);
+    requires requires(Edge& edge) {
+      requires parametersT<std::remove_cvref_t<decltype(Edge::geometry)>::space_dim(),
+                           lSol_float_t>::constant_coefficients;
+      edge.geometry.congruence_class();
     }
-  unsigned int n_operator_slots(GlobalLoop::Stiffness kind, const Args& args) const
+  unsigned int operator_slot(Edge& edge, GlobalLoop::Stiffness, const Args&) const
   {
-    return LayoutT::template n_slots<Edge>(*this, kind, args);
-  }
-  template <class Edge>
-    requires requires(const Diffusion& solver, Edge& edge, const Args& args) {
-      LayoutT::slot(solver, edge, GlobalLoop::Stiffness{}, args);
-    }
-  unsigned int operator_slot(Edge& edge, GlobalLoop::Stiffness kind, const Args& args) const
-  {
-    return LayoutT::slot(*this, edge, kind, args);
+    return edge.geometry.congruence_class();
   }
   /*!***********************************************************************************************
    * \brief   Local right-hand side: volume source and Dirichlet data.
