@@ -277,6 +277,11 @@ class Generic
   /*!***********************************************************************************************
    * \brief   y = J x on free dofs, with x read as zero on constrained dofs; zero there. y is
    *          overwritten.
+   *
+   * x is the direction of the directional derivative. Where a nonlinear problem is linearized is
+   * not an argument: args reaches the local solver as it is, but a global vector does not (only
+   * the loop can gather its local traces), so the local solver keeps the point, e.g. in the data
+   * of the hyperedges.
    ************************************************************************************************/
   template <class Kind = Stiffness, class VecInT, class VecOutT>
   void apply(const VecInT& x, VecOutT& y, const Args& args = Args())
@@ -301,6 +306,8 @@ class Generic
   /*!***********************************************************************************************
    * \brief   r = F(x): flux balance on free dofs, with x read as zero on constrained dofs; zero
    *          there. r is overwritten.
+   *
+   * x is the point at which the residual is evaluated.
    ************************************************************************************************/
   template <class Kind = Stiffness, class VecInT, class VecOutT>
   void residual(const VecInT& x, VecOutT& r, const Args& args = Args())
