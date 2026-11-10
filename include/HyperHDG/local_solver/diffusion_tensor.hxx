@@ -378,6 +378,14 @@ class DiffusionTensor
     requires requires(const Base& base, Edge& edge, const Args& args) {
       base.operator_slot(edge, GlobalLoop::Stiffness{}, args);
     }
+  static constexpr unsigned int n_operator_slots(GlobalLoop::Stiffness kind, const Args& args)
+  {
+    return Base::template n_operator_slots<Edge>(kind, args);
+  }
+  template <class Edge>
+    requires requires(const Base& base, Edge& edge, const Args& args) {
+      base.operator_slot(edge, GlobalLoop::Stiffness{}, args);
+    }
   unsigned int operator_slot(Edge& edge, GlobalLoop::Stiffness kind, const Args& args) const
   {
     return base_.operator_slot(edge, kind, args);
