@@ -23,11 +23,13 @@ def diffusion_test(poly_degree, iteration, debug_mode=False):
 
   const                 = HyperHDG.config()
   const.global_loop     = "Elliptic"
-  const.local_solver    = "TimoshenkoBeam<1,3," + str(poly_degree) + "," + str(2*poly_degree) +">"
+  const.local_solver    = "TimoshenkoBeam<1,3," + str(poly_degree) + "," + str(2*poly_degree) \
+    + ",TimoshenkoCrossParameters>"
   const.topology        = "File<1,3>"
   const.geometry        = "File<1,3>"
   const.node_descriptor = "File<1,3>"
   const.cython_replacements = ["string", "string"]
+  const.include_files   = ["reproducibles_python/parameters/timoshenko.hxx"]
   const.debug_mode      = debug_mode
 
   PyDP = HyperHDG.include(const)
