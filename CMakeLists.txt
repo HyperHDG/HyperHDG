@@ -55,6 +55,14 @@ if(HYPERHDG_HDF5)
                     "CMAKE_PREFIX_PATH) to its install prefix, or -DHYPERHDG_HDF5=OFF.")
   endif()
 endif()
+## CHOLMOD (SuiteSparse) for the sparse direct solver SparseLA::Cholmod
+## (include/HyperHDG/sparse_la.hxx), which exists only with this option. CHOLMOD's CMake config
+## looks up OpenMP for C, so C is enabled.
+option(HYPERHDG_CHOLMOD "Sparse direct solver SparseLA::Cholmod (needs SuiteSparse)" OFF)
+if(HYPERHDG_CHOLMOD)
+  enable_language(C)
+  find_package(CHOLMOD CONFIG REQUIRED)
+endif()
 # On Windows, FindPython looks up interpreters registered in the Windows registry before the ones
 # on PATH. This selects e.g. a python.org Python without NumPy instead of the MSYS2 Python of the
 # shell, so prefer the interpreter on PATH, which is the one that runs the Python scripts.
@@ -88,6 +96,10 @@ target_include_directories(
 if(HYPERHDG_HDF5_FOUND)
   target_compile_definitions(HyperHDG INTERFACE HYPERHDG_HAVE_HDF5)
   target_compile_options(HyperHDG INTERFACE ${HDF5_C_DEFINITIONS})
+endif()
+if(HYPERHDG_CHOLMOD)
+  target_compile_definitions(HyperHDG INTERFACE HYPERHDG_HAVE_CHOLMOD)
+  target_link_libraries(HyperHDG INTERFACE SuiteSparse::CHOLMOD)
 endif()
 
 ## Link our target against upstream dependencies

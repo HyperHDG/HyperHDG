@@ -2,8 +2,13 @@
 
 #include <HyperHDG/hy_assert.hxx>
 
+#ifdef HYPERHDG_HAVE_CHOLMOD  // CMake option HYPERHDG_CHOLMOD
+#include <cholmod.h>
+#endif
+
 #include <algorithm>  // std::max
 #include <cmath>
+#include <cstddef>
 #include <exception>
 #include <functional>
 #include <limits>
@@ -345,5 +350,124 @@ vectorT conjugate_gradient(const vectorT& b,
     throw SparseLA::SolveException();
   return x;
 }
+
+#ifdef HYPERHDG_HAVE_CHOLMOD
+/*!*************************************************************************************************
+ * \brief   Sparse Cholesky factorization of a symmetric definite matrix with CHOLMOD.
+ *
+ * The matrix is given by triplets, as GlobalLoop::Generic::assemble writes them: duplicates are
+ * summed, and of the symmetric matrix only the entries with row <= column are read. \c sign says
+ * which of A (1) and -A (-1) is positive definite, as the condensed matrices of the local solvers
+ * are negative definite; multiply and solve are those of A either way. Constrained dofs need a
+ * diagonal entry of that sign.
+ *
+ * Usage: analyze() (ordering and symbolic factorization, once per sparsity pattern), factorize()
+ * (numeric), then solve() per right-hand side. Only with the CMake option HYPERHDG_CHOLMOD.
+ **************************************************************************************************/
+class Cholmod
+{
+  cholmod_common common_;
+  cholmod_sparse* matrix_ = nullptr;  // sign * A, upper triangle
+  cholmod_factor* factor_ = nullptr;
+  double sign_;
+
+  // A dense CHOLMOD vector on the data of a std::vector.
+  static cholmod_dense view(const std::vector<double>& x)
+  {
+    cholmod_dense dense{};
+    dense.nrow = dense.nzmax = dense.d = x.size();
+    dense.ncol = 1;
+    dense.x = const_cast<double*>(x.data());
+    dense.xtype = CHOLMOD_REAL;
+    dense.dtype = CHOLMOD_DOUBLE;
+    return dense;
+  }
+
+ public:
+  template <class IndexVecT, class ValueVecT>
+  Cholmod(const std::size_t size,
+          const IndexVecT& rows,
+          const IndexVecT& cols,
+          const ValueVecT& vals,
+          const double sign = 1.)
+  : sign_(sign)
+  {
+    hy_assert(cols.size() == rows.size() && vals.size() == rows.size(),
+              "Triplets need a row, a column and a value each.");
+    cholmod_start(&common_);
+    std::size_t n_upper = 0;
+    for (std::size_t k = 0; k < rows.size(); ++k)
+      n_upper += rows[k] <= cols[k];
+    cholmod_triplet* triplet =
+      cholmod_allocate_triplet(size, size, n_upper, 1, CHOLMOD_REAL, &common_);
+    int *i = static_cast<int*>(triplet->i), *j = static_cast<int*>(triplet->j);
+    double* x = static_cast<double*>(triplet->x);
+    std::size_t pos = 0;
+    for (std::size_t k = 0; k < rows.size(); ++k)
+      if (rows[k] <= cols[k])
+      {
+        i[pos] = rows[k];
+        j[pos] = cols[k];
+        x[pos++] = sign_ * vals[k];
+      }
+    triplet->nnz = n_upper;
+    matrix_ = cholmod_triplet_to_sparse(triplet, n_upper, &common_);  // sums duplicates
+    cholmod_free_triplet(&triplet, &common_);
+  }
+  ~Cholmod()
+  {
+    cholmod_free_factor(&factor_, &common_);
+    cholmod_free_sparse(&matrix_, &common_);
+    cholmod_finish(&common_);
+  }
+  Cholmod(const Cholmod&) = delete;
+  Cholmod& operator=(const Cholmod&) = delete;
+
+  std::size_t size() const { return matrix_->nrow; }
+  /*!
+   * Fill-reducing ordering and symbolic factorization.
+   */
+  void analyze()
+  {
+    cholmod_free_factor(&factor_, &common_);
+    factor_ = cholmod_analyze(matrix_, &common_);
+  }
+  /*!
+   * Numeric factorization (after analyze); false if sign * A is not positive definite.
+   */
+  bool factorize()
+  {
+    cholmod_factorize(matrix_, factor_, &common_);
+    return common_.status == CHOLMOD_OK && factor_->minor == factor_->n;
+  }
+  /*!
+   * x = A^-1 b (after factorize).
+   */
+  void solve(const std::vector<double>& b, std::vector<double>& x)
+  {
+    cholmod_dense rhs = view(b);
+    cholmod_dense* result = cholmod_solve(CHOLMOD_A, factor_, &rhs, &common_);
+    const double* values = static_cast<double*>(result->x);
+    x.resize(b.size());
+    for (std::size_t k = 0; k < b.size(); ++k)
+      x[k] = sign_ * values[k];
+    cholmod_free_dense(&result, &common_);
+  }
+  /*!
+   * y = A x, with the assembled matrix.
+   */
+  void multiply(const std::vector<double>& x, std::vector<double>& y)
+  {
+    cholmod_dense in = view(x), out = view(y);
+    double alpha[2] = {sign_, 0.}, beta[2] = {0., 0.};
+    cholmod_sdmult(matrix_, 0, alpha, beta, &in, &out, &common_);
+  }
+  /*!
+   * Nonzeros of the matrix (one triangle) and of its factor (after analyze).
+   */
+  std::size_t nnz() { return cholmod_nnz(matrix_, &common_); }
+  double factor_nnz() const { return common_.lnz; }
+};
+#endif
 
 }  // end of namespace SparseLA
