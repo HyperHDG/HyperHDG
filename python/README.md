@@ -270,10 +270,11 @@ operator keeps (`include/HyperHDG/local_solver/local_operator.hxx`): by default
 `LocalOperator::Condensed`, S = C A⁻¹ B + D and K = C A⁻¹ (apply is S λ, the residual S λ + K l),
 or `LocalOperator::Factored`, the LU of A with B, C, D, or `LocalOperator::Streaming`, which
 stores nothing and sets up the local problem in every call (one empty operator for all
-hyperedges), or a layout of one's own. Congruent elements share one operator when the parameters
-declare `constant_coefficients` and the geometry numbers the shapes of its hyperedges
-(`shape_class`, as `Geometry::UnitCube`; `Geometry::File` does not, so there every hyperedge has
-its own). Operators are
+hyperedges), or a layout of one's own. The layout also numbers the slots: `Streaming` has one,
+`Condensed` and `Factored` one per problem class of the solver. Diffusion declares problem
+classes when the parameters declare `constant_coefficients` and the geometry numbers the shapes
+of its hyperedges (`shape_class`, as `Geometry::UnitCube`; `Geometry::File` does not, so there
+every hyperedge has its own operator). Operators are
 trivially copyable (`SmallMat` copy/move defaulted), the store is one contiguous array.
 
 Bindings (`bind_python.hxx`, `requires`-guarded as before): NumPy in and out. The prototype's
