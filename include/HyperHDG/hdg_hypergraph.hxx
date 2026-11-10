@@ -476,6 +476,10 @@ class HDGHyperGraph
     return hyGraph_geometry_->operator[](index);
   }
   /*!***********************************************************************************************
+   * \brief   The geometry of the hypergraph as a whole.
+   ************************************************************************************************/
+  const GeomT& geometry() const { return *hyGraph_geometry_; }
+  /*!***********************************************************************************************
    * \brief   Nodal information of prescribed hyperedge.
    *
    * \param   index                 Index of the hyperedge to be returned.

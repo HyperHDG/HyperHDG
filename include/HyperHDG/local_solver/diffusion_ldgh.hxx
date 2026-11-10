@@ -1142,21 +1142,23 @@ class Diffusion
    * geometries without congruence classes, the solver does not number the operators and the loop
    * keeps one per hyperedge.
    ************************************************************************************************/
-  template <class Edge>
-  static constexpr bool congruent_share = requires(Edge& edge) {
-    requires parametersT<std::remove_cvref_t<decltype(Edge::geometry)>::space_dim(),
-                         lSol_float_t>::constant_coefficients;
-    std::remove_cvref_t<decltype(Edge::geometry)>::n_congruence_classes();
-    edge.geometry.congruence_class();
-  };
-  template <class Edge>
-    requires congruent_share<Edge>
-  static constexpr unsigned int n_operator_slots(GlobalLoop::Stiffness, const Args&)
+  template <class HyperGraphT>
+    requires requires(const HyperGraphT& hyper_graph) {
+      requires parametersT<HyperGraphT::space_dim(), lSol_float_t>::constant_coefficients;
+      hyper_graph.geometry().n_congruence_classes();
+    }
+  unsigned int n_operator_slots(const HyperGraphT& hyper_graph,
+                                GlobalLoop::Stiffness,
+                                const Args&) const
   {
-    return std::remove_cvref_t<decltype(Edge::geometry)>::n_congruence_classes();
+    return hyper_graph.geometry().n_congruence_classes();
   }
   template <class Edge>
-    requires congruent_share<Edge>
+    requires requires(Edge& edge) {
+      requires parametersT<std::remove_cvref_t<decltype(Edge::geometry)>::space_dim(),
+                           lSol_float_t>::constant_coefficients;
+      edge.geometry.congruence_class();
+    }
   unsigned int operator_slot(Edge& edge, GlobalLoop::Stiffness, const Args&) const
   {
     return edge.geometry.congruence_class();

@@ -31,8 +31,8 @@ namespace GlobalLoop
  *   \c apply<k>(solver, edge, in, args, out) and \c residual(solver, edge, lambda, args, r); what
  *   it computes and keeps is the solver's business (e.g. local_solver/local_operator.hxx). The
  *   loop hands the solver and the hyperedge to every call of the operator,
- * - optional \c n_operator_slots<Edge>(Stiffness, args) and \c operator_slot(edge, Stiffness,
- *   args): the solver numbers its operators, and hyperedges with the same number share one,
+ * - optional \c n_operator_slots(hyper_graph, Stiffness, args) and \c operator_slot(edge,
+ *Stiffness, args): the solver numbers its operators, and hyperedges with the same number share one,
  * - optional \c constrained_node<space_dim>(node_type): default predicate for constrain_dirichlet.
  *
  * Store: after \c prepare the operators live in a contiguous vector until \c release, one per
@@ -424,7 +424,7 @@ class Generic
     else if constexpr (requires(Edge& edge) {
                          local_solver_.operator_slot(edge, Stiffness{}, args);
                        })
-      return local_solver_.template n_operator_slots<Edge>(Stiffness{}, args);
+      return local_solver_.n_operator_slots(hyper_graph_, Stiffness{}, args);
     else
       return hyper_graph_.n_hyEdges();
   }

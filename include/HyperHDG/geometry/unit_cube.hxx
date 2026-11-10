@@ -37,6 +37,18 @@ template <unsigned int hyEdge_dimT,
 class UnitCube
 {
   /*!***********************************************************************************************
+   * \brief   Binomial coefficient n over k (0 if k > n).
+   ************************************************************************************************/
+  static constexpr unsigned int binomial(const unsigned int n, const unsigned int k)
+  {
+    if (k > n)
+      return 0;
+    unsigned int result = 1;
+    for (unsigned int i = 1; i <= k; ++i)
+      result = result * (n - k + i) / i;
+    return result;
+  }
+  /*!***********************************************************************************************
    * \brief   Definition of the geometry of a single hyperedge.
    *
    * A hyperege is uniquely defined by a translation, the spanning dimensions, and the lengths of
@@ -119,18 +131,6 @@ class UnitCube
       return index;
     }
     /*!*********************************************************************************************
-     * \brief   Binomial coefficient n over k (0 if k > n).
-     **********************************************************************************************/
-    static constexpr unsigned int binomial(const unsigned int n, const unsigned int k)
-    {
-      if (k > n)
-        return 0;
-      unsigned int result = 1;
-      for (unsigned int i = 1; i <= k; ++i)
-        result = result * (n - k + i) / i;
-      return result;
-    }
-    /*!*********************************************************************************************
      * \brief   Refine coarse elememnt.
      **********************************************************************************************/
     void adapt_data(const Wrapper::tpcc_elem_t<hyEdge_dimT, hyEdge_dimT>& elem,
@@ -154,20 +154,8 @@ class UnitCube
      **********************************************************************************************/
     static constexpr unsigned int space_dim() { return space_dimT; }
     /*!*********************************************************************************************
-     * \brief   The number of congruence classes of the hyperedges of a unit cube.
-     *
-     * All hyperedges that span the same axes are congruent (same lengths along the same axes, in
-     * the same order), so there is one class per choice of hyEdge_dimT of the space_dimT axes
-     * (for hyperedges of dimension one: one per axis). Local solvers whose operators depend on
-     * the shape of the hyperedge only share them by \c congruence_class.
-     **********************************************************************************************/
-    static constexpr unsigned int n_congruence_classes()
-    {
-      return binomial(space_dimT, hyEdge_dimT);
-    }
-    /*!*********************************************************************************************
-     * \brief   The congruence class of this hyperedge, in 0, ..., n_congruence_classes() - 1: the
-     *          rank of the set of axes it spans (combinatorial number system).
+     * \brief   The congruence class of this hyperedge, in 0, ..., n_congruence_classes() - 1 of
+     *          the unit cube: the rank of the set of axes it spans (combinatorial number system).
      **********************************************************************************************/
     unsigned int congruence_class() const
     {
@@ -477,6 +465,15 @@ class UnitCube
    * elements in the different dimensions.
    ************************************************************************************************/
   typedef ConstructorVecT constructor_value_type;
+  /*!***********************************************************************************************
+   * \brief   The number of congruence classes of the hyperedges.
+   *
+   * All hyperedges that span the same axes are congruent (same lengths along the same axes, in
+   * the same order), so there is one class per choice of hyEdge_dimT of the space_dimT axes (for
+   * hyperedges of dimension one: one per axis). Local solvers whose operators depend on the shape
+   * of the hyperedge only share them by \c hyEdge::congruence_class.
+   ************************************************************************************************/
+  unsigned int n_congruence_classes() const { return binomial(space_dimT, hyEdge_dimT); }
   /*!***********************************************************************************************
    * \brief   Construct a cubic that describes a unit cube hypergraph.
    *

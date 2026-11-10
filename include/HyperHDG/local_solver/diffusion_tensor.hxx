@@ -374,13 +374,15 @@ class DiffusionTensor
     return op;
   }
   // The operator is a function of the local problem: shared as those of Diffusion.
-  template <class Edge>
-    requires requires(const Base& base, Edge& edge, const Args& args) {
-      base.operator_slot(edge, GlobalLoop::Stiffness{}, args);
+  template <class HyperGraphT>
+    requires requires(const Base& base, const HyperGraphT& hyper_graph, const Args& args) {
+      base.n_operator_slots(hyper_graph, GlobalLoop::Stiffness{}, args);
     }
-  static constexpr unsigned int n_operator_slots(GlobalLoop::Stiffness kind, const Args& args)
+  unsigned int n_operator_slots(const HyperGraphT& hyper_graph,
+                                GlobalLoop::Stiffness kind,
+                                const Args& args) const
   {
-    return Base::template n_operator_slots<Edge>(kind, args);
+    return base_.n_operator_slots(hyper_graph, kind, args);
   }
   template <class Edge>
     requires requires(const Base& base, Edge& edge, const Args& args) {
