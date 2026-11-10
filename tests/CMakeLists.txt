@@ -80,10 +80,10 @@ if(HYPERHDG_PLOTTING_TESTS)
   add_subdirectory(plotting)
 endif()
 
-# Quadruple precision end to end (std::float128_t, GCC >= 13). Off by default until the pinned TPP
-# computes in the target precision (tensor_product_polynomials, branch quadrature-precision: the
-# Gauss--Legendre rules, the shape functions at the points and the sums of the integrator); with
-# the older TPP the error stops at about 1e-16 and the test fails.
+# Quadruple precision end to end (std::float128_t, GCC >= 13). It needs a TPP that computes in the
+# target precision (tensor_product_polynomials #13, pinned: the Gauss--Legendre rules, the shape
+# functions at the points and the sums of the integrator); with an older TPP the local matrices
+# are exact to about 1e-16 only and the test fails. Off by default: no CI compiler is checked.
 option(HYPERHDG_QUAD_TESTS "Quadruple-precision test (std::float128_t; needs a current TPP)" OFF)
 if(HYPERHDG_QUAD_TESTS)
   include(CheckCXXSourceCompiles)
