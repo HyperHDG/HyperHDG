@@ -1,9 +1,10 @@
 // The interface of GlobalLoop::Generic on one small instantiation (2D, degree 1, 3 x 3 elements):
-// properties a solve does not check by itself, such as that the streaming sweeps (no prepare)
-// agree with the prepared ones, that the assembled matrix is the matrix-free operator in both
-// modes, and how constraints, the store and reductions behave. Run for every layout of the local
-// operator (local_solver/local_operator.hxx): Condensed (the default), Factored, and a layout of
-// one's own defined here (SinglePrecision); the layouts must agree with each other.
+// properties a solve does not check by itself, such as that the sweeps without prepare agree with
+// the prepared ones, that the assembled matrix is the matrix-free operator in both modes, and how
+// constraints, the store and reductions behave. Run for every layout of the local operator
+// (local_solver/local_operator.hxx): Condensed (the default), Factored, Streaming (nothing
+// stored), and a layout of one's own defined here (SinglePrecision); the layouts must agree with
+// each other.
 #include <HyperHDG/geometry/unit_cube.hxx>
 #include <HyperHDG/global_loop/generic.hxx>
 #include <HyperHDG/local_solver/diffusion_ldgh.hxx>
@@ -19,22 +20,23 @@
 #include <vector>
 
 // A layout of one's own: the condensed operator stored in single precision (half the memory of
-// Condensed) and applied in double. A layout is any type with make(blocks) returning an operator
-// with apply and residual; this one has no make_streaming, so it also serves sweeps without
-// prepare, and no local_solution, so errors factorize on the fly.
+// Condensed) and applied in double. A layout is any type with make(solver, edge, kind, args)
+// returning an operator with apply and residual; this one has no local_solution, so errors
+// factorize on the fly.
 struct SinglePrecision
 {
-  template <class BlocksT>
+  template <class CondensedT>
   struct Operator
   {
-    static constexpr unsigned int n_ldofs = BlocksT::n_ldofs, n_loc = BlocksT::n_loc;
-    using T = typename BlocksT::value_type;
+    static constexpr unsigned int n_ldofs = CondensedT::n_ldofs, n_loc = CondensedT::n_loc;
+    using T = typename CondensedT::T;
 
     SmallSquareMat<n_loc, float> S;
     SmallMat<n_loc, n_ldofs, float> K;
 
-    template <unsigned int k, class Edge, class Args>
-    void apply(const Edge&,
+    template <unsigned int k, class SolverT, class Edge, class Args>
+    void apply(const SolverT&,
+               Edge&,
                const SmallMat<n_loc, k, T>& in,
                const Args&,
                SmallMat<n_loc, k, T>& out) const
@@ -48,34 +50,35 @@ struct SinglePrecision
           out(row, col) = sum;
         }
     }
-    template <class Edge, class Args>
-    void residual(const Edge& edge,
+    template <class SolverT, class Edge, class Args>
+    void residual(const SolverT& solver,
+                  Edge& edge,
                   const SmallVec<n_loc, T>& lambda,
-                  const SmallVec<n_ldofs, T>& load,
                   const Args& args,
                   SmallVec<n_loc, T>& r) const
     {
-      apply(edge, lambda, args, r);
+      apply(solver, edge, lambda, args, r);
+      const SmallVec<n_ldofs, T> load = solver.local_load(edge, args);
       for (unsigned int row = 0; row < n_loc; ++row)
         for (unsigned int j = 0; j < n_ldofs; ++j)
           r[row] += (T)K(row, j) * load[j];
     }
   };
-  template <class BlocksT>
-  static Operator<BlocksT> make(const BlocksT& blocks)
+  template <class SolverT, class Edge, class Kind, class Args>
+  static auto make(const SolverT& solver, Edge& edge, Kind kind, const Args& args)
   {
-    const auto condensed = LocalOperator::Condensed::make(blocks);
-    Operator<BlocksT> op;
-    for (unsigned int i = 0; i < BlocksT::n_loc * BlocksT::n_loc; ++i)
+    const auto condensed = LocalOperator::Condensed::make(solver, edge, kind, args);
+    Operator<std::remove_cvref_t<decltype(condensed)> > op;
+    for (unsigned int i = 0; i < op.n_loc * op.n_loc; ++i)
       op.S[i] = (float)condensed.S[i];
-    for (unsigned int i = 0; i < BlocksT::n_loc * BlocksT::n_ldofs; ++i)
+    for (unsigned int i = 0; i < op.n_loc * op.n_ldofs; ++i)
       op.K[i] = (float)condensed.K[i];
     return op;
   }
 };
 
 // The same problem with the coefficients declared as varying: the local matrix is factorized
-// whole (no fluxes eliminated) and every hyperedge has an operator of its own (no operator_key).
+// whole (no fluxes eliminated) and every hyperedge has an operator of its own (no operator_slot).
 template <unsigned int space_dimT, typename param_float_t = double>
 struct DiffusionSinVarying : tests::DiffusionSin<space_dimT, param_float_t>
 {
@@ -171,7 +174,7 @@ Results test(const char* layout, const double tol)
   for (unsigned int i : constraints)
     constrained[i] = true;
 
-  // ---- streaming (no prepare)
+  // ---- without prepare (an operator per hyperedge and sweep; named stream below)
   check(!loop.prepared() && loop.n_operators() == 0, "not prepared after construction");
   const Vec y_stream = product(loop, x), r_stream = residual_of(loop, x),
             r0 = residual_of(loop, zero);
@@ -195,7 +198,7 @@ Results test(const char* layout, const double tol)
   }
   const Vec a_stream = assembled(loop, true);
   check(max_difference(multiply(a_stream, x), y_stream) <= tol,
-        "streaming: assembled matrix (identity rows) times x = apply(x)");
+        "without prepare: assembled matrix (identity rows) times x = apply(x)");
   {
     const Vec a_masked = assembled(loop, false);
     bool zero_rows = true;
@@ -216,13 +219,13 @@ Results test(const char* layout, const double tol)
   // ---- prepared store
   loop.prepare();
   check(loop.prepared(), "prepared after prepare");
-  check(loop.n_operators() == 1, "congruent hyperedges share one operator (operator_key)");
-  check(max_difference(product(loop, x), y_stream) <= tol, "prepared apply = streaming apply");
+  check(loop.n_operators() == 1, "congruent hyperedges share one operator (operator_slot)");
+  check(max_difference(product(loop, x), y_stream) <= tol, "prepared apply = apply without");
   check(max_difference(residual_of(loop, x), r_stream) <= tol,
-        "prepared residual = streaming residual");
+        "prepared residual = residual without");
   check(max_difference(assembled(loop, true), a_stream) <= tol,
-        "prepared assemble = streaming assemble");
-  const double error_prepared = loop.errors(x)[0];
+        "prepared assemble = assemble without");
+  const double error_prepared = GlobalLoop::errors(loop, x)[0];
   const Results results{product(loop, x), residual_of(loop, x), assembled(loop, true),
                         error_prepared};
 
@@ -232,8 +235,8 @@ Results test(const char* layout, const double tol)
   check(count == 9., "reduce visits every hyperedge once");
   loop.release();
   check(!loop.prepared() && loop.n_operators() == 0, "release empties the store");
-  check(std::abs(loop.errors(x)[0] - error_prepared) <= tol * error_prepared,
-        "errors: streaming = prepared");
+  check(std::abs(GlobalLoop::errors(loop, x)[0] - error_prepared) <= tol * error_prepared,
+        "errors: without prepare = prepared");
   return results;
 }
 
@@ -251,14 +254,15 @@ Results results_only()
   loop.constrain_dirichlet_nodes();
   loop.prepare();
   check(loop.n_operators() == loop.n_hyEdges(), "varying coefficients: an operator per hyperedge");
-  return Results{product(loop, x), residual_of(loop, x), assembled(loop, true), loop.errors(x)[0]};
+  return Results{product(loop, x), residual_of(loop, x), assembled(loop, true),
+                 GlobalLoop::errors(loop, x)[0]};
 }
 
 int main()
 {
-  const Results condensed =
-    test<LocalOperator::Condensed>("Condensed (S, K; Factored streaming)", 1e-12);
+  const Results condensed = test<LocalOperator::Condensed>("Condensed (S, K)", 1e-12);
   const Results factored = test<LocalOperator::Factored>("Factored (LU, B, C, D)", 1e-12);
+  const Results streaming = test<LocalOperator::Streaming>("Streaming (nothing stored)", 1e-12);
   const Results single = test<SinglePrecision>("SinglePrecision (a layout of one's own)", 1e-5);
 
   std::printf("---- layouts against each other\n");
@@ -275,6 +279,8 @@ int main()
            std::abs(a.error - b.error) <= tol * b.error;
   };
   check(agree(condensed, factored, 1e-12), "Condensed = Factored: apply, residual, matrix, error");
+  check(agree(streaming, factored, 1e-12), "Streaming = Factored");
+  check(sizeof(LoopT<LocalOperator::Streaming>::Operator) == 1, "the Streaming operator is empty");
   // with the fluxes eliminated (constant coefficients) and without (declared varying)
   const Results whole = results_only<LoopT<LocalOperator::Factored, DiffusionSinVarying> >();
   const Results whole_condensed =

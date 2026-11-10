@@ -1,6 +1,12 @@
 # Local operator / global loop redesign, v2 — interfaces only
 
 Status: design note, 2026-10-28; the prototype on branch operator-loop implements it (see python/README.md).
+Changed since (2026-11-10), not folded into the text below: the operator is handed the solver in
+every call (apply(solver, edge, ...), residual(solver, edge, lambda, args, r)) and fetches the
+load itself; operator_key is replaced by operator_slot (the solver numbers its operators, a slot
+names what is stored, not the local problem); there is no Streaming form of an operator, a sweep
+without prepare builds local_operator, and LocalOperator::Streaming is a layout that stores
+nothing; errors is a free function on reduce.
 Decisions folded in from review: kind/args/key split, constraints in the
 loop, block apply instead of matrix(), reduce in the loop only, parallel
 prepare, optional update/operator_key, implicit store policy

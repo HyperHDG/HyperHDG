@@ -75,7 +75,7 @@ double error(const double rtol)
   options.max_iterations = 10 * size;
   const SparseLA::SolverResult cg = SparseLA::cg(
     [&](const std::vector<T>& in, std::vector<T>& out) { loop.apply(in, out); }, rhs, x, options);
-  const double e = (double)loop.errors(x)[0];
+  const double e = (double)GlobalLoop::errors(loop, x)[0];
   std::printf("  %-12s cg %s after %u iterations, error %.2e\n",
               sizeof(T) == 16 ? "float128_t" : "double", SparseLA::to_string(cg.reason),
               cg.iterations, e);

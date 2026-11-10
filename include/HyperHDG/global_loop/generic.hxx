@@ -10,44 +10,14 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
-#include <map>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
 namespace GlobalLoop
 {
-namespace detail
-{
 /*!*************************************************************************************************
- * \brief   Whether the local solver has a Streaming form of its operator, and the operator type of
- *a sweep without prepare (the Streaming form if there is one).
- **************************************************************************************************/
-template <class SolverT, class EdgeT, class ArgsT>
-concept has_streaming_operator = requires(const SolverT& solver, EdgeT& edge, const ArgsT& args) {
-  solver.local_operator(edge, Stiffness{}, args, Streaming{});
-};
-template <class SolverT, class EdgeT, class ArgsT>
-struct streaming_operator
-{
-  using type = std::remove_cvref_t<
-    decltype(std::declval<const SolverT&>()
-               .local_operator(std::declval<EdgeT&>(), Stiffness{}, std::declval<const ArgsT&>()))>;
-};
-template <class SolverT, class EdgeT, class ArgsT>
-  requires has_streaming_operator<SolverT, EdgeT, ArgsT>
-struct streaming_operator<SolverT, EdgeT, ArgsT>
-{
-  using type = std::remove_cvref_t<decltype(std::declval<const SolverT&>().local_operator(
-    std::declval<EdgeT&>(),
-    Stiffness{},
-    std::declval<const ArgsT&>(),
-    Streaming{}))>;
-};
-}  // end of namespace detail
-
-/*!*************************************************************************************************
- * \brief   Prototype of the single global loop built on local operators.
+ * \brief   The single global loop built on local operators.
  *
  * The loop is a scatter--gather engine over hyperedges. For every hyperedge it gathers the local
  * trace from a global vector, hands it to the hyperedge's local operator, and scatters the result.
@@ -57,20 +27,21 @@ struct streaming_operator<SolverT, EdgeT, ArgsT>
  *
  * Local solver protocol (cf. doc/local_operator_design.md):
  * - \c Args: runtime parameters (time, ...) forwarded to every call,
- * - \c local_operator(edge, Stiffness, args): builds the immutable per-edge operator with
- *   \c apply<k>(edge, in, args, out) and \c residual(edge, lambda, load, args, r); its layout,
- *   i.e. what is computed and kept, is the solver's (e.g. local_solver/local_operator.hxx),
- * - optional \c local_operator(edge, Stiffness, args, Streaming): the operator for a single use (a
- *   sweep without prepare), if the stored form is expensive to build,
- * - \c local_load(edge, args): the local right-hand side (loads, Dirichlet data) used by residual,
- * - \c error_sq(edge, op, lambda, args): per-edge error contribution; its type needs operator+,
- * - optional \c operator_key(edge, Stiffness, args): share one operator among equal edges,
+ * - \c local_operator(edge, Stiffness, args): builds the immutable operator with
+ *   \c apply<k>(solver, edge, in, args, out) and \c residual(solver, edge, lambda, args, r); what
+ *   it computes and keeps is the solver's business (e.g. local_solver/local_operator.hxx). The
+ *   loop hands the solver and the hyperedge to every call of the operator,
+ * - optional \c n_operator_slots<Edge>(Stiffness, args) and \c operator_slot(edge, Stiffness,
+ *   args): the solver numbers its operators, and hyperedges with the same number share one,
  * - optional \c constrained_node<space_dim>(node_type): default predicate for constrain_dirichlet.
  *
- * Store: after \c prepare the operators live in a contiguous vector (one per distinct key) until
- * \c release. Without prepare every sweep streams: build (the Streaming form), use, drop per
- * hyperedge. Every public
- * sweep takes that decision once and runs a branch-free per-edge body for the chosen mode.
+ * Store: after \c prepare the operators live in a contiguous vector until \c release, one per
+ * slot; without operator_slot, the slot of a hyperedge is its index. A slot names the operator
+ * that is stored, not the local problem: hyperedges of one slot read the same operator, whose
+ * results may still depend on the hyperedge it is applied to (an operator without state serves
+ * all hyperedges from one slot). The loop keeps nothing per hyperedge beyond the operators.
+ * Without prepare every sweep builds the operator of a hyperedge, uses it and drops it. Every
+ * public sweep takes that decision once and runs a branch-free per-edge body for the chosen mode.
  *
  * Constraints: a sorted index set of global dofs owned by the loop. apply is the identity there,
  * residual returns x_i (prescribed values are zero in this prototype, Dirichlet data enters via
@@ -103,28 +74,14 @@ class Generic
   using Operator = std::remove_cvref_t<
     decltype(std::declval<const LocalSolverT&>()
                .local_operator(std::declval<Edge&>(), Stiffness{}, std::declval<const Args&>()))>;
-  // The operator of a sweep without prepare: the solver's Streaming form, if it has one.
-  using StreamingOperator = typename detail::streaming_operator<LocalSolverT, Edge, Args>::type;
   template <unsigned int k>
   using Traces = SmallMat<n_loc, k, dof_value_t>;
-  using error_t = std::remove_cvref_t<decltype(std::declval<const LocalSolverT&>().error_sq(
-    std::declval<Edge&>(),
-    std::declval<const Operator&>(),
-    std::declval<const Traces<1>&>(),
-    std::declval<const Args&>()))>;
-  static_assert(
-    requires(error_t a, error_t b) { a + b; },
-    "The error type of the local solver must provide operator+ (e.g. a SmallVec).");
 
  private:
   HyperGraphT hyper_graph_;
   const LocalSolverT local_solver_;
 
-  std::vector<Operator> store_;              // one operator per distinct key (prepared only)
-  std::vector<std::size_t> slot_;            // hyperedge -> index into store_
-  std::vector<std::size_t> representative_;  // slot -> a hyperedge with that key
-  std::vector<std::size_t> slot_begin_;      // slot -> its first entry in slot_edges_
-  std::vector<std::size_t> slot_edges_;      // the hyperedges, grouped by slot
+  std::vector<Operator> store_;  // one operator per slot (prepared only)
   bool prepared_ = false;
 
   std::vector<dof_index_t> constraints_;  // sorted global dof indices
@@ -155,6 +112,7 @@ class Generic
   // ---- sizes, refinement
   // ---------------------------------------------------------------------------
 
+  const LocalSolverT& local_solver() const { return local_solver_; }
   dof_index_t size_of_system() const { return hyper_graph_.n_global_dofs(); }
   std::size_t n_hyEdges() const { return hyper_graph_.n_hyEdges(); }
   unsigned int get_refinement() { return hyper_graph_.get_refinement(); }
@@ -218,43 +176,28 @@ class Generic
   // -------------------------------------------------------------------------------------
 
   /*!***********************************************************************************************
-   * \brief   Build the operators of all hyperedges (one per distinct key) and keep them.
+   * \brief   Build the operators (one per slot) and keep them.
    ************************************************************************************************/
   void prepare(const Args& args = Args())
   {
     release();
     const std::size_t n_edges = hyper_graph_.n_hyEdges();
-    slot_.resize(n_edges);
-
-    if constexpr (requires(Edge& e) { local_solver_.operator_key(e, Stiffness{}, args); })
+    store_.resize(n_operator_slots(args));
+    std::vector<bool> built(store_.size(), false);
+    try
     {
-      using Key = std::remove_cvref_t<decltype(local_solver_.operator_key(std::declval<Edge&>(),
-                                                                          Stiffness{}, args))>;
-      std::map<Key, std::size_t> slot_of_key;
       for (std::size_t e = 0; e < n_edges; ++e)
       {
         Edge edge = hyper_graph_[e];
-        auto [it, inserted] = slot_of_key.emplace(
-          local_solver_.operator_key(edge, Stiffness{}, args), representative_.size());
-        if (inserted)
-          representative_.push_back(e);
-        slot_[e] = it->second;
-      }
-    }
-    else
-    {
-      representative_.resize(n_edges);
-      for (std::size_t e = 0; e < n_edges; ++e)
-        slot_[e] = representative_[e] = e;
-    }
-
-    store_.resize(representative_.size());
-    try
-    {
-      for (std::size_t s = 0; s < representative_.size(); ++s)
-      {
-        Edge edge = hyper_graph_[representative_[s]];
-        store_[s] = local_solver_.local_operator(edge, Stiffness{}, args);
+        const std::size_t slot = operator_slot(e, edge, args);
+        hy_assert(slot < store_.size(), "The local solver has only "
+                                          << store_.size() << " operator slots, but named slot "
+                                          << slot << ".");
+        if (!built[slot])
+        {
+          store_[slot] = local_solver_.local_operator(edge, Stiffness{}, args);
+          built[slot] = true;
+        }
       }
     }
     catch (...)
@@ -262,26 +205,12 @@ class Generic
       release();
       throw;
     }
-    // the hyperedges of every slot, for reductions that build one operator per slot
-    slot_begin_.assign(representative_.size() + 1, 0);
-    for (std::size_t e = 0; e < n_edges; ++e)
-      ++slot_begin_[slot_[e] + 1];
-    for (std::size_t s = 0; s < representative_.size(); ++s)
-      slot_begin_[s + 1] += slot_begin_[s];
-    slot_edges_.resize(n_edges);
-    std::vector<std::size_t> next(slot_begin_.begin(), slot_begin_.end() - 1);
-    for (std::size_t e = 0; e < n_edges; ++e)
-      slot_edges_[next[slot_[e]]++] = e;
     prepared_ = true;
   }
   void release()
   {
     store_.clear();
     store_.shrink_to_fit();
-    slot_.clear();
-    representative_.clear();
-    slot_begin_.clear();
-    slot_edges_.clear();
     prepared_ = false;
   }
   bool prepared() const { return prepared_; }
@@ -306,7 +235,7 @@ class Generic
                           {
                             Traces<1> in, res;
                             gather(dofs, x, in);
-                            op.apply(edge, in, args, res);
+                            op.apply(local_solver_, edge, in, args, res);
                             scatter(dofs, res, y);
                           });
       });
@@ -329,7 +258,7 @@ class Generic
                           {
                             Traces<1> in, res;
                             gather(dofs, x, in);
-                            op.residual(edge, in, local_solver_.local_load(edge, args), args, res);
+                            op.residual(local_solver_, edge, in, args, res);
                             scatter(dofs, res, r);
                           });
       });
@@ -383,34 +312,17 @@ class Generic
         }
     };
 
-    if (prepared_ && store_.size() < n_edges)
-    {
-      // Shared operators: one dense block per slot, then a copy per hyperedge.
-      std::vector<Traces<n_loc> > blocks(store_.size());
-      for (std::size_t s = 0; s < store_.size(); ++s)
+    dispatch(
+      [&](auto mode)
       {
-        Edge edge = hyper_graph_[representative_[s]];
-        store_[s].apply(edge, identity, args, blocks[s]);
-      }
-      for (std::size_t e = 0; e < n_edges; ++e)
-      {
-        Dofs dofs;
-        local_dof_indices(hyper_graph_[e], dofs);
-        write_block(e, dofs, blocks[slot_[e]]);
-      }
-    }
-    else
-      dispatch(
-        [&](auto mode)
-        {
-          sweep<mode.value>(args,
-                            [&](std::size_t e, Edge& edge, const auto& op, const Dofs& dofs)
-                            {
-                              Traces<n_loc> loc_mat;
-                              op.apply(edge, identity, args, loc_mat);
-                              write_block(e, dofs, loc_mat);
-                            });
-        });
+        sweep<mode.value>(args,
+                          [&](std::size_t e, Edge& edge, const auto& op, const Dofs& dofs)
+                          {
+                            Traces<n_loc> loc_mat;
+                            op.apply(local_solver_, edge, identity, args, loc_mat);
+                            write_block(e, dofs, loc_mat);
+                          });
+      });
 
     if (identity_rows)
     {
@@ -441,46 +353,6 @@ class Generic
                           });
       });
     return result;
-  }
-  /*!***********************************************************************************************
-   * \brief   Errors: sum of the local solver's error_sq, square root taken componentwise.
-   ************************************************************************************************/
-  template <class VecT>
-  error_t errors(const VecT& x, const Args& args = Args())
-  {
-    auto error_sq = [&](Edge& edge, const auto& op, const Traces<1>& lam)
-    { return local_solver_.error_sq(edge, op, lam, args); };
-    error_t sum = error_t();
-    if constexpr (!requires(const Operator& op, Edge& e, const Traces<1>& lam, const Args& a) {
-                    op.local_solution(e, lam, local_solver_.local_load(e, a), a);
-                  })
-      if (prepared_)
-      {
-        // The stored operators lack the local solution (e.g. LocalOperator::Condensed): one
-        // Streaming operator per slot, shared by the slot's hyperedges, instead of the solver
-        // setting up the local problem again for every hyperedge.
-        for (std::size_t s = 0; s < representative_.size(); ++s)
-        {
-          Edge representative = hyper_graph_[representative_[s]];
-          const StreamingOperator op = streaming_operator(representative, args);
-          for (std::size_t k = slot_begin_[s]; k < slot_begin_[s + 1]; ++k)
-          {
-            Edge edge = hyper_graph_[slot_edges_[k]];
-            Dofs dofs;
-            local_dof_indices(edge, dofs);
-            Traces<1> lam;
-            gather(dofs, x, lam);
-            sum = sum + error_sq(edge, op, lam);
-          }
-        }
-        for (unsigned int k = 0; k < sum.size(); ++k)
-          sum[k] = std::sqrt(sum[k]);
-        return sum;
-      }
-    sum = reduce(x, args, error_sq, error_t());
-    for (unsigned int k = 0; k < sum.size(); ++k)
-      sum[k] = std::sqrt(sum[k]);
-    return sum;
   }
 
  private:
@@ -541,19 +413,27 @@ class Generic
       f(std::false_type{});
   }
   /*!***********************************************************************************************
-   * \brief   Run body(e, edge, operator, dofs) over all hyperedges; the operator comes from the
-   *store or is built on the fly, decided at compile time.
+   * \brief   The number of operators the store holds, and the one of a hyperedge: as the local
+   *          solver numbers them, else one per hyperedge.
    ************************************************************************************************/
-  /*!***********************************************************************************************
-   * \brief   The operator of one hyperedge for a single use: the solver's Streaming form, if any.
-   ************************************************************************************************/
-  StreamingOperator streaming_operator(Edge& edge, const Args& args) const
+  std::size_t n_operator_slots(const Args& args) const
   {
-    if constexpr (detail::has_streaming_operator<LocalSolverT, Edge, Args>)
-      return local_solver_.local_operator(edge, Stiffness{}, args, Streaming{});
+    if constexpr (requires(Edge& edge) { local_solver_.operator_slot(edge, Stiffness{}, args); })
+      return local_solver_.template n_operator_slots<Edge>(Stiffness{}, args);
     else
-      return local_solver_.local_operator(edge, Stiffness{}, args);
+      return hyper_graph_.n_hyEdges();
   }
+  std::size_t operator_slot(const std::size_t e, Edge& edge, const Args& args) const
+  {
+    if constexpr (requires { local_solver_.operator_slot(edge, Stiffness{}, args); })
+      return local_solver_.operator_slot(edge, Stiffness{}, args);
+    else
+      return e;
+  }
+  /*!***********************************************************************************************
+   * \brief   Run body(e, edge, operator, dofs) over all hyperedges; the operator comes from the
+   *          store or is built on the fly, decided at compile time.
+   ************************************************************************************************/
   template <bool use_store, class Body>
   void sweep(const Args& args, Body body)
   {
@@ -564,14 +444,32 @@ class Generic
       Dofs dofs;
       local_dof_indices(edge, dofs);
       if constexpr (use_store)
-        body(e, edge, store_[slot_[e]], dofs);
+        body(e, edge, store_[operator_slot(e, edge, args)], dofs);
       else
       {
-        const StreamingOperator op = streaming_operator(edge, args);
+        const Operator op = local_solver_.local_operator(edge, Stiffness{}, args);
         body(e, edge, op, dofs);
       }
     }
   }
 };  // end of class Generic
+
+/*!*************************************************************************************************
+ * \brief   Errors of a solution: the sum of the local solver's error_sq(edge, operator, lambda,
+ *          args) over all hyperedges (a reduction of the loop), square root taken componentwise.
+ **************************************************************************************************/
+template <class LoopT, class VecT>
+auto errors(LoopT& loop, const VecT& x, const typename LoopT::Args& args = typename LoopT::Args())
+{
+  using error_t = std::remove_cvref_t<decltype(loop.local_solver().error_sq(
+    std::declval<typename LoopT::Edge&>(), std::declval<const typename LoopT::Operator&>(),
+    std::declval<const typename LoopT::template Traces<1>&>(), args))>;
+  error_t sum = loop.reduce(
+    x, args, [&](auto& edge, const auto& op, const auto& lambda)
+    { return loop.local_solver().error_sq(edge, op, lambda, args); }, error_t());
+  for (unsigned int k = 0; k < sum.size(); ++k)
+    sum[k] = std::sqrt(sum[k]);
+  return sum;
+}
 
 }  // end of namespace GlobalLoop

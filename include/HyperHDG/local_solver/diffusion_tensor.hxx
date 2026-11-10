@@ -155,10 +155,11 @@ class DiffusionTensor
     std::array<Mat1, dim> G, H, V;        // 1D derivative, its partner, eigenvectors of X_d
     std::array<std::array<T, n1>, dim> lambda;
 
-    template <unsigned int k, class Edge, class Args>
-    void apply(const Edge& edge,
+    template <unsigned int k, class SolverT, class Edge, class Args>
+    void apply(const SolverT&,
+               Edge&,
                const SmallMat<n_loc, k, T>& in,
-               const Args& args,
+               const Args&,
                SmallMat<n_loc, k, T>& out) const
     {
       for (unsigned int col = 0; col < k; ++col)
@@ -166,19 +167,36 @@ class DiffusionTensor
         SmallVec<n_loc, T> lambda_col, flux;
         for (unsigned int i = 0; i < n_loc; ++i)
           lambda_col[i] = in(i, col);
-        residual(edge, lambda_col, SmallVec<n_ldofs, T>(), args, flux);
+        flux_of(lambda_col, SmallVec<n_ldofs, T>(), flux);
         for (unsigned int i = 0; i < n_loc; ++i)
           out(i, col) = flux[i];
       }
     }
-    template <class Edge, class Args>
-    void residual(const Edge& edge,
+    template <class SolverT, class Edge, class Args>
+    void residual(const SolverT& solver,
+                  Edge& edge,
                   const SmallVec<n_loc, T>& lambda_in,
-                  const SmallVec<n_ldofs, T>& load,
                   const Args& args,
                   SmallVec<n_loc, T>& r) const
     {
-      const SmallVec<n_ldofs, T> x = local_solution(edge, lambda_in, load, args);
+      flux_of(lambda_in, solver.local_load(edge, args), r);
+    }
+    template <class SolverT, class Edge, class Args>
+    SmallVec<n_ldofs, T> local_solution(const SolverT& solver,
+                                        Edge& edge,
+                                        const SmallVec<n_loc, T>& lambda_in,
+                                        const Args& args) const
+    {
+      return solve(lambda_in, solver.local_load(edge, args));
+    }
+
+   private:
+    // r = C x + D lambda for the local solution x of the trace lambda and the load
+    void flux_of(const SmallVec<n_loc, T>& lambda_in,
+                 const SmallVec<n_ldofs, T>& load,
+                 SmallVec<n_loc, T>& r) const
+    {
+      const SmallVec<n_ldofs, T> x = solve(lambda_in, load);
       // flux = C x + D lambda: restriction of n_d q_d + tau u to every face
       for (unsigned int d = 0; d < dim; ++d)
         for (unsigned int s = 0; s < 2; ++s)
@@ -194,11 +212,9 @@ class DiffusionTensor
           }
         }
     }
-    template <class Edge, class Args>
-    SmallVec<n_ldofs, T> local_solution(const Edge&,
-                                        const SmallVec<n_loc, T>& lambda_in,
-                                        const SmallVec<n_ldofs, T>& load,
-                                        const Args&) const
+    // the local solution x = A^-1 (B lambda + l)
+    SmallVec<n_ldofs, T> solve(const SmallVec<n_loc, T>& lambda_in,
+                               const SmallVec<n_ldofs, T>& load) const
     {
       // b = B lambda + l: extension of the face values along their direction
       SmallVec<n_ldofs, T> rhs = load;
@@ -357,11 +373,21 @@ class DiffusionTensor
     }
     return op;
   }
+  // The operators are shared as those of Diffusion: by the shape classes of the geometry.
   template <class Edge>
-  auto operator_key(Edge& edge, GlobalLoop::Stiffness kind, const Args& args) const
-    requires requires(const Base& base) { base.operator_key(edge, kind, args); }
+    requires Base::template
+  shares_operators<Edge> static constexpr unsigned int n_operator_slots(GlobalLoop::Stiffness kind,
+                                                                        const Args& args)
   {
-    return base_.operator_key(edge, kind, args);
+    return Base::template n_operator_slots<Edge>(kind, args);
+  }
+  template <class Edge>
+    requires Base::template
+  shares_operators<Edge> unsigned int operator_slot(Edge& edge,
+                                                    GlobalLoop::Stiffness kind,
+                                                    const Args& args) const
+  {
+    return base_.operator_slot(edge, kind, args);
   }
   template <class Edge>
   SmallVec<n_ldofs, T> local_load(Edge& edge, const Args& args) const

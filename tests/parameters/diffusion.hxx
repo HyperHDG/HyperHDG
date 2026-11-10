@@ -12,7 +12,7 @@ namespace tests
  *
  * The problem of reproducibles_python/diffusion_convergence_elliptic.py (TestParametersSinEllipt).
  * The coefficients do not depend on space, so identical hyperedges share one local operator (cf.
- * Diffusion::operator_key).
+ * Diffusion::operator_slot).
  **************************************************************************************************/
 template <unsigned int space_dimT, typename param_float_t = double>
 struct DiffusionSin
