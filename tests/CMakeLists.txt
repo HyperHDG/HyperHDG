@@ -88,22 +88,25 @@ if(HYPERHDG_PLOTTING_TESTS)
   add_subdirectory(plotting)
 endif()
 
-# Quadruple precision end to end (std::float128_t, GCC >= 13). Off by default until the pinned TPP
-# computes in the target precision (tensor_product_polynomials, branch quadrature-precision: the
-# Gauss--Legendre rules, the shape functions at the points and the sums of the integrator); with
-# the older TPP the error stops at about 1e-16 and the test fails.
-option(HYPERHDG_QUAD_TESTS "Quadruple-precision test (std::float128_t; needs a current TPP)" OFF)
+# Quadruple precision end to end (std::float128_t with its math functions: GCC >= 13 with glibc;
+# left out with compilers that have none, e.g. Clang). It needs a TPP that computes in the target
+# precision (tensor_product_polynomials #13, pinned: the Gauss--Legendre rules, the shape functions
+# at the points and the sums of the integrator); with an older TPP the local matrices are exact to
+# about 1e-16 only and the test fails.
+option(HYPERHDG_QUAD_TESTS "Quadruple-precision test (std::float128_t; needs a current TPP)" ON)
 if(HYPERHDG_QUAD_TESTS)
   include(CheckCXXSourceCompiles)
   set(CMAKE_REQUIRED_FLAGS -std=c++23)
-  check_cxx_source_compiles("#include <stdfloat>
-    int main() { std::float128_t x = 1; return x > 0 ? 0 : 1; }" HYPERHDG_HAVE_FLOAT128)
+  check_cxx_source_compiles("#include <cmath>
+    #include <stdfloat>
+    int main() { std::float128_t x = 1; return std::sqrt(std::abs(std::sin(x))) > 0 ? 0 : 1; }"
+    HYPERHDG_HAVE_FLOAT128)
   unset(CMAKE_REQUIRED_FLAGS)
   if(HYPERHDG_HAVE_FLOAT128)
     add_hyperhdg_test(quad quad.cxx)
     target_compile_features(quad PRIVATE cxx_std_23)
   else()
-    message(WARNING "HYPERHDG_QUAD_TESTS: the compiler has no std::float128_t, quad left out.")
+    message(STATUS "HYPERHDG_QUAD_TESTS: the compiler has no std::float128_t, quad left out.")
   endif()
 endif()
 

@@ -1,4 +1,4 @@
-# Explicit python bindings (nanobind)
+#Explicit python bindings(nanobind)
 
 An alternative to the runtime cython compile machinery (`import/` + `cython/`): the user
 writes a small module `.cxx` that spells out the template instantiation it wants, CMake
@@ -94,7 +94,8 @@ import hyperhdg
 module = hyperhdg.load('''
 #include <HyperHDG/bind_python.hxx>
 ...
-NB_MODULE(my_module, m) { HyperHDG::bind_python<HDG>(m, "Diffusion_D2_P4"); }
+NB_MODULE(my_module, m) {
+  HyperHDG::bind_python<HDG>(m, "Diffusion_D2_P4"); }
 ''')
 hdg = module.Diffusion_D2_P4("domains/simplex_1_2.geo", 1.0)
 ```
@@ -206,7 +207,8 @@ CMake and nanobind now provide natively:
 - **Two build trees that don't know about each other.** CMake freezes compiler and flags
   into `cmake_cython.cfg` in *its* binary dir; the python side reads
   `<repo>/build/cmake_cython.cfg` and writes artifacts to
-  `<repo>/build/{cython_files,shared_objects}` — both hardcoded relative to the package
+  `<repo>/build/{
+  cython_files, shared_objects}` — both hardcoded relative to the package
   location (`import_cxx/paths.py`). The two coincide only while everyone configures with
   `-B build`; with CMake presets (`build/<preset>/`) the cfg is no longer found and the
   machinery silently falls back to a hardcoded `g++-10`.
@@ -257,9 +259,13 @@ construction) and `residual`; the loop hands it the solver and the hyperedge in 
 loop owns the store (`prepare` / `release`: one operator per slot, as the solver numbers them
 with `operator_slot`, else one per hyperedge; without `prepare` an operator is built per
 hyperedge and sweep; each public sweep decides once and runs a branch-free body), the constraint
-index set (Dirichlet rows: identity in `apply`, masked in `assemble`), `n_triplets` + `assemble`
-into caller arrays, and `reduce`; `GlobalLoop::errors(loop, x)` is a reduction with the solver's
-`error_sq`. Nothing in the loop
+index set (constrained dofs are not part of the system: rows and columns are zero in `apply`
+and `assemble`, so the matrix is symmetric; `assemble` adds a unit diagonal there on request),
+`n_triplets` + `assemble`
+into caller arrays, and `reduce` (with any combination, `+` by default);
+`GlobalLoop::errors(loop, x)` is a reduction with the solver's `error_sq`. `prepare` and the
+sweeps are templates on the kind of operator (`Stiffness` by default, `loop.apply<Mass>(x, y)`),
+with one store per kind; a solver with other kinds lists them as `Kinds`. Nothing in the loop
 allocates global vectors: every entry point takes vector-like inputs and outputs (`std::vector`,
 `std::span`). Serial; parallel sweeps are a separate step.
 
@@ -270,11 +276,10 @@ operator keeps (`include/HyperHDG/local_solver/local_operator.hxx`): by default
 `LocalOperator::Condensed`, S = C A⁻¹ B + D and K = C A⁻¹ (apply is S λ, the residual S λ + K l),
 or `LocalOperator::Factored`, the LU of A with B, C, D, or `LocalOperator::Streaming`, which
 stores nothing and sets up the local problem in every call (one empty operator for all
-hyperedges), or a layout of one's own. The layout also numbers the slots: `Streaming` has one,
-`Condensed` and `Factored` one per problem class of the solver. Diffusion declares problem
-classes when the parameters declare `constant_coefficients` and the geometry numbers the shapes
-of its hyperedges (`shape_class`, as `Geometry::UnitCube`; `Geometry::File` does not, so there
-every hyperedge has its own operator). Operators are
+hyperedges), or a layout of one's own. Diffusion numbers the operators when the parameters
+declare `constant_coefficients` and the geometry gives the congruence class of a hyperedge
+(`congruence_class`, as `Geometry::UnitCube`; `Geometry::File` does not yet, so there every
+hyperedge has its own operator): congruent hyperedges then share one. Operators are
 trivially copyable (`SmallMat` copy/move defaulted), the store is one contiguous array.
 
 Bindings (`bind_python.hxx`, `requires`-guarded as before): NumPy in and out. The prototype's

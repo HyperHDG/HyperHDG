@@ -17,14 +17,14 @@
 #include <cmath>
 #include <cstdio>
 #include <random>
+#include <tuple>
 #include <vector>
 
 // A layout of one's own: the condensed operator stored in single precision (half the memory of
 // Condensed) and applied in double. A layout is any type with make(solver, edge, kind, args)
 // returning an operator with apply and residual; this one has no local_solution, so errors
-// factorize on the fly. It stores the local problem, so its slots are the problem classes of the
-// solver (ByProblemClass); without that base, every hyperedge would have an operator of its own.
-struct SinglePrecision : LocalOperator::ByProblemClass
+// factorize on the fly.
+struct SinglePrecision
 {
   template <class CondensedT>
   struct Operator
@@ -84,6 +84,26 @@ template <unsigned int space_dimT, typename param_float_t = double>
 struct DiffusionSinVarying : tests::DiffusionSin<space_dimT, param_float_t>
 {
   static constexpr bool constant_coefficients = false;
+};
+
+// A solver with a second kind of operator: twice the stiffness. It lists its kinds; the loop
+// keeps a store per kind.
+struct Twice
+{
+};
+struct TwoKinds : LocalSolver::Diffusion<2, 1, 2, tests::DiffusionSin, double>
+{
+  using Base = LocalSolver::Diffusion<2, 1, 2, tests::DiffusionSin, double>;
+  using Kinds = std::tuple<GlobalLoop::Stiffness, Twice>;
+  using Base::Base;
+  using Base::local_operator;
+  template <class Edge>
+  auto local_operator(Edge& edge, Twice, const Args& args) const
+  {
+    auto op = Base::local_operator(edge, GlobalLoop::Stiffness{}, args);
+    op.S *= 2.;
+    return op;
+  }
 };
 
 template <class LayoutT, template <unsigned int, typename> class ParametersT = tests::DiffusionSin>
@@ -179,13 +199,20 @@ Results test(const char* layout, const double tol)
   check(!loop.prepared() && loop.n_operators() == 0, "not prepared after construction");
   const Vec y_stream = product(loop, x), r_stream = residual_of(loop, x),
             r0 = residual_of(loop, zero);
-  bool identity = true, affine = true;
+  bool zero_there = true, affine = true;
   for (unsigned int i = 0; i < n; ++i)
     if (constrained[i])
-      identity = identity && y_stream[i] == x[i] && r_stream[i] == x[i];
+      zero_there = zero_there && y_stream[i] == 0. && r_stream[i] == 0.;
     else
       affine = affine && std::abs(r_stream[i] - r0[i] - y_stream[i]) <= tol;
-  check(identity, "apply and residual are the identity on constrained dofs");
+  check(zero_there, "apply and residual are zero on constrained dofs");
+  {
+    Vec x_free = x;
+    for (unsigned int i : constraints)
+      x_free[i] = 0.;
+    check(product(loop, x_free) == y_stream && residual_of(loop, x_free) == r_stream,
+          "apply and residual read x as zero on constrained dofs");
+  }
   check(affine, "residual(x) - residual(0) = apply(x) on free dofs");
   {
     Vec combination(n);
@@ -198,24 +225,23 @@ Results test(const char* layout, const double tol)
     check(max_difference(y_combination, expected) <= tol, "apply is linear");
   }
   const Vec a_stream = assembled(loop, true);
-  check(max_difference(multiply(a_stream, x), y_stream) <= tol,
-        "without prepare: assembled matrix (identity rows) times x = apply(x)");
   {
     const Vec a_masked = assembled(loop, false);
+    check(max_difference(multiply(a_masked, x), y_stream) <= tol,
+          "without prepare: assembled matrix times x = apply(x)");
     bool zero_rows = true;
     for (unsigned int col = 0; col < n; ++col)
       for (unsigned int i : constraints)
-        zero_rows = zero_rows && a_masked[col * n + i] == 0.;
-    check(zero_rows, "without identity rows, constrained rows are zero");
+        zero_rows = zero_rows && a_masked[col * n + i] == 0. && a_masked[i * n + col] == 0.;
+    check(zero_rows, "without identity rows, constrained rows and columns are zero");
     check(loop.n_triplets(true) == loop.n_triplets(false) + constraints.size(),
           "n_triplets(true) adds one entry per constraint");
   }
   bool symmetric = true;
   for (unsigned int row = 0; row < n; ++row)
     for (unsigned int col = 0; col < n; ++col)
-      if (!constrained[row] && !constrained[col])
-        symmetric = symmetric && std::abs(a_stream[col * n + row] - a_stream[row * n + col]) <= tol;
-  check(symmetric, "the free-free block is symmetric");
+      symmetric = symmetric && std::abs(a_stream[col * n + row] - a_stream[row * n + col]) <= tol;
+  check(symmetric, "the assembled matrix is symmetric");
 
   // ---- prepared store
   loop.prepare();
@@ -234,6 +260,22 @@ Results test(const char* layout, const double tol)
   const double count =
     loop.reduce(x, typename Loop::Args(), [](auto&, const auto&, const auto&) { return 1.; }, 0.);
   check(count == 9., "reduce visits every hyperedge once");
+  const double largest = loop.reduce(
+    x, typename Loop::Args(),
+    [](auto&, const auto&, const auto& lambda)
+    {
+      double result = 0.;
+      for (unsigned int i = 0; i < lambda.size(); ++i)
+        result = std::max(result, std::abs(lambda[i]));
+      return result;
+    },
+    0., [](const double a, const double b) { return std::max(a, b); });
+  double largest_x = 0.;
+  for (unsigned int i = 0; i < n; ++i)
+    if (!constrained[i])
+      largest_x = std::max(largest_x, std::abs(x[i]));
+  check(largest == largest_x,
+        "reduce with max as the combination (x read as zero on constrained dofs)");
   loop.release();
   check(!loop.prepared() && loop.n_operators() == 0, "release empties the store");
   check(std::abs(GlobalLoop::errors(loop, x)[0] - error_prepared) <= tol * error_prepared,
@@ -259,8 +301,45 @@ Results results_only()
                  GlobalLoop::errors(loop, x)[0]};
 }
 
+// Two kinds of operators in one loop: each has its own store, prepared and released on its own.
+void test_kinds()
+{
+  std::printf("---- kinds\n");
+  GlobalLoop::Generic<Topology::Cubic<2, 2>, Geometry::UnitCube<2, 2, double>,
+                      NodeDescriptor::Cubic<2, 2>, TwoKinds>
+    loop(std::vector<unsigned int>{3, 3});
+  const unsigned int n = loop.size_of_system();
+  std::mt19937 generator(1);
+  std::uniform_real_distribution<double> uniform(-1., 1.);
+  Vec x(n), y(n), y_twice(n);
+  for (unsigned int i = 0; i < n; ++i)
+    x[i] = uniform(generator);
+  auto twice_as_large = [&]()
+  {
+    loop.apply(x, y);
+    loop.apply<Twice>(x, y_twice);
+    for (unsigned int i = 0; i < n; ++i)
+      y[i] *= 2.;
+    return max_difference(y, y_twice) <= 1e-12;
+  };
+  check(twice_as_large(), "apply<Twice> = 2 apply, without prepare");
+  loop.prepare<Twice>();
+  check(loop.prepared<Twice>() && !loop.prepared(), "prepare<Twice> prepares that kind only");
+  check(loop.n_operators<Twice>() == loop.n_hyEdges() && loop.n_operators() == 0,
+        "a kind the solver does not number has an operator per hyperedge");
+  loop.prepare();
+  check(loop.n_operators() == 1 && loop.n_operators<Twice>() == loop.n_hyEdges(),
+        "both kinds prepared, each with its slots");
+  check(twice_as_large(), "apply<Twice> = 2 apply, prepared");
+  loop.release<Twice>();
+  check(!loop.prepared<Twice>() && loop.prepared(), "release<Twice> keeps the other kind");
+  loop.release();
+  check(!loop.prepared() && loop.n_operators() == 0, "release drops all kinds");
+}
+
 int main()
 {
+  test_kinds();
   const Results condensed = test<LocalOperator::Condensed>("Condensed (S, K)", 1e-12);
   const Results factored = test<LocalOperator::Factored>("Factored (LU, B, C, D)", 1e-12);
   const Results streaming = test<LocalOperator::Streaming>("Streaming (nothing stored)", 1e-12);

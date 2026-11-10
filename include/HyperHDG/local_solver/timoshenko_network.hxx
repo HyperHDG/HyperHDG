@@ -756,24 +756,6 @@ class TimoshenkoBeam
   {
     return LayoutT::make(*this, edge, kind, args);
   }
-  // Which beams read the same stored operator: as the layout says. The beams declare no problem
-  // classes, so with Condensed and Factored every beam has an operator of its own.
-  template <class Edge>
-    requires requires(const TimoshenkoBeam& solver, Edge& edge, const Args& args) {
-      LayoutT::slot(solver, edge, GlobalLoop::Stiffness{}, args);
-    }
-  unsigned int n_operator_slots(GlobalLoop::Stiffness kind, const Args& args) const
-  {
-    return LayoutT::template n_slots<Edge>(*this, kind, args);
-  }
-  template <class Edge>
-    requires requires(const TimoshenkoBeam& solver, Edge& edge, const Args& args) {
-      LayoutT::slot(solver, edge, GlobalLoop::Stiffness{}, args);
-    }
-  unsigned int operator_slot(Edge& edge, GlobalLoop::Stiffness kind, const Args& args) const
-  {
-    return LayoutT::slot(*this, edge, kind, args);
-  }
   template <class Edge>
   Load local_load(Edge& edge, const Args& args) const
   {
