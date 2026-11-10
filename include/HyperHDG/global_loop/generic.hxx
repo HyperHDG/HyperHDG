@@ -69,9 +69,11 @@ using kinds_of = typename kinds<SolverT>::type;
  * Without prepare every sweep builds the operator of a hyperedge, uses it and drops it. Every
  * public sweep takes that decision once and runs a branch-free per-edge body for the chosen mode.
  *
- * Constraints: a sorted index set of global dofs owned by the loop. apply is the identity there,
- * residual returns x_i (prescribed values are zero in this prototype, Dirichlet data enters via
- * the local load), assemble replaces the rows by zero or identity rows.
+ * Constraints: a sorted index set of global dofs owned by the loop. Constrained dofs are not part
+ * of the system (prescribed values are zero in this prototype, Dirichlet data enters via the
+ * local load): every sweep reads x as zero there, and apply and residual return zero there. So
+ * apply is P J P with the projection P onto the free dofs, symmetric if J is, and singular;
+ * assemble gives the same matrix, with a unit diagonal on the constrained dofs on request.
  *
  * Serial. Parallel sweeps (scatter strategy) are a separate step.
  **************************************************************************************************/
@@ -136,12 +138,14 @@ class Generic
           const typename LocalSolverT::constructor_value_type& construct_loc_sol)
   : hyper_graph_(construct_topo), local_solver_(construct_loc_sol)
   {
+    free_mask_.assign(hyper_graph_.n_global_dofs(), 1.);
   }
   // The local solver's own defaults (e.g. tau = 1 for Diffusion), not a value-initialized
   // constructor argument (tau = 0, a singular local problem).
   Generic(const typename TopologyT::constructor_value_type& construct_topo)
   : hyper_graph_(construct_topo), local_solver_()
   {
+    free_mask_.assign(hyper_graph_.n_global_dofs(), 1.);
   }
 
   // ---- sizes, refinement
@@ -156,7 +160,7 @@ class Generic
     hyper_graph_.set_refinement(level);
     release();
     constraints_.clear();
-    free_mask_.clear();
+    free_mask_.assign(hyper_graph_.n_global_dofs(), 1.);
   }
 
   // ---- constraints
@@ -268,7 +272,8 @@ class Generic
   // ------------------------------------------------------------------------------------
 
   /*!***********************************************************************************************
-   * \brief   y = J x with identity rows on constrained dofs. y is overwritten.
+   * \brief   y = J x on free dofs, with x read as zero on constrained dofs; zero there. y is
+   *          overwritten.
    ************************************************************************************************/
   template <class Kind = Stiffness, class VecInT, class VecOutT>
   void apply(const VecInT& x, VecOutT& y, const Args& args = Args())
@@ -288,10 +293,11 @@ class Generic
                                 });
       });
     for (dof_index_t i : constraints_)
-      y[i] = x[i];
+      y[i] = 0.;
   }
   /*!***********************************************************************************************
-   * \brief   r = F(x): flux balance on free dofs, x_i on constrained dofs. r is overwritten.
+   * \brief   r = F(x): flux balance on free dofs, with x read as zero on constrained dofs; zero
+   *          there. r is overwritten.
    ************************************************************************************************/
   template <class Kind = Stiffness, class VecInT, class VecOutT>
   void residual(const VecInT& x, VecOutT& r, const Args& args = Args())
@@ -311,7 +317,7 @@ class Generic
                                 });
       });
     for (dof_index_t i : constraints_)
-      r[i] = x[i];
+      r[i] = 0.;
   }
   /*!***********************************************************************************************
    * \brief   Number of triplets assemble() writes: one block per hyperedge plus the identity rows.
@@ -325,8 +331,9 @@ class Generic
    * \brief   Triplets of J into caller-provided arrays of size n_triplets(identity_rows).
    *
    * Every hyperedge's block is apply<n_loc> of the identity (so the matrix is the matrix-free
-   * operator by construction). Entries in constrained rows are multiplied by zero (branch-free
-   * mask); with \c identity_rows a unit diagonal entry is appended for every constrained dof.
+   * operator by construction). Entries in constrained rows and columns are multiplied by zero
+   * (branch-free mask), so the matrix is symmetric if J is; with \c identity_rows a unit diagonal
+   * entry is appended for every constrained dof, which makes it non-singular.
    * Duplicate (row, col) pairs have to be summed by the consumer (as scipy's coo_matrix does).
    ************************************************************************************************/
   template <class Kind = Stiffness, class IndexVecT, class ValueVecT>
@@ -341,9 +348,6 @@ class Generic
     hy_assert(rows.size() == n_triplets(identity_rows) && cols.size() == rows.size() &&
                 vals.size() == rows.size(),
               "Triplet arrays must have size n_triplets(identity_rows).");
-    if (free_mask_.size() != hyper_graph_.n_global_dofs())
-      free_mask_.assign(hyper_graph_.n_global_dofs(), 1.);
-
     Traces<n_loc> identity;
     for (unsigned int i = 0; i < n_loc; ++i)
       identity(i, i) = 1.;
@@ -356,7 +360,7 @@ class Generic
         {
           rows[index] = dofs[row];
           cols[index] = dofs[col];
-          vals[index] = loc_mat(row, col) * free_mask_[dofs[row]];
+          vals[index] = loc_mat(row, col) * free_mask_[dofs[row]] * free_mask_[dofs[col]];
         }
     };
 
@@ -440,11 +444,12 @@ class Generic
         dofs[face * n_dofs_per_node + d] = node_dofs[d];
     }
   }
+  // The local trace of x, zero on constrained dofs (branch-free mask).
   template <class VecT>
-  static void gather(const Dofs& dofs, const VecT& x, Traces<1>& loc)
+  void gather(const Dofs& dofs, const VecT& x, Traces<1>& loc) const
   {
     for (unsigned int i = 0; i < n_loc; ++i)
-      loc[i] = x[dofs[i]];
+      loc[i] = x[dofs[i]] * free_mask_[dofs[i]];
   }
   template <class VecT>
   static void scatter(const Dofs& dofs, const Traces<1>& loc, VecT& y)

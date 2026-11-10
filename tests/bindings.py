@@ -29,9 +29,9 @@ n = hdg.size_of_system()
 x = np.random.default_rng(1).standard_normal(n)
 y = np.empty(n)
 hdg.apply(x, y)
-m = hdg.n_triplets(True)
+m = hdg.n_triplets()
 rows, cols, vals = np.empty(m, np.uint32), np.empty(m, np.uint32), np.empty(m)
-hdg.assemble(rows, cols, vals, 0., True)
+hdg.assemble(rows, cols, vals)
 matrix = np.zeros((n, n))
 np.add.at(matrix, (rows, cols), vals)
 check(np.abs(matrix @ x - y).max() <= 1e-12 * np.abs(y).max(),
@@ -59,9 +59,9 @@ for what, call in {
     "apply: a list as output": lambda: hdg.apply(x, [0.] * n),
     "residual: output of the wrong dtype": lambda: hdg.residual(x, np.empty(n, np.float32)),
     "assemble: indices of the wrong dtype": lambda: hdg.assemble(np.empty(m, np.int64), cols,
-                                                                 vals, 0., True),
+                                                                 vals),
     "assemble: values of the wrong dtype": lambda: hdg.assemble(rows, cols,
-                                                                np.empty(m, np.float32), 0., True),
+                                                                np.empty(m, np.float32)),
 }.items():
   check(raises_type_error(call), what + " raises TypeError")
 

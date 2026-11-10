@@ -199,13 +199,20 @@ Results test(const char* layout, const double tol)
   check(!loop.prepared() && loop.n_operators() == 0, "not prepared after construction");
   const Vec y_stream = product(loop, x), r_stream = residual_of(loop, x),
             r0 = residual_of(loop, zero);
-  bool identity = true, affine = true;
+  bool zero_there = true, affine = true;
   for (unsigned int i = 0; i < n; ++i)
     if (constrained[i])
-      identity = identity && y_stream[i] == x[i] && r_stream[i] == x[i];
+      zero_there = zero_there && y_stream[i] == 0. && r_stream[i] == 0.;
     else
       affine = affine && std::abs(r_stream[i] - r0[i] - y_stream[i]) <= tol;
-  check(identity, "apply and residual are the identity on constrained dofs");
+  check(zero_there, "apply and residual are zero on constrained dofs");
+  {
+    Vec x_free = x;
+    for (unsigned int i : constraints)
+      x_free[i] = 0.;
+    check(product(loop, x_free) == y_stream && residual_of(loop, x_free) == r_stream,
+          "apply and residual read x as zero on constrained dofs");
+  }
   check(affine, "residual(x) - residual(0) = apply(x) on free dofs");
   {
     Vec combination(n);
@@ -218,24 +225,23 @@ Results test(const char* layout, const double tol)
     check(max_difference(y_combination, expected) <= tol, "apply is linear");
   }
   const Vec a_stream = assembled(loop, true);
-  check(max_difference(multiply(a_stream, x), y_stream) <= tol,
-        "without prepare: assembled matrix (identity rows) times x = apply(x)");
   {
     const Vec a_masked = assembled(loop, false);
+    check(max_difference(multiply(a_masked, x), y_stream) <= tol,
+          "without prepare: assembled matrix times x = apply(x)");
     bool zero_rows = true;
     for (unsigned int col = 0; col < n; ++col)
       for (unsigned int i : constraints)
-        zero_rows = zero_rows && a_masked[col * n + i] == 0.;
-    check(zero_rows, "without identity rows, constrained rows are zero");
+        zero_rows = zero_rows && a_masked[col * n + i] == 0. && a_masked[i * n + col] == 0.;
+    check(zero_rows, "without identity rows, constrained rows and columns are zero");
     check(loop.n_triplets(true) == loop.n_triplets(false) + constraints.size(),
           "n_triplets(true) adds one entry per constraint");
   }
   bool symmetric = true;
   for (unsigned int row = 0; row < n; ++row)
     for (unsigned int col = 0; col < n; ++col)
-      if (!constrained[row] && !constrained[col])
-        symmetric = symmetric && std::abs(a_stream[col * n + row] - a_stream[row * n + col]) <= tol;
-  check(symmetric, "the free-free block is symmetric");
+      symmetric = symmetric && std::abs(a_stream[col * n + row] - a_stream[row * n + col]) <= tol;
+  check(symmetric, "the assembled matrix is symmetric");
 
   // ---- prepared store
   loop.prepare();
@@ -265,9 +271,11 @@ Results test(const char* layout, const double tol)
     },
     0., [](const double a, const double b) { return std::max(a, b); });
   double largest_x = 0.;
-  for (const double value : x)
-    largest_x = std::max(largest_x, std::abs(value));
-  check(largest == largest_x, "reduce with max as the combination");
+  for (unsigned int i = 0; i < n; ++i)
+    if (!constrained[i])
+      largest_x = std::max(largest_x, std::abs(x[i]));
+  check(largest == largest_x,
+        "reduce with max as the combination (x read as zero on constrained dofs)");
   loop.release();
   check(!loop.prepared() && loop.n_operators() == 0, "release empties the store");
   check(std::abs(GlobalLoop::errors(loop, x)[0] - error_prepared) <= tol * error_prepared,

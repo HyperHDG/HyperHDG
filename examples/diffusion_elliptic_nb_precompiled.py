@@ -21,7 +21,7 @@ hdg.constrain_dirichlet_nodes()
 hdg.prepare()
 
 # The system: the residual at zero is minus the right-hand side, assemble writes the matrix
-# (identity rows on the Dirichlet dofs) into arrays sized by n_triplets.
+# (a unit diagonal on the Dirichlet dofs) into arrays sized by n_triplets.
 size = hdg.size_of_system()
 rhs = np.empty(size)
 hdg.residual(np.zeros(size), rhs)

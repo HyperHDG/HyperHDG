@@ -259,7 +259,9 @@ construction) and `residual`; the loop hands it the solver and the hyperedge in 
 loop owns the store (`prepare` / `release`: one operator per slot, as the solver numbers them
 with `operator_slot`, else one per hyperedge; without `prepare` an operator is built per
 hyperedge and sweep; each public sweep decides once and runs a branch-free body), the constraint
-index set (Dirichlet rows: identity in `apply`, masked in `assemble`), `n_triplets` + `assemble`
+index set (constrained dofs are not part of the system: rows and columns are zero in `apply`
+and `assemble`, so the matrix is symmetric; `assemble` adds a unit diagonal there on request),
+`n_triplets` + `assemble`
 into caller arrays, and `reduce` (with any combination, `+` by default);
 `GlobalLoop::errors(loop, x)` is a reduction with the solver's `error_sq`. `prepare` and the
 sweeps are templates on the kind of operator (`Stiffness` by default, `loop.apply<Mass>(x, y)`),

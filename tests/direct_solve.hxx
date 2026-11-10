@@ -8,8 +8,8 @@
 namespace tests
 {
 /*!*************************************************************************************************
- * \brief   Dense LU solve of the assembled matrix of a GlobalLoop::Generic (constrained rows are
- *          identity rows, as in apply); throws if the matrix is singular. For small meshes only.
+ * \brief   Dense LU solve of the assembled matrix of a GlobalLoop::Generic (with a unit
+ *          diagonal on constrained dofs); throws if the matrix is singular. For small meshes only.
  **************************************************************************************************/
 template <class LoopT>
 std::vector<typename LoopT::value_type> direct_solve(LoopT& loop,
