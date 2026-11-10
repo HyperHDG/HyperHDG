@@ -247,6 +247,8 @@ its time. The machinery simply predates the tools that now make its job unnecess
 - `include/HyperHDG/bind_python.hxx` — generic, `requires`-guarded binding helper.
 - `python/hyperhdg.py` — compile/load a module source string (generated CMake project, cached).
 - `examples/diffusion_elliptic_nb_*` — the examples, just in time and precompiled.
+- `examples/beam_network_nb_jit.py` — a network of Timoshenko beams from a `.geo` or `.geo.h5`
+  file, solved with the assembled matrix or matrix-free CG and plotted as `vtu` or `vtkhdf`.
 
 ## Prototype: one global loop over local operators
 

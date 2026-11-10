@@ -5,6 +5,7 @@
 #include <HyperHDG/global_loop/prototype.hxx>  // sparse_mat
 #include <HyperHDG/hdg_hypergraph.hxx>
 #include <HyperHDG/hy_assert.hxx>
+#include <HyperHDG/plot.hxx>
 
 #include <algorithm>
 #include <array>
@@ -122,6 +123,8 @@ class Generic
   template <class... Kinds>
   static std::tuple<Store<Kinds>...> stores_of(std::tuple<Kinds...>*);
   decltype(stores_of((detail::kinds_of<LocalSolverT>*)nullptr)) stores_;  // one per kind
+
+  PlotOptions plot_options_;
 
   std::vector<dof_index_t> constraints_;  // sorted global dof indices
   std::vector<dof_value_t> free_mask_;    // 1 on free dofs, 0 on constrained dofs
@@ -409,6 +412,27 @@ class Generic
                                 });
       });
     return result;
+  }
+
+  // ---- plot
+  // --------------------------------------------------------------------------------------
+
+  /*!***********************************************************************************************
+   * \brief   Set an option of the plot (cf. PlotOptions in plot.hxx, e.g. "fileName", or
+   *          "fileEnding" as "vtu" or "vtkhdf") and return its value; without a value, only that.
+   ************************************************************************************************/
+  std::string plot_option(const std::string& option, const std::string& value = "")
+  {
+    return set_plot_option(plot_options_, option, value);
+  }
+  /*!***********************************************************************************************
+   * \brief   Write the local solutions of x to the file the plot options name (plot.hxx; the
+   *          local solver's bulk_values). The format vtkhdf needs HyperHDG configured with HDF5.
+   ************************************************************************************************/
+  template <class VecT>
+  void plot_solution(const VecT& x, const dof_value_t time = 0.)
+  {
+    plot(hyper_graph_, local_solver_, x, plot_options_, time);
   }
 
  private:

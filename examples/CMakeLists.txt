@@ -33,4 +33,10 @@ if(NOT NOPYTHONTESTS AND Python_FOUND)
   # A CMake configure and build: started first by ctest -j, so the others run meanwhile.
   set_tests_properties(diffusion_elliptic_nb_jit_py PROPERTIES
     ENVIRONMENT "${HYPERHDG_TEST_ENVIRONMENT}" COST 100)
+  # A network of beams (domains/grid_7x7.geo), solved and plotted; also compiled just in time.
+  add_test(NAME beam_network_nb_jit_py
+           COMMAND Python::Interpreter ${CMAKE_CURRENT_SOURCE_DIR}/beam_network_nb_jit.py
+           WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+  set_tests_properties(beam_network_nb_jit_py PROPERTIES
+    ENVIRONMENT "${HYPERHDG_TEST_ENVIRONMENT}" COST 100)
 endif()

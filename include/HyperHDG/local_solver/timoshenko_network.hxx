@@ -532,10 +532,14 @@ class TimoshenkoBeam
 
     if (hyper_edge.geometry.has_extra_data())
     {
-      auto extra_data = hyper_edge.geometry.extra_data();
+      // Per beam, 12 numbers:
       // (EA, kG_1A, kG_2A, G_xI_x, E_1I_1, E_2I_2):   6 structural constants
       // (n_11,n_12,n_13) : normal 1
       // (n_21,n_22,n_23) : normal 2
+      // Domains with more columns (github.com/HyperHDG/fiber_network: 13 or 17) have the mass of
+      // the beam first, and widths and fiber ids after these 12.
+      const auto& properties = hyper_edge.geometry.extra_data();
+      const auto extra_data = properties.begin() + (properties.size() > 12 ? 1 : 0);
       SmallVec<space_dim, lSol_float_t> normal1 =
         std::array<lSol_float_t, space_dim>{{extra_data[6], extra_data[7], extra_data[8]}};
       SmallVec<space_dim, lSol_float_t> normal2 =
