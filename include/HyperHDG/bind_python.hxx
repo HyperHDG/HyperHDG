@@ -322,12 +322,13 @@ auto bind_python(nanobind::module_& m, const char* name)
         nb::arg("rows").noconvert(), nb::arg("cols").noconvert(), nb::arg("vals").noconvert(),
         nb::arg("time") = 0., nb::arg("identity_rows") = false);
     }
-    if constexpr (requires(GlobalLoopT o, std::span<const Scalar> x, Args a) { o.errors(x, a); })
+    // errors: a free function on the loop (found by its namespace), the solver's error_sq summed
+    if constexpr (requires(GlobalLoopT o, std::span<const Scalar> x, Args a) { errors(o, x, a); })
       cls.def(
         "errors",
         [](GlobalLoopT& o, const InArr& x, Scalar t)
         {
-          auto e = o.errors(detail::as_span(x), Args{t});
+          auto e = errors(o, detail::as_span(x), Args{t});
           return std::vector<Scalar>(e.data().begin(), e.data().end());
         },
         nb::arg("x"), nb::arg("time") = 0.);

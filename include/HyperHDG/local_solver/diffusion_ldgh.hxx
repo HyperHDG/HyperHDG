@@ -1023,9 +1023,9 @@ class Diffusion
   // local_blocks(edge, Stiffness, args) sets up the local problem of one hyperedge as the blocks
   // A x = B lambda + l, flux = C x + D lambda (A: the local matrix, B: trace -> local rhs, C: local
   // solution -> flux, D: -tau * face area on the diagonal); the boundary integrals are evaluated
-  // once per operator. local_operator turns them into the operator the loop stores, as LayoutT
-  // says (local_operator.hxx: by default the condensed S = C A^-1 B + D and K = C A^-1), and into
-  // a cheaper one for a single use (Streaming). As in the methods above, Dirichlet values enter
+  // once per operator. local_operator makes the operator the loop uses, as LayoutT says
+  // (local_operator.hxx: by default the condensed S = C A^-1 B + D and K = C A^-1, which the
+  // layout computes from these blocks). As in the methods above, Dirichlet values enter
   // through the local load; constraining the trace on Dirichlet nodes is the loop's business, no
   // boundary masking happens here.
 
@@ -1046,7 +1046,7 @@ class Diffusion
    * mass matrix weighted with the inverse diffusion coefficient, the same for every component.
    * With the orthonormal Legendre basis on affine hyperedges it is diagonal if the coefficient is
    * constant on the hyperedge, which the parameters declare by constant_coefficients (as for
-   * operator_key). Then the factorization eliminates the fluxes and factorizes the Schur
+   * operator_slot). Then the factorization eliminates the fluxes and factorizes the Schur
    * complement of the primal unknowns only (LocalOperator::detail::Factors; debug builds check the
    * block is diagonal); otherwise it factorizes the whole local matrix.
    ************************************************************************************************/
@@ -1130,45 +1130,45 @@ class Diffusion
   template <class Edge>
   auto local_operator(Edge& edge, GlobalLoop::Stiffness kind, const Args& args) const
   {
-    return checked([&] { return LayoutT::make(local_blocks(edge, kind, args)); });
+    return checked([&] { return LayoutT::make(*this, edge, kind, args); });
   }
   /*!***********************************************************************************************
-   * \brief   The operator for a single use (a sweep without prepare): the layout's cheap form.
-   ************************************************************************************************/
-  template <class Edge>
-  auto local_operator(Edge& edge,
-                      GlobalLoop::Stiffness kind,
-                      const Args& args,
-                      GlobalLoop::Streaming) const
-  {
-    if constexpr (requires(const Blocks<Edge>& blocks) { LayoutT::make_streaming(blocks); })
-      return checked([&] { return LayoutT::make_streaming(local_blocks(edge, kind, args)); });
-    else
-      return local_operator(edge, kind, args);
-  }
-  /*!***********************************************************************************************
-   * \brief   Share one operator among congruent hyperedges (opt-in by the parameters).
+   * \brief   Whether hyperedges share operators, numbered by operator_slot.
    *
-   * Only available if the parameters declare \c constant_coefficients: then the local operator
-   * depends on the hyperedge's shape only (constraints and loads are not part of it), and the key
-   * is the span vectors rounded to 12 digits. Elements of a uniform mesh thus share one operator,
-   * which is what factorize_once of Elliptic::trace_to_flux_mat assumes, here by construction.
+   * They do if the layout stores nothing (\c LocalOperator::Stateless, one operator for all), or
+   * if the parameters declare \c constant_coefficients and the geometry numbers the shapes of its
+   * hyperedges (\c n_shape_classes and \c shape_class, as Geometry::UnitCube): then the local
+   * operator depends on the shape only (constraints and loads are not part of it), and congruent
+   * hyperedges share one. With constant coefficients on a geometry that declares no shape
+   * classes, every hyperedge has an operator of its own (no operator_slot; the loop's default).
    ************************************************************************************************/
   template <class Edge>
-    requires(
-      parametersT<decltype(Edge::geometry)::space_dim(), lSol_float_t>::constant_coefficients)
-  std::array<long long, hyEdge_dimT* decltype(Edge::geometry)::space_dim()>
-  operator_key(Edge& edge, GlobalLoop::Stiffness, const Args&) const
+  static constexpr bool shares_operators =
+    LocalOperator::Stateless<LayoutT> ||
+    (requires {
+      requires parametersT<std::remove_cvref_t<decltype(Edge::geometry)>::space_dim(),
+                           lSol_float_t>::constant_coefficients;
+    } && requires(const std::remove_cvref_t<decltype(Edge::geometry)>& geometry) {
+      std::remove_cvref_t<decltype(Edge::geometry)>::n_shape_classes();
+      geometry.shape_class();
+    });
+  template <class Edge>
+    requires shares_operators<Edge>
+  static constexpr unsigned int n_operator_slots(GlobalLoop::Stiffness, const Args&)
   {
-    constexpr unsigned int space_dim = decltype(Edge::geometry)::space_dim();
-    std::array<long long, hyEdge_dimT * space_dim> key;
-    for (unsigned int i = 0; i < hyEdge_dimT; ++i)
-    {
-      const auto span = edge.geometry.span_vec(i);
-      for (unsigned int d = 0; d < space_dim; ++d)
-        key[i * space_dim + d] = (long long)std::llround(span[d] * 1e12);
-    }
-    return key;
+    if constexpr (LocalOperator::Stateless<LayoutT>)
+      return 1;
+    else
+      return std::remove_cvref_t<decltype(Edge::geometry)>::n_shape_classes();
+  }
+  template <class Edge>
+    requires shares_operators<Edge>
+  unsigned int operator_slot(Edge& edge, GlobalLoop::Stiffness, const Args&) const
+  {
+    if constexpr (LocalOperator::Stateless<LayoutT>)
+      return 0;
+    else
+      return edge.geometry.shape_class();
   }
   /*!***********************************************************************************************
    * \brief   Local right-hand side: volume source and Dirichlet data.
@@ -1191,17 +1191,14 @@ class Diffusion
                                      const Args& args) const
   {
     using parameters = parametersT<decltype(Edge::geometry)::space_dim(), lSol_float_t>;
-    const Load load = local_load(edge, args);
     SmallVec<n_loc_dofs_, lSol_float_t> coefficients;
-    if constexpr (requires { op.local_solution(edge, lambda, load, args); })
-      coefficients = op.local_solution(edge, lambda, load, args);
+    if constexpr (requires { op.local_solution(*this, edge, lambda, args); })
+      coefficients = op.local_solution(*this, edge, lambda, args);
     else
       coefficients =
         checked(
-          [&] {
-            return LocalOperator::Factored::make(local_blocks(edge, GlobalLoop::Stiffness{}, args));
-          })
-          .local_solution(edge, lambda, load, args);
+          [&] { return LocalOperator::Factored::make(*this, edge, GlobalLoop::Stiffness{}, args); })
+          .local_solution(*this, edge, lambda, args);
     std::array<lSol_float_t, n_shape_fct_> coeffs;
     for (unsigned int i = 0; i < coeffs.size(); ++i)
       coeffs[i] = coefficients[i + hyEdge_dimT * n_shape_fct_];

@@ -61,7 +61,7 @@ int main()
     const SparseLA::SolverResult cg =
       SparseLA::cg([&](const std::vector<double>& in, std::vector<double>& out)
                    { loop.apply(in, out); }, rhs, x, options);
-    const double error = loop.errors(x)[0];
+    const double error = GlobalLoop::errors(loop, x)[0];
     tests::record("- {degree: %u, n: %u, dofs: %u, cg: %s, iterations: %u, error: %.6e}\n", degree,
                   n, size, SparseLA::to_string(cg.reason), cg.iterations, error);
     if (!cg.converged())

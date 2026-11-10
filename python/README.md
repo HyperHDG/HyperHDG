@@ -253,11 +253,13 @@ global loop (design note `doc/local_operator_design.md`): a scatter–gather eng
 knowledge of the physics is an immutable per-hyperedge *local operator* that the local solver
 returns from `local_operator(edge, Kind, args)`. The operator provides `apply<k>` (k traces at
 once; assembly is `apply<n_loc>` of the identity, so the matrix is the matrix-free operator by
-construction) and `residual(…, load, …)` with the load supplied by the solver. The loop owns the store (`prepare` /
-`release`: one operator per distinct `operator_key`; streaming without `prepare`; each public
-sweep decides once and runs a branch-free body), the constraint index set (Dirichlet rows:
-identity in `apply`, masked in `assemble`), `n_triplets` + `assemble` into caller arrays, and
-`reduce` / `errors` (the solver's error type must have `operator+`). Nothing in the loop
+construction) and `residual`; the loop hands it the solver and the hyperedge in every call. The
+loop owns the store (`prepare` / `release`: one operator per slot, as the solver numbers them
+with `operator_slot`, else one per hyperedge; without `prepare` an operator is built per
+hyperedge and sweep; each public sweep decides once and runs a branch-free body), the constraint
+index set (Dirichlet rows: identity in `apply`, masked in `assemble`), `n_triplets` + `assemble`
+into caller arrays, and `reduce`; `GlobalLoop::errors(loop, x)` is a reduction with the solver's
+`error_sq`. Nothing in the loop
 allocates global vectors: every entry point takes vector-like inputs and outputs (`std::vector`,
 `std::span`). Serial; parallel sweeps are a separate step.
 
@@ -266,10 +268,12 @@ protocol next to its legacy interface. It sets up the blocks of the local proble
 flux = C x + D λ (`local_blocks`), and its layout, a template parameter, decides what the
 operator keeps (`include/HyperHDG/local_solver/local_operator.hxx`): by default
 `LocalOperator::Condensed`, S = C A⁻¹ B + D and K = C A⁻¹ (apply is S λ, the residual S λ + K l),
-or `LocalOperator::Factored`, the LU of A with B, C, D, or a layout of one's own. A sweep without
-`prepare` uses the cheaper form to build (`Streaming`: the factors), and `errors` builds the
-operator with the local solution once per shared operator. Congruent elements share one operator
-when the parameters declare `constant_coefficients` (key: rounded span vectors). Operators are
+or `LocalOperator::Factored`, the LU of A with B, C, D, or `LocalOperator::Streaming`, which
+stores nothing and sets up the local problem in every call (one empty operator for all
+hyperedges), or a layout of one's own. Congruent elements share one operator when the parameters
+declare `constant_coefficients` and the geometry numbers the shapes of its hyperedges
+(`shape_class`, as `Geometry::UnitCube`; `Geometry::File` does not, so there every hyperedge has
+its own). Operators are
 trivially copyable (`SmallMat` copy/move defaulted), the store is one contiguous array.
 
 Bindings (`bind_python.hxx`, `requires`-guarded as before): NumPy in and out. The prototype's

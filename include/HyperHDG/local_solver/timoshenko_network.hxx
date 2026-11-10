@@ -754,18 +754,21 @@ class TimoshenkoBeam
   template <class Edge>
   auto local_operator(Edge& edge, GlobalLoop::Stiffness kind, const Args& args) const
   {
-    return LayoutT::make(local_blocks(edge, kind, args));
+    return LayoutT::make(*this, edge, kind, args);
+  }
+  // A layout that stores nothing has one operator for all beams; else every beam has its own
+  // (no operator_slot: the default of the loop).
+  template <class Edge>
+    requires LocalOperator::Stateless<LayoutT>
+  static constexpr unsigned int n_operator_slots(GlobalLoop::Stiffness, const Args&)
+  {
+    return 1;
   }
   template <class Edge>
-  auto local_operator(Edge& edge,
-                      GlobalLoop::Stiffness kind,
-                      const Args& args,
-                      GlobalLoop::Streaming) const
+    requires LocalOperator::Stateless<LayoutT>
+  unsigned int operator_slot(Edge&, GlobalLoop::Stiffness, const Args&) const
   {
-    if constexpr (requires(const Blocks& blocks) { LayoutT::make_streaming(blocks); })
-      return LayoutT::make_streaming(local_blocks(edge, kind, args));
-    else
-      return local_operator(edge, kind, args);
+    return 0;
   }
   template <class Edge>
   Load local_load(Edge& edge, const Args& args) const
@@ -782,14 +785,12 @@ class TimoshenkoBeam
                                      const Args& args) const
   {
     using parameters = parametersT<decltype(Edge::geometry)::space_dim(), lSol_float_t>;
-    const Load load = local_load(edge, args);
     Load coefficients;
-    if constexpr (requires { op.local_solution(edge, lambda, load, args); })
-      coefficients = op.local_solution(edge, lambda, load, args);
+    if constexpr (requires { op.local_solution(*this, edge, lambda, args); })
+      coefficients = op.local_solution(*this, edge, lambda, args);
     else
-      coefficients =
-        LocalOperator::Factored::make(local_blocks(edge, GlobalLoop::Stiffness{}, args))
-          .local_solution(edge, lambda, load, args);
+      coefficients = LocalOperator::Factored::make(*this, edge, GlobalLoop::Stiffness{}, args)
+                       .local_solution(*this, edge, lambda, args);
     SmallVec<1, lSol_float_t> error;
     std::array<lSol_float_t, n_shape_fct_> coeffs;
     const int components[3] = {1, -1, -2};  // as errors(): u along the tangent and the normals

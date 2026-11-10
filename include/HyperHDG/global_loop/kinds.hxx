@@ -11,14 +11,4 @@ namespace GlobalLoop
 struct Stiffness
 {
 };
-/*!*************************************************************************************************
- * \brief   Tag for an operator that is used once (a sweep without prepare) instead of stored.
- *
- * A local solver may provide local_operator(edge, Kind, args, Streaming) for a representation that
- * is cheap to build (e.g. LU factors instead of the condensed matrix); without it, the loop uses
- * local_operator(edge, Kind, args) for streaming as well.
- **************************************************************************************************/
-struct Streaming
-{
-};
 }  // end of namespace GlobalLoop

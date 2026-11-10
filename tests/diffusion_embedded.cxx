@@ -83,7 +83,7 @@ int solve()
   const SparseLA::SolverResult cg =
     SparseLA::cg([&](const std::vector<double>& in, std::vector<double>& out)
                  { loop.apply(in, out); }, rhs, x, options);
-  const double error = loop.errors(x)[0];
+  const double error = GlobalLoop::errors(loop, x)[0];
   const bool ok = cg.converged() && error < 1e-12;
   std::printf(
     "%s  space dimension %u, degree %u: %u edges, cg %s after %u iterations, error %.2e\n",

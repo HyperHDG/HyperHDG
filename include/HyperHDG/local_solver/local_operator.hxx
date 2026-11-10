@@ -1,6 +1,7 @@
 #pragma once  // Ensure that file is included only once in a single compilation.
 
 #include <HyperHDG/dense_la.hxx>
+#include <HyperHDG/global_loop/kinds.hxx>
 #include <HyperHDG/hy_assert.hxx>
 #include <HyperHDG/wrapper/lapack.hxx>
 
@@ -8,6 +9,8 @@
 #include <cmath>
 #include <cstddef>
 #include <limits>
+#include <type_traits>
+#include <utility>
 
 /*!*************************************************************************************************
  * \brief   Layouts of local operators: what a local solver stores of its condensed local problem.
@@ -24,19 +27,24 @@
  * so in the type of its blocks; the factorization then eliminates them explicitly and factorizes
  * the Schur complement of the others only (\c detail::Factors), in every layout.
  *
- * A layout turns the blocks into the operator GlobalLoop::Generic applies: any type with
+ * A layout makes the operator GlobalLoop::Generic applies: any type with
  *
- *   template <class BlocksT> static auto make(const BlocksT&);
+ *   static auto make(const SolverT& solver, Edge& edge, Kind kind, const Args& args);
  *
- * returning an operator with apply<k>(edge, in, args, out), residual(edge, lambda, load, args, r)
- * and optionally local_solution(edge, lambda, load, args). It may also provide make_streaming, a
- * representation for an operator that is used once (a sweep without prepare); without it, make
- * serves both. The solver is templated on its layout and has a default; users can write their own
- * (e.g. single-precision or symmetric storage) without touching the solver.
+ * returning an operator with apply<k>(solver, edge, in, args, out),
+ * residual(solver, edge, lambda, args, r) and optionally local_solution(solver, edge, lambda,
+ * args). The layout asks the solver for what it needs (local_blocks(edge, kind, args), and
+ * local_load(edge, args) in residual and local_solution); the operator is handed the solver and
+ * the hyperedge in every call, so it keeps neither. The solver is templated on its layout and has
+ * a default; users can write their own (e.g. single-precision or symmetric storage) without
+ * touching the solver.
  *
  * Provided: \c Condensed (the default of Diffusion) stores S = C A^-1 B + D and K = C A^-1, so
  * that apply is S lambda and residual is S lambda + K l, without factors; \c Factored stores the
- * factors of A with B, C, D, as the local problem is set up, and also provides local_solution.
+ * factors of A with B, C, D, as the local problem is set up, and also provides local_solution;
+ * \c Streaming stores nothing and sets up the local problem in every call. A layout whose
+ * operator has no state declares \c stateless: all hyperedges can then share one operator, see
+ * operator_slot of the solvers.
  **************************************************************************************************/
 namespace LocalOperator
 {
@@ -204,13 +212,24 @@ struct Factors<n, 0, T>
 
 template <class BlocksT>
 using FactorsOf = Factors<BlocksT::n_ldofs, BlocksT::n_eliminate, typename BlocksT::value_type>;
+template <class SolverT, class Edge, class Kind, class Args>
+using BlocksOf = std::remove_cvref_t<decltype(std::declval<const SolverT&>().local_blocks(
+  std::declval<Edge&>(),
+  std::declval<Kind>(),
+  std::declval<const Args&>()))>;
 }  // end of namespace detail
+
+/*!*************************************************************************************************
+ * \brief   Whether the operators of a layout have no state (the layout declares \c stateless).
+ **************************************************************************************************/
+template <class LayoutT>
+concept Stateless = requires { requires LayoutT::stateless; };
 
 /*!*************************************************************************************************
  * \brief   The blocks as the local problem is set up: the factors of A, B, C, D.
  *
  * Cheap to build (one factorization), expensive to apply (a solve with A per application), and
- * it provides local_solution. Used for streaming by Condensed.
+ * it provides local_solution.
  **************************************************************************************************/
 struct Factored
 {
@@ -225,8 +244,9 @@ struct Factored
     SmallMat<n_loc, n_ldofs, T> C;
     SmallSquareMat<n_loc, T> D;
 
-    template <unsigned int k, class Edge, class Args>
-    void apply(const Edge&,
+    template <unsigned int k, class SolverT, class Edge, class Args>
+    void apply(const SolverT&,
+               Edge&,
                const SmallMat<n_loc, k, T>& in,
                const Args&,
                SmallMat<n_loc, k, T>& out) const
@@ -235,30 +255,32 @@ struct Factored
       factors.solve(x);
       out = C * x + D * in;
     }
-    template <class Edge, class Args>
-    void residual(const Edge& edge,
+    template <class SolverT, class Edge, class Args>
+    void residual(const SolverT& solver,
+                  Edge& edge,
                   const SmallVec<n_loc, T>& lambda,
-                  const SmallVec<n_ldofs, T>& load,
                   const Args& args,
                   SmallVec<n_loc, T>& r) const
     {
-      r = C * local_solution(edge, lambda, load, args) + D * lambda;
+      r = C * local_solution(solver, edge, lambda, args) + D * lambda;
     }
-    template <class Edge, class Args>
-    SmallVec<n_ldofs, T> local_solution(const Edge&,
+    template <class SolverT, class Edge, class Args>
+    SmallVec<n_ldofs, T> local_solution(const SolverT& solver,
+                                        Edge& edge,
                                         const SmallVec<n_loc, T>& lambda,
-                                        const SmallVec<n_ldofs, T>& load,
-                                        const Args&) const
+                                        const Args& args) const
     {
-      SmallVec<n_ldofs, T> x = B * lambda + load;
+      SmallVec<n_ldofs, T> x = B * lambda + solver.local_load(edge, args);
       factors.solve(x);
       return x;
     }
   };
 
-  template <class BlocksT>
-  static Operator<BlocksT> make(const BlocksT& blocks)
+  template <class SolverT, class Edge, class Kind, class Args>
+  static auto make(const SolverT& solver, Edge& edge, Kind kind, const Args& args)
   {
+    using BlocksT = detail::BlocksOf<SolverT, Edge, Kind, Args>;
+    const BlocksT blocks = solver.local_blocks(edge, kind, args);
     return Operator<BlocksT>{detail::FactorsOf<BlocksT>(blocks.A), blocks.B, blocks.C, blocks.D};
   }
 };
@@ -269,8 +291,8 @@ struct Factored
  * Building costs a factorization, a solve with n_loc right-hand sides, and one with A^T for K;
  * applying costs one product with S (n_loc^2 instead of about 2 n_ldofs n_loc + n_ldofs^2 for
  * Factored), the residual one with K in addition. Smaller than Factored, since n_loc < n_ldofs.
- * No local_solution: reductions that need it build the Factored operator on the fly. A sweep
- * without prepare uses Factored (make_streaming), which is cheaper to build for one use.
+ * No local_solution: reductions that need it build the Factored operator on the fly. Expensive
+ * to build: without prepare (an operator per hyperedge and sweep), Factored is the cheaper one.
  **************************************************************************************************/
 struct Condensed
 {
@@ -283,28 +305,31 @@ struct Condensed
     SmallSquareMat<n_loc, T> S;
     SmallMat<n_loc, n_ldofs, T> K;
 
-    template <unsigned int k, class Edge, class Args>
-    void apply(const Edge&,
+    template <unsigned int k, class SolverT, class Edge, class Args>
+    void apply(const SolverT&,
+               Edge&,
                const SmallMat<n_loc, k, T>& in,
                const Args&,
                SmallMat<n_loc, k, T>& out) const
     {
       out = S * in;
     }
-    template <class Edge, class Args>
-    void residual(const Edge&,
+    template <class SolverT, class Edge, class Args>
+    void residual(const SolverT& solver,
+                  Edge& edge,
                   const SmallVec<n_loc, T>& lambda,
-                  const SmallVec<n_ldofs, T>& load,
-                  const Args&,
+                  const Args& args,
                   SmallVec<n_loc, T>& r) const
     {
-      r = S * lambda + K * load;
+      r = S * lambda + K * solver.local_load(edge, args);
     }
   };
 
-  template <class BlocksT>
-  static Operator<BlocksT> make(const BlocksT& blocks)
+  template <class SolverT, class Edge, class Kind, class Args>
+  static auto make(const SolverT& solver, Edge& edge, Kind kind, const Args& args)
   {
+    using BlocksT = detail::BlocksOf<SolverT, Edge, Kind, Args>;
+    const BlocksT blocks = solver.local_blocks(edge, kind, args);
     const detail::FactorsOf<BlocksT> factors(blocks.A);
     Operator<BlocksT> op;
     auto ainv_b = blocks.B;
@@ -316,10 +341,54 @@ struct Condensed
     op.K = transposed(kt);
     return op;
   }
-  template <class BlocksT>
-  static auto make_streaming(const BlocksT& blocks)
+};
+
+/*!*************************************************************************************************
+ * \brief   Nothing is stored: every call sets up the local problem of its hyperedge, factorizes
+ *          it, uses the factors and drops them (the Factored operator, for one use).
+ *
+ * The operator is empty, so all hyperedges share one (the layout is \c stateless) and a prepared
+ * loop stores nothing per hyperedge; its results depend on the hyperedge it is applied to.
+ **************************************************************************************************/
+struct Streaming
+{
+  static constexpr bool stateless = true;
+
+  template <class Kind>
+  struct Operator
   {
-    return Factored::make(blocks);
+    template <unsigned int k, unsigned int n_loc, typename T, class SolverT, class Edge, class Args>
+    void apply(const SolverT& solver,
+               Edge& edge,
+               const SmallMat<n_loc, k, T>& in,
+               const Args& args,
+               SmallMat<n_loc, k, T>& out) const
+    {
+      Factored::make(solver, edge, Kind{}, args).apply(solver, edge, in, args, out);
+    }
+    template <unsigned int n_loc, typename T, class SolverT, class Edge, class Args>
+    void residual(const SolverT& solver,
+                  Edge& edge,
+                  const SmallVec<n_loc, T>& lambda,
+                  const Args& args,
+                  SmallVec<n_loc, T>& r) const
+    {
+      Factored::make(solver, edge, Kind{}, args).residual(solver, edge, lambda, args, r);
+    }
+    template <unsigned int n_loc, typename T, class SolverT, class Edge, class Args>
+    auto local_solution(const SolverT& solver,
+                        Edge& edge,
+                        const SmallVec<n_loc, T>& lambda,
+                        const Args& args) const
+    {
+      return Factored::make(solver, edge, Kind{}, args).local_solution(solver, edge, lambda, args);
+    }
+  };
+
+  template <class SolverT, class Edge, class Kind, class Args>
+  static Operator<Kind> make(const SolverT&, Edge&, Kind, const Args&)
+  {
+    return Operator<Kind>{};
   }
 };
 
