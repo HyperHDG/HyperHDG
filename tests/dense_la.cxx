@@ -10,6 +10,7 @@
 #include <cstdio>
 #include <random>
 #include <utility>
+#include <vector>
 
 int failures = 0;
 void check(const bool ok, const char* what, const unsigned int dim, const char* type)
@@ -175,6 +176,46 @@ void test_qr_handedness()
   }
 }
 
+// The QR decomposition of a single column is done without LAPACK. Its frame must be the one of
+// LAPACK's Householder reflector (made right-handed by flipping the last column), since beams read
+// the orientation of their cross-section from it.
+void test_qr_single_column()
+{
+  std::vector<std::array<double, 3> > directions = {
+    {1., 0., 0.}, {-1., 0., 0.}, {0., 1., 0.},      {0., -1., 0.},
+    {0., 0., 1.}, {0., 0., -1.}, {1e-7, -3e-7, 0.}, {-4e3, 0., 1e-2}};
+  std::mt19937 generator(0);
+  std::uniform_real_distribution<double> uniform(-1., 1.);
+  for (unsigned int k = 0; k < 1000; ++k)
+    directions.push_back({uniform(generator), uniform(generator), uniform(generator)});
+  double deviation = 0.;
+  for (const auto& dir : directions)
+  {
+    SmallMat<3, 1, double> matrix, lapack_matrix;
+    for (unsigned int i = 0; i < 3; ++i)
+      matrix(i, 0) = lapack_matrix(i, 0) = dir[i];
+    SmallSquareMat<3, double> q, lapack_q;
+    SmallSquareMat<1, double> r, lapack_r;
+    qr_decomp(matrix, q, r);
+    Wrapper::lapack_qr_decomp<3, 1, double>(lapack_matrix.data(), lapack_q.data(),
+                                            lapack_r.data());
+    if (dir[1] != 0. || dir[2] != 0.)  // a reflector, det = -1
+      for (unsigned int i = 0; i < 3; ++i)
+        lapack_q(i, 2) *= -1.;
+    const double scale = std::abs(lapack_r(0, 0));
+    deviation = std::max(deviation, std::abs(r(0, 0) - lapack_r(0, 0)) / scale);
+    for (unsigned int i = 0; i < 3; ++i)
+    {
+      deviation = std::max(deviation, std::abs(matrix(i, 0) - lapack_matrix(i, 0)) / scale);
+      for (unsigned int j = 0; j < 3; ++j)
+        deviation = std::max(deviation, std::abs(q(i, j) - lapack_q(i, j)));
+    }
+  }
+  if (!(deviation < 1e-14))
+    std::printf("FAIL  QR of a single column deviates from LAPACK's by %g\n", deviation);
+  failures += !(deviation < 1e-14);
+}
+
 // The generic LU of dense_la.hxx (LU::generic_*) against LAPACK (Wrapper) in double: factors,
 // pivots and the solutions with A and A^T agree, and a singular matrix throws.
 void test_generic_lu()
@@ -232,6 +273,7 @@ int main()
     (test_point<d + 1, float>("float"), ...);
   }(std::make_integer_sequence<unsigned int, 10>());
   test_qr_handedness();
+  test_qr_single_column();
   test_generic_lu();
   std::printf("%s: %d failed checks\n", failures ? "FAILED" : "ok", failures);
   return failures;

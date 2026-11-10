@@ -1233,6 +1233,42 @@ void qr_decomp(SmallMat<n_rows, n_cols, mat_entry_t>& mat,
                SmallSquareMat<n_cols, mat_entry_t>& mat_r)
 {
   static_assert(n_cols <= n_rows, "Function only defined for these matrices!");
+  // A single column (the direction of a one-dimensional hyperedge, decomposed for every hyperedge
+  // that is built) needs no LAPACK: Q is the one Householder reflector that dgeqr2 (dlarfg) would
+  // build, so the frame is the same up to round-off, and it is made right-handed as below. The
+  // norm is not scaled against overflow.
+  if constexpr (n_cols == 1)
+  {
+    const mat_entry_t alpha = mat[0];
+    mat_entry_t tail_sq = 0.;
+    for (unsigned int i = 1; i < n_rows; ++i)
+      tail_sq += mat[i] * mat[i];
+    for (unsigned int i = 0; i < n_rows; ++i)
+      for (unsigned int j = 0; j < n_rows; ++j)
+        mat_q(i, j) = i == j;
+    mat_r(0, 0) = alpha;
+    if (tail_sq != 0.)  // else: the trivial reflector (tau = 0), Q = 1 and det(Q) = +1
+    {
+      const mat_entry_t norm = std::sqrt(alpha * alpha + tail_sq);
+      const mat_entry_t beta = alpha < 0. ? norm : -norm;
+      const mat_entry_t tau = (beta - alpha) / beta, scale = 1. / (alpha - beta);
+      SmallVec<n_rows, mat_entry_t> vec;
+      vec[0] = 1.;
+      for (unsigned int i = 1; i < n_rows; ++i)
+        vec[i] = scale * mat[i];
+      for (unsigned int i = 0; i < n_rows; ++i)
+        for (unsigned int j = 0; j < n_rows; ++j)
+          mat_q(i, j) -= tau * (vec[i] * vec[j]);
+      // det(Q) = -1 for a reflector: flip the last column, which multiplies a zero row of R
+      for (unsigned int i = 0; i < n_rows; ++i)
+        mat_q(i, n_rows - 1) *= -1.;
+      mat_r(0, 0) = beta;
+    }
+    mat[0] = mat_r(0, 0);
+    for (unsigned int i = 1; i < n_rows; ++i)
+      mat[i] = 0.;
+    return;
+  }
   Wrapper::lapack_qr_decomp<n_rows, n_cols, mat_entry_t>(mat.data(), mat_q.data(), mat_r.data());
 
   // Determinant of the raw (orthonormal) Householder matrix Q, computed robustly via
