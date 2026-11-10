@@ -46,51 +46,11 @@ MODULE = """\
 #include <array>
 #include <vector>
 
-// The problem, set at run time (set_problem): the node types that are clamped, the force on
-// every beam and the displacements of the corners (0,0), (1,0), (0,1), (1,1) of the unit square.
-// The functions receive a point and a direction and return the component along the direction.
+// The problem is LocalSolver::TimoschenkoBeamParametersUnitSquare, whose static data is set at run
+// time (set_problem): the node types that are clamped, the force on every beam and the
+// displacements of the corners (0,0), (1,0), (0,1), (1,1) of the unit square.
 template <unsigned int space_dimT, typename param_float_t = double>
-struct Problem
-{
-  using P = Point<space_dimT, param_float_t>;
-  static inline std::vector<unsigned int> dirichlet_nodes;
-  static constexpr std::array<unsigned int, 0U> neumann_nodes{};
-  static inline std::array<double, 3> force{};
-  static inline std::array<std::array<double, 3>, 4> corner_displacement{};
-
-  static param_float_t right_hand_side_n(const P&, const P& direction, const param_float_t = 0.)
-  {
-    return force[0] * direction[0] + force[1] * direction[1] + force[2] * direction[2];
-  }
-  static param_float_t dirichlet_value_u(const P& point, const P& direction,
-                                         const param_float_t = 0.)
-  {
-    const double x = point[0], y = point[1];
-    const double weight[4] = {(1. - x) * (1. - y), x * (1. - y), (1. - x) * y, x * y};
-    double value = 0.;
-    for (unsigned int corner = 0; corner < 4; ++corner)
-      for (unsigned int d = 0; d < 3; ++d)
-        value += weight[corner] * corner_displacement[corner][d] * direction[d];
-    return value;
-  }
-  // no distributed moment, no rotation at clamped nodes, no analytic solution
-  static param_float_t right_hand_side_m(const P&, const P&, const param_float_t = 0.)
-  {
-    return 0.;
-  }
-  static param_float_t dirichlet_value_phi(const P&, const P&, const param_float_t = 0.)
-  {
-    return 0.;
-  }
-  static param_float_t analytic_result_u(const P&, const P&, const param_float_t = 0.)
-  {
-    return 0.;
-  }
-  static param_float_t analytic_result_phi(const P&, const P&, const param_float_t = 0.)
-  {
-    return 0.;
-  }
-};
+using Problem = LocalSolver::TimoschenkoBeamParametersUnitSquare<space_dimT, param_float_t>;
 
 using Beams = GlobalLoop::Generic<
   Topology::File<1, 3>,

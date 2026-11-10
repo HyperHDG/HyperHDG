@@ -12,6 +12,7 @@
 #include <cmath>
 #include <limits>
 #include <tuple>
+#include <vector>
 
 namespace LocalSolver
 {
@@ -189,6 +190,99 @@ struct TimoschenkoBeamParametersClamped
     // return sin(M_PI * point[0]) * normal[0];
   }
 };  // end of struct TimoschenkoBeamParametersClamped
+
+/*!*************************************************************************************************
+ * \brief   Parameters of the Timoshenko beam solver that are set at run time: a network on the unit
+ *          square under a uniform force, clamped where the node types say.
+ *
+ * The node types that are clamped, the force on every beam and the displacements of the corners
+ * (0,0), (1,0), (0,1), (1,1) of the unit square are static data, to be set before the system is
+ * built. Clamped nodes have zero rotation and the displacement that interpolates those of the
+ * corners bilinearly. There is no distributed moment and no analytic solution, so errors() returns
+ * the norm of the discrete solution. The functions receive a point and a direction and return the
+ * component of the vector field along that direction. Cf. examples/beam_network_nb_jit.py.
+ **************************************************************************************************/
+template <unsigned int space_dimT, typename param_float_t = double>
+struct TimoschenkoBeamParametersUnitSquare
+{
+  /*!***********************************************************************************************
+   * \brief   Hypernode types corresponding to Dirichlet boundary (clamped nodes).
+   ************************************************************************************************/
+  static inline std::vector<unsigned int> dirichlet_nodes;
+  /*!***********************************************************************************************
+   * \brief   Array containing hypernode types corresponding to Neumann boundary.
+   ************************************************************************************************/
+  static constexpr std::array<unsigned int, 0U> neumann_nodes{};
+  /*!***********************************************************************************************
+   * \brief   The uniform force on every beam.
+   ************************************************************************************************/
+  static inline std::array<double, 3> force{};
+  /*!***********************************************************************************************
+   * \brief   Displacements of the corners (0,0), (1,0), (0,1), (1,1) of the unit square.
+   ************************************************************************************************/
+  static inline std::array<std::array<double, 3>, 4> corner_displacement{};
+
+  /*!***********************************************************************************************
+   * \brief   Distributed force: uniform.
+   ************************************************************************************************/
+  static param_float_t right_hand_side_n(const Point<space_dimT, param_float_t>&,
+                                         const Point<space_dimT, param_float_t>& direction,
+                                         const param_float_t = 0.)
+  {
+    return force[0] * direction[0] + force[1] * direction[1] + force[2] * direction[2];
+  }
+  /*!***********************************************************************************************
+   * \brief   Distributed moment: none.
+   ************************************************************************************************/
+  static param_float_t right_hand_side_m(const Point<space_dimT, param_float_t>&,
+                                         const Point<space_dimT, param_float_t>&,
+                                         const param_float_t = 0.)
+  {
+    return 0.;
+  }
+  /*!***********************************************************************************************
+   * \brief   Dirichlet values of the displacement: bilinear in the displacements of the corners.
+   ************************************************************************************************/
+  static param_float_t dirichlet_value_u(const Point<space_dimT, param_float_t>& point,
+                                         const Point<space_dimT, param_float_t>& direction,
+                                         const param_float_t = 0.)
+  {
+    const double x = point[0], y = point[1];
+    const double weight[4] = {(1. - x) * (1. - y), x * (1. - y), (1. - x) * y, x * y};
+    double value = 0.;
+    for (unsigned int corner = 0; corner < 4; ++corner)
+      for (unsigned int d = 0; d < 3; ++d)
+        value += weight[corner] * corner_displacement[corner][d] * direction[d];
+    return value;
+  }
+  /*!***********************************************************************************************
+   * \brief   Dirichlet values of the rotation: zero.
+   ************************************************************************************************/
+  static param_float_t dirichlet_value_phi(const Point<space_dimT, param_float_t>&,
+                                           const Point<space_dimT, param_float_t>&,
+                                           const param_float_t = 0.)
+  {
+    return 0.;
+  }
+  /*!***********************************************************************************************
+   * \brief   No closed-form displacement: zero, so errors() is the norm of the discrete solution.
+   ************************************************************************************************/
+  static param_float_t analytic_result_u(const Point<space_dimT, param_float_t>&,
+                                         const Point<space_dimT, param_float_t>&,
+                                         const param_float_t = 0.)
+  {
+    return 0.;
+  }
+  /*!***********************************************************************************************
+   * \brief   No closed-form rotation: zero.
+   ************************************************************************************************/
+  static param_float_t analytic_result_phi(const Point<space_dimT, param_float_t>&,
+                                           const Point<space_dimT, param_float_t>&,
+                                           const param_float_t = 0.)
+  {
+    return 0.;
+  }
+};  // end of struct TimoschenkoBeamParametersUnitSquare
 
 /*!*************************************************************************************************
  * \brief   Layout of the Timoshenko beam: the frame of the beam and its six stiffnesses.
