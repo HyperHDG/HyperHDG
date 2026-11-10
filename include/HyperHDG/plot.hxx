@@ -1330,7 +1330,8 @@ void plot_vtu(HyperGraphT& hyper_graph,
   myfile << "</VTKFile>" << std::endl;
   std::cout << plot_options.fileName;
   if (plot_options.printFileNumber)
-    std::cout << "." << plot_options.fileNumber << " was written\n";
+    std::cout << "." << plot_options.fileNumber;
+  std::cout << " was written\n";
   PlotFunctions::close_ofstream(myfile);
 }  // end of void plot_vtu
 
