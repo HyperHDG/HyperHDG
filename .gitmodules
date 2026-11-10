@@ -10,10 +10,6 @@
 	path = submodules/docker.git
 	url = https://github.com/HyperHDG/docker.git
 	branch = main
-[submodule "submodules/fiber_network.git"]
-	path = submodules/fiber_network.git
-	url = https://github.com/HyperHDG/fiber_network.git
-	branch = main
 [submodule "submodules/nanobind.git"]
 	path = submodules/nanobind.git
 	url = https://github.com/wjakob/nanobind

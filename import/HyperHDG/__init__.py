@@ -9,8 +9,6 @@
 #  \authors   Guido Kanschat, Heidelberg University, 2021.
 #  \authors   Andreas Rupp, Heidelberg University, 2021.
 
-import os, sys
-
 # Functions thata are used to compile C++ code.
 from .import_cxx.config import config
 from .import_cxx.include import include
@@ -19,11 +17,3 @@ from .import_cxx.include import include
 # it was renamed to ``rtol``); a no-op on older SciPy versions. See HyperHDG.scipy_compat.
 from . import scipy_compat
 scipy_compat.patch()
-
-try:
-  import fiber_network
-except (ImportError, ModuleNotFoundError) as error:
-  sys.path.append(os.path.dirname(os.path.abspath(__file__))+"/../../submodules/fiber_network.git")
-  import fiber_network
-finally:
-  pass
