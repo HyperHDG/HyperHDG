@@ -230,6 +230,48 @@ auto bind_python(nanobind::module_& m, const char* name)
       "trace_to_flux_mat", [to_coo](GlobalLoopT& o, Scalar t)
       { return to_coo(o.trace_to_flux_mat(t)); }, nb::arg("time") = 0.);
 
+  // generalized eigenvalue problems in bulk and skeletal unknowns
+  // (GlobalLoop::GeneralizedEigenvalue)
+  if constexpr (requires(GlobalLoopT o) { o.stiffness_mat(); })
+    cls.def("stiffness_mat", [to_coo](GlobalLoopT& o) { return to_coo(o.stiffness_mat()); });
+  if constexpr (requires(GlobalLoopT o) { o.mass_mat(); })
+    cls.def("mass_mat", [to_coo](GlobalLoopT& o) { return to_coo(o.mass_mat()); });
+  if constexpr (requires(GlobalLoopT o) { o.n_skeleton_dofs(); })
+    cls.def("n_skeleton_dofs", [](GlobalLoopT& o) { return o.n_skeleton_dofs(); });
+  if constexpr (requires(GlobalLoopT o) { o.n_hyEdges(); })
+    cls.def("n_hyEdges", [](GlobalLoopT& o) { return o.n_hyEdges(); });
+  if constexpr (requires(GlobalLoopT o) { o.n_loc_bulk_dofs(); })
+    cls.def("n_loc_bulk_dofs", [](GlobalLoopT& o) { return o.n_loc_bulk_dofs(); });
+  if constexpr (requires(GlobalLoopT o) { o.coefficients(); })
+    cls.def("coefficients", [to_numpy](GlobalLoopT& o) { return to_numpy(o.coefficients()); });
+  if constexpr (requires(GlobalLoopT o, Vec v, std::vector<double> a) { o.bulk_values(v, a); })
+    cls.def(
+      "bulk_values", [to_numpy](GlobalLoopT& o, const Vec& v, const std::vector<double>& a)
+      { return to_numpy(o.bulk_values(v, a)); }, nb::arg("x"), nb::arg("abscissas"));
+  if constexpr (requires(GlobalLoopT o, std::vector<double> a) { o.bulk_points(a); })
+    cls.def(
+      "bulk_points", [to_numpy](GlobalLoopT& o, const std::vector<double>& a)
+      { return to_numpy(o.bulk_points(a)); }, nb::arg("abscissas"));
+  if constexpr (requires(GlobalLoopT o) { o.hyEdge_measures(); })
+    cls.def("hyEdge_measures",
+            [to_numpy](GlobalLoopT& o) { return to_numpy(o.hyEdge_measures()); });
+  if constexpr (requires(GlobalLoopT o, Vec v, std::vector<double> a) { o.face_values(v, a); })
+    cls.def(
+      "face_values", [to_numpy](GlobalLoopT& o, const Vec& v, const std::vector<double>& a)
+      { return to_numpy(o.face_values(v, a)); }, nb::arg("x"), nb::arg("abscissas"));
+  if constexpr (requires(GlobalLoopT o, std::vector<double> a) { o.face_points(a); })
+    cls.def(
+      "face_points", [to_numpy](GlobalLoopT& o, const std::vector<double>& a)
+      { return to_numpy(o.face_points(a)); }, nb::arg("abscissas"));
+  if constexpr (requires(GlobalLoopT o) { o.face_measures(); })
+    cls.def("face_measures", [to_numpy](GlobalLoopT& o) { return to_numpy(o.face_measures()); });
+  if constexpr (requires(GlobalLoopT o) { o.face_node_types(); })
+    cls.def("face_node_types",
+            [to_numpy](GlobalLoopT& o) { return to_numpy(o.face_node_types()); });
+  if constexpr (requires(GlobalLoopT o) { o.face_node_indices(); })
+    cls.def("face_node_indices",
+            [to_numpy](GlobalLoopT& o) { return to_numpy(o.face_node_indices()); });
+
   if constexpr (requires(GlobalLoopT o, Vec v) { o.residual_flux(v, 0.); })
     cls.def(
       "residual_flux", [](GlobalLoopT& o, const Vec& v, Scalar t) { return o.residual_flux(v, t); },
