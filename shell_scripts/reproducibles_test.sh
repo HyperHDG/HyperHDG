@@ -11,10 +11,9 @@ FILES="${MAIN_DIR}"/reproducibles_python/*.py
 
 
 ## Scripts that are skipped, and why.
-#  - fiber_network_*: need large domain files (fiber_network_615452*) that are not in the repository.
 #  - advection_hypergraph: none of the linear solvers converges (also on main as of 2026-09).
 #    Remove it from this list once this has been fixed.
-SKIP="fiber_network_diffusion.py fiber_network_elastic.py advection_hypergraph.py"
+SKIP="advection_hypergraph.py"
 
 
 cd "${MAIN_DIR}" && mkdir -p output && rm -f output/reproducibles_test.txt

@@ -3,9 +3,8 @@
 
     python python/diffusion.py domains/cross.geo --degree 2 --refine 8
 
-The explicit-binding counterpart of reproducibles_python/fiber_network_diffusion.py: the
-LDG-H system of a network of one-dimensional hyperedges, assembled by HyperHDG and solved by
-scipy's CG. The C++ below is compiled the first time a (space dimension, degree) combination
+The explicit-binding example on a domain file: the LDG-H system of a network of
+one-dimensional hyperedges, assembled by HyperHDG and solved by scipy's CG. The C++ below is compiled the first time a (space dimension, degree) combination
 is asked for and cached afterwards, so there is no build step -- see python/README.md.
 """
 
