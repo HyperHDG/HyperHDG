@@ -1,15 +1,26 @@
 #!/usr/bin/env python3
-"""A network of Timoshenko beams in space, clamped at its Dirichlet nodes, under a uniform force.
+"""A network of Timoshenko beams on the unit square, under a force or a displacement of a side.
 
     python3 examples/beam_network_nb_jit.py                        # the grid of domains/grid_7x7.geo
+    python3 examples/beam_network_nb_jit.py --experiment tensile
     python3 examples/beam_network_nb_jit.py network.geo.h5 --solver cg --plot vtkhdf
 
+Three experiments:
+    force     all four sides clamped, the force -e_z on every beam (the default)
+    tensile   the left side clamped, the right side clamped and moved by 0.1 e_x
+    bending   the left side clamped, the right side clamped and moved by 0.1 e_z
+--force, --displacement and --clamp change their force, the displacement of the right side and the
+clamped sides. Clamped nodes have zero rotation and the displacement that interpolates the
+displacements of the four corners of the square bilinearly (zero on the left, --displacement on
+the right).
+
 The domain is a .geo file or, with HDF5, a .geo.h5 file (e.g. from
-github.com/HyperHDG/fiber_network). The force is -e_z on every beam, displacements and rotations
-are zero at the Dirichlet nodes (LocalSolver::TimoschenkoBeamParametersDefault). The C++ below is
-the module source with the degree filled in; hyperhdg.load compiles it with CMake the first time a
-degree is asked for and imports it. The solution is written to output/beam_network.vtu or, with
---plot vtkhdf, to output/beam_network.vtkhdf, which needs HDF5; ParaView reads both.
+github.com/HyperHDG/fiber_network), whose node types tell the sides: 1 and 2 on xmin and xmax,
+3 and 6 on ymin and ymax, summed at the corners. The C++ below is the module source, in which
+DEGREE is replaced; hyperhdg.load compiles it with CMake the first time a degree is asked for and
+imports it. Its parameters are static data of the module, set before the system is built. The
+solution is written to output/beam_network.vtu or, with --plot vtkhdf, to
+output/beam_network.vtkhdf, which needs HDF5; ParaView reads both.
 """
 
 import argparse
@@ -32,29 +43,115 @@ MODULE = """\
 #include <HyperHDG/node_descriptor/file.hxx>
 #include <HyperHDG/topology/file.hxx>
 
+#include <array>
+#include <vector>
+
+// The problem, set at run time (set_problem): the node types that are clamped, the force on
+// every beam and the displacements of the corners (0,0), (1,0), (0,1), (1,1) of the unit square.
+// The functions receive a point and a direction and return the component along the direction.
+template <unsigned int space_dimT, typename param_float_t = double>
+struct Problem
+{
+  using P = Point<space_dimT, param_float_t>;
+  static inline std::vector<unsigned int> dirichlet_nodes;
+  static constexpr std::array<unsigned int, 0U> neumann_nodes{};
+  static inline std::array<double, 3> force{};
+  static inline std::array<std::array<double, 3>, 4> corner_displacement{};
+
+  static param_float_t right_hand_side_n(const P&, const P& direction, const param_float_t = 0.)
+  {
+    return force[0] * direction[0] + force[1] * direction[1] + force[2] * direction[2];
+  }
+  static param_float_t dirichlet_value_u(const P& point, const P& direction,
+                                         const param_float_t = 0.)
+  {
+    const double x = point[0], y = point[1];
+    const double weight[4] = {(1. - x) * (1. - y), x * (1. - y), (1. - x) * y, x * y};
+    double value = 0.;
+    for (unsigned int corner = 0; corner < 4; ++corner)
+      for (unsigned int d = 0; d < 3; ++d)
+        value += weight[corner] * corner_displacement[corner][d] * direction[d];
+    return value;
+  }
+  // no distributed moment, no rotation at clamped nodes, no analytic solution
+  static param_float_t right_hand_side_m(const P&, const P&, const param_float_t = 0.)
+  {
+    return 0.;
+  }
+  static param_float_t dirichlet_value_phi(const P&, const P&, const param_float_t = 0.)
+  {
+    return 0.;
+  }
+  static param_float_t analytic_result_u(const P&, const P&, const param_float_t = 0.)
+  {
+    return 0.;
+  }
+  static param_float_t analytic_result_phi(const P&, const P&, const param_float_t = 0.)
+  {
+    return 0.;
+  }
+};
+
 using Beams = GlobalLoop::Generic<
   Topology::File<1, 3>,
   Geometry::File<1, 3>,
   NodeDescriptor::File<1, 3>,
-  LocalSolver::TimoshenkoBeam<1, 3, {degree}, {quadrature}> >;
+  LocalSolver::TimoshenkoBeam<1, 3, DEGREE, 2 * DEGREE, Problem> >;
 
 NB_MODULE(beam_network_jit, m)
-{{
+{
   HyperHDG::bind_python<Beams, std::string>(m, "Beams");
-}}
+  m.def("set_problem",
+        [](const std::vector<unsigned int>& dirichlet_nodes, const std::vector<double>& force,
+           const std::vector<std::vector<double> >& corner_displacement)
+        {
+          Problem<3>::dirichlet_nodes = dirichlet_nodes;
+          for (unsigned int d = 0; d < 3; ++d)
+          {
+            Problem<3>::force[d] = force.at(d);
+            for (unsigned int corner = 0; corner < 4; ++corner)
+              Problem<3>::corner_displacement[corner][d] = corner_displacement.at(corner).at(d);
+          }
+        });
+}
 """
+
+SIDES = {"xmin": (0, 1), "xmax": (0, 2), "ymin": (1, 1), "ymax": (1, 2)}
+EXPERIMENTS = {  # force, displacement of the right side, clamped sides
+    "force": ((0., 0., -1.), (0., 0., 0.), ("xmin", "xmax", "ymin", "ymax")),
+    "tensile": ((0., 0., 0.), (0.1, 0., 0.), ("xmin", "xmax")),
+    "bending": ((0., 0., 0.), (0., 0., 0.1), ("xmin", "xmax")),
+}
 
 parser = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
 parser.add_argument("domain", nargs="?", default="domains/grid_7x7.geo",
                     help=".geo or .geo.h5 file of the network")
+parser.add_argument("--experiment", choices=list(EXPERIMENTS), default="force")
+parser.add_argument("--force", type=float, nargs=3, metavar=("FX", "FY", "FZ"),
+                    help="force on every beam (default: that of the experiment)")
+parser.add_argument("--displacement", type=float, nargs=3, metavar=("UX", "UY", "UZ"),
+                    help="displacement of the right side (default: that of the experiment)")
+parser.add_argument("--clamp", nargs="+", choices=list(SIDES),
+                    help="clamped sides (default: those of the experiment)")
 parser.add_argument("--degree", type=int, default=2, help="polynomial degree")
 parser.add_argument("--solver", choices=["direct", "cg"], default="direct",
                     help="sparse direct solve of the assembled matrix, or matrix-free CG")
 parser.add_argument("--plot", choices=["vtu", "vtkhdf"], default="vtu", help="format of the plot")
 opt = parser.parse_args()
 
-module = hyperhdg.load(MODULE.format(degree=opt.degree, quadrature=2 * opt.degree))
+force, displacement, clamp = EXPERIMENTS[opt.experiment]
+force = opt.force or force
+displacement = opt.displacement or displacement
+clamp = opt.clamp or clamp
+# The node types on the clamped sides: digit 0 (x) or 1 (y) of the type in base 3 names the side.
+dirichlet_nodes = [node_type for node_type in range(1, 27)
+                   if any(node_type // 3**axis % 3 == side
+                          for axis, side in (SIDES[name] for name in clamp))]
+zero = [0., 0., 0.]
+
+module = hyperhdg.load(MODULE.replace("DEGREE", str(opt.degree)))
+module.set_problem(dirichlet_nodes, force, [zero, displacement, zero, displacement])
 hdg = module.Beams(opt.domain)
 hdg.constrain_dirichlet_nodes()
 hdg.prepare()
@@ -82,7 +179,7 @@ else:
         sys.exit(f"CG did not converge (info = {info})")
 
 print(f"beams: {hdg.n_hyEdges()}, unknowns: {size}")
-# the analytic displacement of the default parameters is zero: this is the norm of the solution
+# the analytic displacement of the parameters is zero: this is the norm of the solution
 print(f"L2 norm of the displacement: {hdg.errors(solution)[0]:.6e}")
 
 hdg.plot_option("fileName", "beam_network")
