@@ -260,8 +260,10 @@ loop owns the store (`prepare` / `release`: one operator per slot, as the solver
 with `operator_slot`, else one per hyperedge; without `prepare` an operator is built per
 hyperedge and sweep; each public sweep decides once and runs a branch-free body), the constraint
 index set (Dirichlet rows: identity in `apply`, masked in `assemble`), `n_triplets` + `assemble`
-into caller arrays, and `reduce`; `GlobalLoop::errors(loop, x)` is a reduction with the solver's
-`error_sq`. Nothing in the loop
+into caller arrays, and `reduce` (with any combination, `+` by default);
+`GlobalLoop::errors(loop, x)` is a reduction with the solver's `error_sq`. `prepare` and the
+sweeps are templates on the kind of operator (`Stiffness` by default, `loop.apply<Mass>(x, y)`),
+with one store per kind; a solver with other kinds lists them as `Kinds`. Nothing in the loop
 allocates global vectors: every entry point takes vector-like inputs and outputs (`std::vector`,
 `std::span`). Serial; parallel sweeps are a separate step.
 

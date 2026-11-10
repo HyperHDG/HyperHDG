@@ -17,6 +17,7 @@
 #include <cmath>
 #include <cstdio>
 #include <random>
+#include <tuple>
 #include <vector>
 
 // A layout of one's own: the condensed operator stored in single precision (half the memory of
@@ -83,6 +84,26 @@ template <unsigned int space_dimT, typename param_float_t = double>
 struct DiffusionSinVarying : tests::DiffusionSin<space_dimT, param_float_t>
 {
   static constexpr bool constant_coefficients = false;
+};
+
+// A solver with a second kind of operator: twice the stiffness. It lists its kinds; the loop
+// keeps a store per kind.
+struct Twice
+{
+};
+struct TwoKinds : LocalSolver::Diffusion<2, 1, 2, tests::DiffusionSin, double>
+{
+  using Base = LocalSolver::Diffusion<2, 1, 2, tests::DiffusionSin, double>;
+  using Kinds = std::tuple<GlobalLoop::Stiffness, Twice>;
+  using Base::Base;
+  using Base::local_operator;
+  template <class Edge>
+  auto local_operator(Edge& edge, Twice, const Args& args) const
+  {
+    auto op = Base::local_operator(edge, GlobalLoop::Stiffness{}, args);
+    op.S *= 2.;
+    return op;
+  }
 };
 
 template <class LayoutT, template <unsigned int, typename> class ParametersT = tests::DiffusionSin>
@@ -272,8 +293,45 @@ Results results_only()
                  GlobalLoop::errors(loop, x)[0]};
 }
 
+// Two kinds of operators in one loop: each has its own store, prepared and released on its own.
+void test_kinds()
+{
+  std::printf("---- kinds\n");
+  GlobalLoop::Generic<Topology::Cubic<2, 2>, Geometry::UnitCube<2, 2, double>,
+                      NodeDescriptor::Cubic<2, 2>, TwoKinds>
+    loop(std::vector<unsigned int>{3, 3});
+  const unsigned int n = loop.size_of_system();
+  std::mt19937 generator(1);
+  std::uniform_real_distribution<double> uniform(-1., 1.);
+  Vec x(n), y(n), y_twice(n);
+  for (unsigned int i = 0; i < n; ++i)
+    x[i] = uniform(generator);
+  auto twice_as_large = [&]()
+  {
+    loop.apply(x, y);
+    loop.apply<Twice>(x, y_twice);
+    for (unsigned int i = 0; i < n; ++i)
+      y[i] *= 2.;
+    return max_difference(y, y_twice) <= 1e-12;
+  };
+  check(twice_as_large(), "apply<Twice> = 2 apply, without prepare");
+  loop.prepare<Twice>();
+  check(loop.prepared<Twice>() && !loop.prepared(), "prepare<Twice> prepares that kind only");
+  check(loop.n_operators<Twice>() == loop.n_hyEdges() && loop.n_operators() == 0,
+        "a kind the solver does not number has an operator per hyperedge");
+  loop.prepare();
+  check(loop.n_operators() == 1 && loop.n_operators<Twice>() == loop.n_hyEdges(),
+        "both kinds prepared, each with its slots");
+  check(twice_as_large(), "apply<Twice> = 2 apply, prepared");
+  loop.release<Twice>();
+  check(!loop.prepared<Twice>() && loop.prepared(), "release<Twice> keeps the other kind");
+  loop.release();
+  check(!loop.prepared() && loop.n_operators() == 0, "release drops all kinds");
+}
+
 int main()
 {
+  test_kinds();
   const Results condensed = test<LocalOperator::Condensed>("Condensed (S, K)", 1e-12);
   const Results factored = test<LocalOperator::Factored>("Factored (LU, B, C, D)", 1e-12);
   const Results streaming = test<LocalOperator::Streaming>("Streaming (nothing stored)", 1e-12);

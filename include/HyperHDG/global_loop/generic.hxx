@@ -11,12 +11,31 @@
 #include <cmath>
 #include <cstddef>
 #include <functional>
+#include <tuple>
 #include <type_traits>
 #include <utility>
 #include <vector>
 
 namespace GlobalLoop
 {
+namespace detail
+{
+// The kinds of operators of a local solver: its Kinds (a std::tuple), else Stiffness only.
+template <class SolverT>
+struct kinds
+{
+  using type = std::tuple<Stiffness>;
+};
+template <class SolverT>
+  requires requires { typename SolverT::Kinds; }
+struct kinds<SolverT>
+{
+  using type = typename SolverT::Kinds;
+};
+template <class SolverT>
+using kinds_of = typename kinds<SolverT>::type;
+}  // end of namespace detail
+
 /*!*************************************************************************************************
  * \brief   The single global loop built on local operators.
  *
@@ -28,13 +47,18 @@ namespace GlobalLoop
  *
  * Local solver protocol (cf. doc/local_operator_design.md):
  * - \c Args: runtime parameters (time, ...) forwarded to every call,
- * - \c local_operator(edge, Stiffness, args): builds the immutable operator with
+ * - \c local_operator(edge, Kind, args): builds the immutable operator of that kind with
  *   \c apply<k>(solver, edge, in, args, out) and \c residual(solver, edge, lambda, args, r); what
  *   it computes and keeps is the solver's business (e.g. local_solver/local_operator.hxx). The
  *   loop hands the solver and the hyperedge to every call of the operator,
- * - optional \c n_operator_slots(edge, Stiffness, args) and \c operator_slot(edge, Stiffness,
- *   args): the solver numbers its operators, and hyperedges with the same number share one,
+ * - optional \c n_operator_slots(edge, Kind, args) and \c operator_slot(edge, Kind, args): the
+ *   solver numbers its operators of that kind, and hyperedges with the same number share one,
+ * - optional \c Kinds: a std::tuple of the kinds of operators the solver builds (kinds.hxx), if
+ *   there are others than Stiffness,
  * - optional \c constrained_node<space_dim>(node_type): default predicate for constrain_dirichlet.
+ *
+ * Kinds: \c prepare and the sweeps are templates on the kind of operator, Stiffness by default
+ * (loop.apply<Mass>(x, y)); each kind has its own store, prepared on its own.
  *
  * Store: after \c prepare the operators live in a contiguous vector until \c release, one per
  * slot; without operator_slot, the slot of a hyperedge is its index. A slot names the operator
@@ -73,9 +97,11 @@ class Generic
                                     typename LocalSolverT::data_type>;
   // The hypergraph keeps its hyEdge type private; name it through operator[].
   using Edge = decltype(std::declval<HyperGraphT&>()[(unsigned int)0]);
-  using Operator = std::remove_cvref_t<
+  template <class Kind>
+  using OperatorOf = std::remove_cvref_t<
     decltype(std::declval<const LocalSolverT&>()
-               .local_operator(std::declval<Edge&>(), Stiffness{}, std::declval<const Args&>()))>;
+               .local_operator(std::declval<Edge&>(), Kind{}, std::declval<const Args&>()))>;
+  using Operator = OperatorOf<Stiffness>;
   template <unsigned int k>
   using Traces = SmallMat<n_loc, k, dof_value_t>;
 
@@ -83,8 +109,17 @@ class Generic
   HyperGraphT hyper_graph_;
   const LocalSolverT local_solver_;
 
-  std::vector<Operator> store_;  // one operator per slot (prepared only)
-  bool prepared_ = false;
+  template <class Kind>
+  struct Store
+  {
+    static_assert(std::is_trivially_copyable_v<OperatorOf<Kind> >,
+                  "Local operators must be trivially copyable (contiguous store, device copy).");
+    std::vector<OperatorOf<Kind> > operators;  // one per slot (prepared only)
+    bool prepared = false;
+  };
+  template <class... Kinds>
+  static std::tuple<Store<Kinds>...> stores_of(std::tuple<Kinds...>*);
+  decltype(stores_of((detail::kinds_of<LocalSolverT>*)nullptr)) stores_;  // one per kind
 
   std::vector<dof_index_t> constraints_;  // sorted global dof indices
   std::vector<dof_value_t> free_mask_;    // 1 on free dofs, 0 on constrained dofs
@@ -95,8 +130,6 @@ class Generic
                 "Space dimension of topology and geometry must be equal!");
   static_assert(TopologyT::hyEdge_dim() == LocalSolverT::hyEdge_dim(),
                 "Hyperedge dimension of hypergraph and local solver must be equal!");
-  static_assert(std::is_trivially_copyable_v<Operator>,
-                "Local operators must be trivially copyable (contiguous store, device copy).");
 
  public:
   Generic(const typename TopologyT::constructor_value_type& construct_topo,
@@ -178,45 +211,58 @@ class Generic
   // -------------------------------------------------------------------------------------
 
   /*!***********************************************************************************************
-   * \brief   Build the operators (one per slot) and keep them.
+   * \brief   Build the operators of a kind (one per slot) and keep them.
    ************************************************************************************************/
+  template <class Kind = Stiffness>
   void prepare(const Args& args = Args())
   {
-    release();
+    release<Kind>();
     const std::size_t n_edges = hyper_graph_.n_hyEdges();
-    store_.resize(n_operator_slots(args));
+    std::vector<OperatorOf<Kind> >& store_ = store<Kind>().operators;
+    store_.resize(n_operator_slots<Kind>(args));
     std::vector<bool> built(store_.size(), false);
     try
     {
       for (std::size_t e = 0; e < n_edges; ++e)
       {
         Edge edge = hyper_graph_[e];
-        const std::size_t slot = operator_slot(e, edge, args);
+        const std::size_t slot = operator_slot<Kind>(e, edge, args);
         hy_assert(slot < store_.size(), "The local solver has only "
                                           << store_.size() << " operator slots, but named slot "
                                           << slot << ".");
         if (!built[slot])
         {
-          store_[slot] = local_solver_.local_operator(edge, Stiffness{}, args);
+          store_[slot] = local_solver_.local_operator(edge, Kind{}, args);
           built[slot] = true;
         }
       }
     }
     catch (...)
     {
-      release();
+      release<Kind>();
       throw;
     }
-    prepared_ = true;
+    store<Kind>().prepared = true;
   }
+  /*!***********************************************************************************************
+   * \brief   Drop the stored operators of a kind, or of all kinds.
+   ************************************************************************************************/
+  template <class Kind>
   void release()
   {
-    store_.clear();
-    store_.shrink_to_fit();
-    prepared_ = false;
+    store<Kind>() = Store<Kind>();
   }
-  bool prepared() const { return prepared_; }
-  std::size_t n_operators() const { return store_.size(); }
+  void release() { stores_ = {}; }
+  template <class Kind = Stiffness>
+  bool prepared() const
+  {
+    return store<Kind>().prepared;
+  }
+  template <class Kind = Stiffness>
+  std::size_t n_operators() const
+  {
+    return store<Kind>().operators.size();
+  }
 
   // ---- sweeps
   // ------------------------------------------------------------------------------------
@@ -224,22 +270,22 @@ class Generic
   /*!***********************************************************************************************
    * \brief   y = J x with identity rows on constrained dofs. y is overwritten.
    ************************************************************************************************/
-  template <class VecInT, class VecOutT>
+  template <class Kind = Stiffness, class VecInT, class VecOutT>
   void apply(const VecInT& x, VecOutT& y, const Args& args = Args())
   {
     check_sizes(x, y);
     zero(y);
-    dispatch(
+    dispatch<Kind>(
       [&](auto mode)
       {
-        sweep<mode.value>(args,
-                          [&](std::size_t, Edge& edge, const auto& op, const Dofs& dofs)
-                          {
-                            Traces<1> in, res;
-                            gather(dofs, x, in);
-                            op.apply(local_solver_, edge, in, args, res);
-                            scatter(dofs, res, y);
-                          });
+        sweep<Kind, mode.value>(args,
+                                [&](std::size_t, Edge& edge, const auto& op, const Dofs& dofs)
+                                {
+                                  Traces<1> in, res;
+                                  gather(dofs, x, in);
+                                  op.apply(local_solver_, edge, in, args, res);
+                                  scatter(dofs, res, y);
+                                });
       });
     for (dof_index_t i : constraints_)
       y[i] = x[i];
@@ -247,22 +293,22 @@ class Generic
   /*!***********************************************************************************************
    * \brief   r = F(x): flux balance on free dofs, x_i on constrained dofs. r is overwritten.
    ************************************************************************************************/
-  template <class VecInT, class VecOutT>
+  template <class Kind = Stiffness, class VecInT, class VecOutT>
   void residual(const VecInT& x, VecOutT& r, const Args& args = Args())
   {
     check_sizes(x, r);
     zero(r);
-    dispatch(
+    dispatch<Kind>(
       [&](auto mode)
       {
-        sweep<mode.value>(args,
-                          [&](std::size_t, Edge& edge, const auto& op, const Dofs& dofs)
-                          {
-                            Traces<1> in, res;
-                            gather(dofs, x, in);
-                            op.residual(local_solver_, edge, in, args, res);
-                            scatter(dofs, res, r);
-                          });
+        sweep<Kind, mode.value>(args,
+                                [&](std::size_t, Edge& edge, const auto& op, const Dofs& dofs)
+                                {
+                                  Traces<1> in, res;
+                                  gather(dofs, x, in);
+                                  op.residual(local_solver_, edge, in, args, res);
+                                  scatter(dofs, res, r);
+                                });
       });
     for (dof_index_t i : constraints_)
       r[i] = x[i];
@@ -283,7 +329,7 @@ class Generic
    * mask); with \c identity_rows a unit diagonal entry is appended for every constrained dof.
    * Duplicate (row, col) pairs have to be summed by the consumer (as scipy's coo_matrix does).
    ************************************************************************************************/
-  template <class IndexVecT, class ValueVecT>
+  template <class Kind = Stiffness, class IndexVecT, class ValueVecT>
   void assemble(const Args& args,
                 const bool identity_rows,
                 IndexVecT& rows,
@@ -314,16 +360,16 @@ class Generic
         }
     };
 
-    dispatch(
+    dispatch<Kind>(
       [&](auto mode)
       {
-        sweep<mode.value>(args,
-                          [&](std::size_t e, Edge& edge, const auto& op, const Dofs& dofs)
-                          {
-                            Traces<n_loc> loc_mat;
-                            op.apply(local_solver_, edge, identity, args, loc_mat);
-                            write_block(e, dofs, loc_mat);
-                          });
+        sweep<Kind, mode.value>(args,
+                                [&](std::size_t e, Edge& edge, const auto& op, const Dofs& dofs)
+                                {
+                                  Traces<n_loc> loc_mat;
+                                  op.apply(local_solver_, edge, identity, args, loc_mat);
+                                  write_block(e, dofs, loc_mat);
+                                });
       });
 
     if (identity_rows)
@@ -344,19 +390,19 @@ class Generic
    * \c combine is associative and \c result its neutral element (0 for +), so that partial
    * results can be combined in any grouping.
    ************************************************************************************************/
-  template <class VecT, class F, class R, class Combine = std::plus<> >
+  template <class Kind = Stiffness, class VecT, class F, class R, class Combine = std::plus<> >
   R reduce(const VecT& x, const Args& args, F f, R result, Combine combine = Combine())
   {
-    dispatch(
+    dispatch<Kind>(
       [&](auto mode)
       {
-        sweep<mode.value>(args,
-                          [&](std::size_t, Edge& edge, const auto& op, const Dofs& dofs)
-                          {
-                            Traces<1> in;
-                            gather(dofs, x, in);
-                            result = combine(std::move(result), f(edge, op, in));
-                          });
+        sweep<Kind, mode.value>(args,
+                                [&](std::size_t, Edge& edge, const auto& op, const Dofs& dofs)
+                                {
+                                  Traces<1> in;
+                                  gather(dofs, x, in);
+                                  result = combine(std::move(result), f(edge, op, in));
+                                });
       });
     return result;
   }
@@ -407,13 +453,26 @@ class Generic
       y[dofs[i]] += loc[i];
   }
   /*!***********************************************************************************************
+   * \brief   The store of a kind of operators.
+   ************************************************************************************************/
+  template <class Kind>
+  Store<Kind>& store()
+  {
+    return std::get<Store<Kind> >(stores_);
+  }
+  template <class Kind>
+  const Store<Kind>& store() const
+  {
+    return std::get<Store<Kind> >(stores_);
+  }
+  /*!***********************************************************************************************
    * \brief   Call f with std::true_type / std::false_type telling whether the store is used. The
    *          runtime decision is taken once per public call.
    ************************************************************************************************/
-  template <class F>
+  template <class Kind, class F>
   void dispatch(F&& f) const
   {
-    if (prepared_)
+    if (store<Kind>().prepared)
       f(std::true_type{});
     else
       f(std::false_type{});
@@ -422,28 +481,28 @@ class Generic
    * \brief   The number of slots and the slot of a hyperedge: a single one if operators have no
    *          state, else as the local solver numbers them, else one per hyperedge.
    ************************************************************************************************/
+  template <class Kind>
   std::size_t n_operator_slots(const Args& args)
   {
-    if constexpr (std::is_empty_v<Operator>)
+    if constexpr (std::is_empty_v<OperatorOf<Kind> >)
       return 1;
-    else if constexpr (requires(Edge& edge) {
-                         local_solver_.operator_slot(edge, Stiffness{}, args);
-                       })
+    else if constexpr (requires(Edge& edge) { local_solver_.operator_slot(edge, Kind{}, args); })
     {
       if (hyper_graph_.n_hyEdges() == 0)
         return 0;
       Edge edge = hyper_graph_[0];  // any hyperedge can tell
-      return local_solver_.n_operator_slots(edge, Stiffness{}, args);
+      return local_solver_.n_operator_slots(edge, Kind{}, args);
     }
     else
       return hyper_graph_.n_hyEdges();
   }
+  template <class Kind>
   std::size_t operator_slot(const std::size_t e, Edge& edge, const Args& args) const
   {
-    if constexpr (std::is_empty_v<Operator>)
+    if constexpr (std::is_empty_v<OperatorOf<Kind> >)
       return 0;
-    else if constexpr (requires { local_solver_.operator_slot(edge, Stiffness{}, args); })
-      return local_solver_.operator_slot(edge, Stiffness{}, args);
+    else if constexpr (requires { local_solver_.operator_slot(edge, Kind{}, args); })
+      return local_solver_.operator_slot(edge, Kind{}, args);
     else
       return e;
   }
@@ -451,7 +510,7 @@ class Generic
    * \brief   Run body(e, edge, operator, dofs) over all hyperedges; the operator comes from the
    *          store or is built on the fly, decided at compile time.
    ************************************************************************************************/
-  template <bool use_store, class Body>
+  template <class Kind, bool use_store, class Body>
   void sweep(const Args& args, Body body)
   {
     const std::size_t n_edges = hyper_graph_.n_hyEdges();
@@ -461,10 +520,10 @@ class Generic
       Dofs dofs;
       local_dof_indices(edge, dofs);
       if constexpr (use_store)
-        body(e, edge, store_[operator_slot(e, edge, args)], dofs);
+        body(e, edge, store<Kind>().operators[operator_slot<Kind>(e, edge, args)], dofs);
       else
       {
-        const Operator op = local_solver_.local_operator(edge, Stiffness{}, args);
+        const OperatorOf<Kind> op = local_solver_.local_operator(edge, Kind{}, args);
         body(e, edge, op, dofs);
       }
     }
