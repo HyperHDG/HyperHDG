@@ -31,7 +31,7 @@ namespace GlobalLoop
  *   \c apply<k>(solver, edge, in, args, out) and \c residual(solver, edge, lambda, args, r); what
  *   it computes and keeps is the solver's business (e.g. local_solver/local_operator.hxx). The
  *   loop hands the solver and the hyperedge to every call of the operator,
- * - optional \c n_operator_slots(hyper_graph, Stiffness, args) and \c operator_slot(edge,
+ * - optional \c n_operator_slots(edge, Stiffness, args) and \c operator_slot(edge,
  *Stiffness, args): the solver numbers its operators, and hyperedges with the same number share one,
  * - optional \c constrained_node<space_dim>(node_type): default predicate for constrain_dirichlet.
  *
@@ -417,14 +417,19 @@ class Generic
    * \brief   The number of slots and the slot of a hyperedge: a single one if operators have no
    *          state, else as the local solver numbers them, else one per hyperedge.
    ************************************************************************************************/
-  std::size_t n_operator_slots(const Args& args) const
+  std::size_t n_operator_slots(const Args& args)
   {
     if constexpr (std::is_empty_v<Operator>)
       return 1;
     else if constexpr (requires(Edge& edge) {
                          local_solver_.operator_slot(edge, Stiffness{}, args);
                        })
-      return local_solver_.n_operator_slots(hyper_graph_, Stiffness{}, args);
+    {
+      if (hyper_graph_.n_hyEdges() == 0)
+        return 0;
+      Edge edge = hyper_graph_[0];  // any hyperedge can tell
+      return local_solver_.n_operator_slots(edge, Stiffness{}, args);
+    }
     else
       return hyper_graph_.n_hyEdges();
   }

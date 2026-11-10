@@ -154,8 +154,17 @@ class UnitCube
      **********************************************************************************************/
     static constexpr unsigned int space_dim() { return space_dimT; }
     /*!*********************************************************************************************
-     * \brief   The congruence class of this hyperedge, in 0, ..., n_congruence_classes() - 1 of
-     *          the unit cube: the rank of the set of axes it spans (combinatorial number system).
+     * \brief   The number of congruence classes of the hyperedges of the unit cube.
+     *
+     * All hyperedges that span the same axes are congruent (same lengths along the same axes, in
+     * the same order), so there is one class per choice of hyEdge_dimT of the space_dimT axes
+     * (for hyperedges of dimension one: one per axis). Local solvers whose operators depend on
+     * the shape of the hyperedge only share them by \c congruence_class.
+     **********************************************************************************************/
+    unsigned int n_congruence_classes() const { return binomial(space_dimT, hyEdge_dimT); }
+    /*!*********************************************************************************************
+     * \brief   The congruence class of this hyperedge, in 0, ..., n_congruence_classes() - 1: the
+     *          rank of the set of axes it spans (combinatorial number system).
      **********************************************************************************************/
     unsigned int congruence_class() const
     {
@@ -465,15 +474,6 @@ class UnitCube
    * elements in the different dimensions.
    ************************************************************************************************/
   typedef ConstructorVecT constructor_value_type;
-  /*!***********************************************************************************************
-   * \brief   The number of congruence classes of the hyperedges.
-   *
-   * All hyperedges that span the same axes are congruent (same lengths along the same axes, in
-   * the same order), so there is one class per choice of hyEdge_dimT of the space_dimT axes (for
-   * hyperedges of dimension one: one per axis). Local solvers whose operators depend on the shape
-   * of the hyperedge only share them by \c hyEdge::congruence_class.
-   ************************************************************************************************/
-  unsigned int n_congruence_classes() const { return binomial(space_dimT, hyEdge_dimT); }
   /*!***********************************************************************************************
    * \brief   Construct a cubic that describes a unit cube hypergraph.
    *
