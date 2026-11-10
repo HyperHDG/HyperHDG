@@ -42,9 +42,14 @@
  * Provided: \c Condensed (the default of Diffusion) stores S = C A^-1 B + D and K = C A^-1, so
  * that apply is S lambda and residual is S lambda + K l, without factors; \c Factored stores the
  * factors of A with B, C, D, as the local problem is set up, and also provides local_solution;
- * \c Streaming stores nothing and sets up the local problem in every call. A layout whose
- * operator has no state declares \c stateless: all hyperedges can then share one operator, see
- * operator_slot of the solvers.
+ * \c Streaming stores nothing and sets up the local problem in every call.
+ *
+ * A layout also says which hyperedges read the same stored operator, since only it knows what it
+ * stores: optional n_slots<Edge>(solver, kind, args) and slot(solver, edge, kind, args), to which
+ * the solvers forward operator_slot. Condensed and Factored store the local problem, so their
+ * slots are the problem classes of the solver (\c ByProblemClass; hyperedges with the same local
+ * problem, if the solver declares any); Streaming has one slot for all hyperedges. Without slots
+ * of the layout, every hyperedge has an operator of its own.
  **************************************************************************************************/
 namespace LocalOperator
 {
@@ -220,10 +225,32 @@ using BlocksOf = std::remove_cvref_t<decltype(std::declval<const SolverT&>().loc
 }  // end of namespace detail
 
 /*!*************************************************************************************************
- * \brief   Whether the operators of a layout have no state (the layout declares \c stateless).
+ * \brief   Slots of a layout whose operators are functions of the local problem: one per problem
+ *          class of the solver.
+ *
+ * Available if the solver declares which hyperedges have the same local problem, by
+ * n_problem_classes<Edge>(kind, args) and problem_class(edge, kind, args). A base of Condensed
+ * and Factored, and of layouts of one's own that store the local problem in some form.
  **************************************************************************************************/
-template <class LayoutT>
-concept Stateless = requires { requires LayoutT::stateless; };
+struct ByProblemClass
+{
+  template <class Edge, class SolverT, class Kind, class Args>
+    requires requires(const SolverT& solver, Edge& edge, Kind kind, const Args& args) {
+      solver.problem_class(edge, kind, args);
+    }
+  static constexpr unsigned int n_slots(const SolverT& solver, Kind kind, const Args& args)
+  {
+    return solver.template n_problem_classes<Edge>(kind, args);
+  }
+  template <class SolverT, class Edge, class Kind, class Args>
+    requires requires(const SolverT& solver, Edge& edge, Kind kind, const Args& args) {
+      solver.problem_class(edge, kind, args);
+    }
+  static constexpr unsigned int slot(const SolverT& solver, Edge& edge, Kind kind, const Args& args)
+  {
+    return solver.problem_class(edge, kind, args);
+  }
+};
 
 /*!*************************************************************************************************
  * \brief   The blocks as the local problem is set up: the factors of A, B, C, D.
@@ -231,7 +258,7 @@ concept Stateless = requires { requires LayoutT::stateless; };
  * Cheap to build (one factorization), expensive to apply (a solve with A per application), and
  * it provides local_solution.
  **************************************************************************************************/
-struct Factored
+struct Factored : ByProblemClass
 {
   template <class BlocksT>
   struct Operator
@@ -294,7 +321,7 @@ struct Factored
  * No local_solution: reductions that need it build the Factored operator on the fly. Expensive
  * to build: without prepare (an operator per hyperedge and sweep), Factored is the cheaper one.
  **************************************************************************************************/
-struct Condensed
+struct Condensed : ByProblemClass
 {
   template <class BlocksT>
   struct Operator
@@ -347,12 +374,21 @@ struct Condensed
  * \brief   Nothing is stored: every call sets up the local problem of its hyperedge, factorizes
  *          it, uses the factors and drops them (the Factored operator, for one use).
  *
- * The operator is empty, so all hyperedges share one (the layout is \c stateless) and a prepared
- * loop stores nothing per hyperedge; its results depend on the hyperedge it is applied to.
+ * The operator is empty, so all hyperedges share one (a single slot) and a prepared loop stores
+ * nothing per hyperedge; its results depend on the hyperedge it is applied to.
  **************************************************************************************************/
 struct Streaming
 {
-  static constexpr bool stateless = true;
+  template <class Edge, class SolverT, class Kind, class Args>
+  static constexpr unsigned int n_slots(const SolverT&, Kind, const Args&)
+  {
+    return 1;
+  }
+  template <class SolverT, class Edge, class Kind, class Args>
+  static constexpr unsigned int slot(const SolverT&, Edge&, Kind, const Args&)
+  {
+    return 0;
+  }
 
   template <class Kind>
   struct Operator

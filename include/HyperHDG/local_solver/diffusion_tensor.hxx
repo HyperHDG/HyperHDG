@@ -373,21 +373,22 @@ class DiffusionTensor
     }
     return op;
   }
-  // The operators are shared as those of Diffusion: by the shape classes of the geometry.
+  // The operator is a function of the local problem: one per problem class of Diffusion.
   template <class Edge>
     requires Base::template
-  shares_operators<Edge> static constexpr unsigned int n_operator_slots(GlobalLoop::Stiffness kind,
-                                                                        const Args& args)
+  has_problem_classes<Edge> static constexpr unsigned int n_operator_slots(
+    GlobalLoop::Stiffness kind,
+    const Args& args)
   {
-    return Base::template n_operator_slots<Edge>(kind, args);
+    return Base::template n_problem_classes<Edge>(kind, args);
   }
   template <class Edge>
     requires Base::template
-  shares_operators<Edge> unsigned int operator_slot(Edge& edge,
-                                                    GlobalLoop::Stiffness kind,
-                                                    const Args& args) const
+  has_problem_classes<Edge> unsigned int operator_slot(Edge& edge,
+                                                       GlobalLoop::Stiffness kind,
+                                                       const Args& args) const
   {
-    return base_.operator_slot(edge, kind, args);
+    return base_.problem_class(edge, kind, args);
   }
   template <class Edge>
   SmallVec<n_ldofs, T> local_load(Edge& edge, const Args& args) const
