@@ -2,6 +2,11 @@ function(add_hyperhdg_test name source)
   add_executable(${name} ${source})
   # Debug builds keep the assertions but optimize: at -O0 the solves dominate the CI job.
   target_compile_options(${name} PRIVATE $<$<CONFIG:Debug>:-O2>)
+  # The local matrices are SmallMats on the stack, and setting up one local operator of Diffusion
+  # in 3D, degree 3, takes about 2.5 MB of it (A alone is 256 x 256 doubles), more than the 2 MB of
+  # MinGW's default; 8 MB as on Linux. TODO: optimize the stack usage, by filling a heap workspace
+  # of the loop in place instead of returning blocks and operators by value.
+  target_link_options(${name} PRIVATE $<$<BOOL:${MINGW}>:-Wl,--stack,8388608>)
   target_link_libraries(${name} PRIVATE HyperHDG)
   target_include_directories(${name} PRIVATE ${PROJECT_SOURCE_DIR})
   add_test(NAME ${name} COMMAND ${name})
