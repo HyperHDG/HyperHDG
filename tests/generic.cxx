@@ -233,6 +233,20 @@ Results test(const char* layout, const double tol)
   const double count =
     loop.reduce(x, typename Loop::Args(), [](auto&, const auto&, const auto&) { return 1.; }, 0.);
   check(count == 9., "reduce visits every hyperedge once");
+  const double largest = loop.reduce(
+    x, typename Loop::Args(),
+    [](auto&, const auto&, const auto& lambda)
+    {
+      double result = 0.;
+      for (unsigned int i = 0; i < lambda.size(); ++i)
+        result = std::max(result, std::abs(lambda[i]));
+      return result;
+    },
+    0., [](const double a, const double b) { return std::max(a, b); });
+  double largest_x = 0.;
+  for (const double value : x)
+    largest_x = std::max(largest_x, std::abs(value));
+  check(largest == largest_x, "reduce with max as the combination");
   loop.release();
   check(!loop.prepared() && loop.n_operators() == 0, "release empties the store");
   check(std::abs(GlobalLoop::errors(loop, x)[0] - error_prepared) <= tol * error_prepared,

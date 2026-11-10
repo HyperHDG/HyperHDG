@@ -10,6 +10,7 @@
 #include <array>
 #include <cmath>
 #include <cstddef>
+#include <functional>
 #include <type_traits>
 #include <utility>
 #include <vector>
@@ -337,10 +338,14 @@ class Generic
     }
   }
   /*!***********************************************************************************************
-   * \brief   Fold f(edge, operator, local trace) over all hyperedges with operator+.
+   * \brief   Fold f(edge, operator, local trace) over all hyperedges: result = combine(result,
+   *          f(...)), by default with operator+.
+   *
+   * \c combine is associative and \c result its neutral element (0 for +), so that partial
+   * results can be combined in any grouping.
    ************************************************************************************************/
-  template <class VecT, class F, class R>
-  R reduce(const VecT& x, const Args& args, F f, R result)
+  template <class VecT, class F, class R, class Combine = std::plus<> >
+  R reduce(const VecT& x, const Args& args, F f, R result, Combine combine = Combine())
   {
     dispatch(
       [&](auto mode)
@@ -350,7 +355,7 @@ class Generic
                           {
                             Traces<1> in;
                             gather(dofs, x, in);
-                            result = result + f(edge, op, in);
+                            result = combine(std::move(result), f(edge, op, in));
                           });
       });
     return result;
