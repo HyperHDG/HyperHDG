@@ -16,7 +16,9 @@
  *
  * Whether this functionality is active or not can be deduced via setting \c NDEBUG, when the code
  * is compiled. Using this functionality makes your program significantly slower. However, usage is
- * highly recommended for testing.
+ * highly recommended for testing. The message is only assembled if the assertion fails: a
+ * \c stringstream per passing assertion made the inner loops of debug builds hundreds of times
+ * slower than those of release builds.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2020.
  * \authors   Andreas Rupp, Heidelberg University, 2020.
@@ -71,12 +73,15 @@ inline constexpr bool hy_debug_mode = true;
  * \param   Expr  C++ Expression that can be evaluated to \c true or \c false.
  * \param   Msg   Message that is to be displayed if \c Expr is evaluated to \c false.
  **************************************************************************************************/
-#define hy_assert(Expr, Msg)                                           \
-  {                                                                    \
-    std::stringstream __hy_assertion_text;                             \
-    __hy_assertion_text << Msg;                                        \
-    __Hy_Assert(#Expr, Expr, __FILE__, __LINE__, __hy_assertion_text); \
-  }                                                                    \
+#define hy_assert(Expr, Msg)                                              \
+  {                                                                       \
+    if (!(Expr))                                                          \
+    {                                                                     \
+      std::stringstream __hy_assertion_text;                              \
+      __hy_assertion_text << Msg;                                         \
+      __Hy_Assert(#Expr, false, __FILE__, __LINE__, __hy_assertion_text); \
+    }                                                                     \
+  }                                                                       \
   static_assert(true, "")
 
 // -------------------------------------------------------------------------------------------------
