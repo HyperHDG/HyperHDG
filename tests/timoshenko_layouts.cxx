@@ -1,8 +1,9 @@
 // The layouts of the local operator of the Timoshenko beam solver against each other, on beams of
 // different lengths and directions in space (domains/skew_beams.geo, run in the source tree):
-// BeamStiffness (the default: the frame of a beam and six stiffnesses) must give the apply, the
-// residual and the errors of Condensed (S and K from the whole local matrix) up to round-off,
-// with and without prepare. One executable per DEGREE, set by CMake (tests/CMakeLists.txt).
+// BeamStiffness (the default: the frame of a beam, six stiffnesses, the fluxes of loads) must give
+// the apply, the residual and the errors of Condensed (S and K from the whole local matrix) up to
+// round-off, with and without prepare. One executable per DEGREE, set by CMake
+// (tests/CMakeLists.txt).
 #include <HyperHDG/geometry/file.hxx>
 #include <HyperHDG/global_loop/generic.hxx>
 #include <HyperHDG/local_solver/timoshenko_network.hxx>
@@ -13,6 +14,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <random>
 #include <string>
@@ -52,8 +54,11 @@ bool agree(const Vec& a, const Vec& b, const double tol)
 
 int main()
 {
-  static_assert(sizeof(Loop<LocalSolver::BeamStiffness>::Operator) == 16 * sizeof(double),
-                "BeamStiffness keeps a frame, a length and six stiffnesses.");
+  static_assert(sizeof(Loop<LocalSolver::BeamStiffness>::Operator) <=
+                  sizeof(Loop<LocalOperator::Condensed>::Operator) / 3,
+                "BeamStiffness is much smaller than Condensed.");
+  static_assert(offsetof(Loop<LocalSolver::BeamStiffness>::Operator, load_to_flux_single) == 128,
+                "apply reads two cache lines: a frame, a length and six stiffnesses.");
   for (const bool prepared : {false, true})
   {
     std::printf("---- %s\n", prepared ? "prepared" : "without prepare");

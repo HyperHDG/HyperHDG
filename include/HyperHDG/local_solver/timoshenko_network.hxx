@@ -201,23 +201,39 @@ struct TimoschenkoBeamParametersClamped
  *   stretching:  flux = -+ k_a d(u_0),            twisting likewise with k_t and r_0,
  *   bending:     shear force  = -+ k_s e_s,       e_s = d(u) - h (r at node 0 + r at node 1),
  *                moment       = -+ k_b d(r) + h k_s e_s,
- * (upper sign at node 1) with h = +- half the length of the beam. The operator keeps the frame,
- * h and the six stiffnesses (128 bytes in double, whatever the degree), which the solver computes
- * from the four small local problems (TimoshenkoBeam::beam_operator); apply rotates the traces
- * into the frame, applies the formulas and rotates back. residual and local_solution, which need
- * the local load, solve the four problems of their beam on the fly.
+ * (upper sign at node 1) with h = +- half the length of the beam. The operator starts with the
+ * frame, h and the six stiffnesses, which the solver computes from the four small local problems
+ * (TimoshenkoBeam::beam_operator): 16 numbers, two cache lines in double, whatever the degree,
+ * and all that apply reads. apply rotates the traces into the frame, applies the formulas and
+ * rotates back.
+ *
+ * The residual also needs the fluxes of the local load, K l with K = C A^-1. K falls into the same
+ * four parts, 40 n numbers for n shape functions, which the operator keeps behind the 16 (about a
+ * quarter of the size of Condensed in total), so that the residual factorizes nothing.
+ * local_solution, for errors, solves the four problems of its beam on the fly.
  **************************************************************************************************/
 struct BeamStiffness
 {
-  template <typename T>
-  struct Operator
+  // The components (in the frame of the beam) of the four parts: stretching and twisting, and the
+  // force and the moment components of the two bending problems.
+  static constexpr std::array<unsigned int, 2> single_dim{0, 3};
+  static constexpr std::array<unsigned int, 2> force_dim{2, 1}, moment_dim{4, 5};
+
+  template <typename T, unsigned int n>
+  struct alignas(64) Operator
   {
     using Trace = std::array<std::array<T, 6>, 2>;  // per node: u and r in the frame of the beam
 
+    // ---- read by apply
     std::array<T, 9> frame;  // rows: the tangent and the two normals of the beam
     T half_length;           // h for (u_2, r_1), -h for (u_1, r_2); signed with the tangent
     T axial, torsion;
     std::array<T, 2> shear, bending;  // of (u_2, r_1) and of (u_1, r_2)
+    // ---- read by residual only: K of the four parts. Rows: the flux at node 0 and node 1 (for
+    // bending: of the force, then of the moment); columns: the unknowns of the part, as
+    // TimoshenkoBeam::BeamProblem orders them.
+    std::array<SmallMat<2, 2 * n, T>, 2> load_to_flux_single;
+    std::array<SmallMat<4, 4 * n, T>, 2> load_to_flux_coupled;
 
     template <unsigned int k, class SolverT, class Edge, class Args>
     void apply(const SolverT&,
@@ -236,9 +252,20 @@ struct BeamStiffness
                   const Args& args,
                   SmallVec<12, T>& r) const
     {
-      const auto problem = solver.beam_problem(edge);
-      const Trace trace = to_beam(lambda, 0);
-      to_nodes(problem.flux(solved(solver, edge, problem, trace, args), trace), r, 0);
+      const auto load = solver.local_load(edge, args);
+      Trace result = flux(to_beam(lambda, 0));
+      for (unsigned int c = 0; c < 2; ++c)
+      {
+        const std::array<unsigned int, 2> first{single_dim[c] * n, (6 + single_dim[c]) * n};
+        for (unsigned int row = 0; row < 2; ++row)
+          result[row][single_dim[c]] += flux_of_load(load_to_flux_single[c], row, first, load);
+        const std::array<unsigned int, 4> first_coupled{
+          force_dim[c] * n, moment_dim[c] * n, (6 + force_dim[c]) * n, (6 + moment_dim[c]) * n};
+        for (unsigned int row = 0; row < 4; ++row)
+          result[row % 2][row < 2 ? force_dim[c] : moment_dim[c]] +=
+            flux_of_load(load_to_flux_coupled[c], row, first_coupled, load);
+      }
+      to_nodes(result, r, 0);
     }
     template <class SolverT, class Edge, class Args>
     auto local_solution(const SolverT& solver,
@@ -250,6 +277,19 @@ struct BeamStiffness
     }
 
    private:
+    // Row row of K of one part times the load of its unknowns: blocks of n starting at first[.].
+    template <unsigned int n_rows, std::size_t n_blocks, class LoadT>
+    static T flux_of_load(const SmallMat<n_rows, n_blocks * n, T>& load_to_flux,
+                          const unsigned int row,
+                          const std::array<unsigned int, n_blocks>& first,
+                          const LoadT& load)
+    {
+      T value = 0.;
+      for (unsigned int block = 0; block < n_blocks; ++block)
+        for (unsigned int i = 0; i < n; ++i)
+          value += load_to_flux(row, block * n + i) * load[first[block] + i];
+      return value;
+    }
     // The local solution of the beam for the trace (in its frame) and the local load.
     template <class SolverT, class Edge, class ProblemT, class Args>
     static auto solved(const SolverT& solver,
@@ -964,8 +1004,9 @@ class TimoshenkoBeam
   struct BeamProblem
   {
     static constexpr unsigned int n = n_shape_fct_;
-    static constexpr std::array<unsigned int, 2> single_dim{0, 3};
-    static constexpr std::array<unsigned int, 2> force_dim{2, 1}, moment_dim{4, 5};
+    static constexpr std::array<unsigned int, 2> single_dim = BeamStiffness::single_dim,
+                                                 force_dim = BeamStiffness::force_dim,
+                                                 moment_dim = BeamStiffness::moment_dim;
 
     std::array<LocalOperator::detail::Factors<2 * n, n, lSol_float_t>, 2> single;
     std::array<LocalOperator::detail::Factors<4 * n, 2 * n, lSol_float_t>, 2> coupled;
@@ -1018,6 +1059,36 @@ class TimoshenkoBeam
           result[node][dim] = value;
         }
       return result;
+    }
+
+    // K = C A^-1 of part c, stretching and twisting: the fluxes at the two nodes of a load on its
+    // unknowns (n, u). One solve with the transposed factors per flux.
+    SmallMat<2, 2 * n, lSol_float_t> load_to_flux_single(const unsigned int c) const
+    {
+      SmallMat<2 * n, 2, lSol_float_t> transposed_k;
+      for (unsigned int node = 0; node < 2; ++node)
+        for (unsigned int i = 0; i < n; ++i)
+        {
+          transposed_k(i, node) = normal[node] * shape_at_node[node][i];
+          transposed_k(n + i, node) = tau * shape_at_node[node][i];
+        }
+      single[c].solve(transposed_k, 'T');
+      return transposed(transposed_k);
+    }
+    // The same for bending, part c: the fluxes of the force at the two nodes, then those of the
+    // moment, of a load on its unknowns (n_a, m_b, u_a, r_b).
+    SmallMat<4, 4 * n, lSol_float_t> load_to_flux_coupled(const unsigned int c) const
+    {
+      SmallMat<4 * n, 4, lSol_float_t> transposed_k;
+      for (unsigned int field = 0; field < 2; ++field)
+        for (unsigned int node = 0; node < 2; ++node)
+          for (unsigned int i = 0; i < n; ++i)
+          {
+            transposed_k(field * n + i, 2 * field + node) = normal[node] * shape_at_node[node][i];
+            transposed_k((2 + field) * n + i, 2 * field + node) = tau * shape_at_node[node][i];
+          }
+      coupled[c].solve(transposed_k, 'T');
+      return transposed(transposed_k);
     }
 
    private:
@@ -1119,11 +1190,12 @@ class TimoshenkoBeam
    * \brief   The operator of the layout BeamStiffness: the frame of the beam and its stiffnesses.
    *
    * The stiffnesses are the responses to unit differences of the traces between the two nodes
-   * (two solves of the four parts). Debug builds check what the formulas of the operator rest on:
+   * (two solves of the four parts); the fluxes of loads take twelve transposed solves. Debug
+   * builds check what the formulas of the operator rest on:
    * no flux for rigid motions, and no coupling of shear and curvature.
    ************************************************************************************************/
   template <class Edge>
-  BeamStiffness::Operator<lSol_float_t> beam_operator(Edge& edge) const
+  BeamStiffness::Operator<lSol_float_t, n_shape_fct_> beam_operator(Edge& edge) const
   {
     static_assert(poly_deg >= 1, "Rigid rotations need linear displacements.");
     const BeamProblem problem = beam_problem(edge);
@@ -1137,7 +1209,7 @@ class TimoshenkoBeam
     auto stiffness = [](const BeamTrace& flux, const unsigned int dim)
     { return (flux[0][dim] - flux[1][dim]) / 2; };
 
-    BeamStiffness::Operator<lSol_float_t> op;
+    BeamStiffness::Operator<lSol_float_t, n_shape_fct_> op;
     const Point<space_dim, lSol_float_t> tangent = edge.geometry.inner_normal(0),
                                          normal_1 = edge.geometry.outer_normal(0),
                                          normal_2 = edge.geometry.outer_normal(1);
@@ -1159,6 +1231,11 @@ class TimoshenkoBeam
     op.torsion = stiffness(flux_rotate, 3);
     op.bending = {stiffness(flux_rotate, 4), stiffness(flux_rotate, 5)};
     op.shear = {stiffness(flux_shear, 2), stiffness(flux_shear, 1)};
+    for (unsigned int c = 0; c < 2; ++c)
+    {
+      op.load_to_flux_single[c] = problem.load_to_flux_single(c);
+      op.load_to_flux_coupled[c] = problem.load_to_flux_coupled(c);
+    }
 
     if constexpr (hy_debug_mode)
     {
