@@ -6,6 +6,13 @@
 #   intended, and the hypernode mass acts on the faces of node type 3 only.
 # - The eigenvalues of the Dirichlet Laplacian on the unit square converge with order 2p + 1.
 # - The evaluation helpers (bulk_values, face_values, ...) integrate discrete functions exactly.
+# - One-dimensional hyperedges: on a star graph of three edges with weights d = (3/2, 3/2, 3),
+#   Dirichlet ends and the mass density mu = 24 / (17 pi) at the center, the smallest eigenvalue
+#   solves 6 omega cos(omega) = mu omega^2 sin(omega), lambda = omega^2, and converges with order
+#   2p + 1 (the face evaluation is the trace at the center).
+# - The (topology, geometry, local solver) constructor is bound for the cubic geometries, which are
+#   constructed from the vector of elements, but not for the file geometries, which would keep a
+#   reference to a temporary topology.
 
 import os, sys, tempfile
 import numpy as np
@@ -48,12 +55,16 @@ using Condensed = GlobalLoop::Elliptic<
 using File = GlobalLoop::GeneralizedEigenvalue<
   Topology::File<2, 3>, Geometry::File<2, 3>, NodeDescriptor::File<2, 3>,
   LocalSolver::DiffusionEigsWeighted<2, {degree}, {quadrature}> >;
+using Graph = GlobalLoop::GeneralizedEigenvalue<
+  Topology::File<1, 2>, Geometry::File<1, 2>, NodeDescriptor::File<1, 2>,
+  LocalSolver::DiffusionEigsWeighted<1, {degree}, {quadrature}> >;
 
 NB_MODULE(hdg_test_generalized_eigenvalue, m) {{
   HyperHDG::bind_python<Cubic, std::vector<unsigned int> >(m, "Cubic");
   HyperHDG::bind_python<CubicNoDirichlet, std::vector<unsigned int> >(m, "CubicNoDirichlet");
   HyperHDG::bind_python<Condensed, std::vector<unsigned int> >(m, "Condensed");
   HyperHDG::bind_python<File>(m, "File");
+  HyperHDG::bind_python<Graph>(m, "Graph");
 }}
 """
 
@@ -83,6 +94,16 @@ def write_plate(filename, props):
                "POINTS_OF_HYPEREDGES:\n0 1 2 3\n")
     if props is not None:
       file.write("HYPEREDGE_PROPERTIES: %d\n%s\n" % (len(props), " ".join(map(repr, props))))
+
+def write_star(filename, d, mu):
+  # three edges from the center (0, 0) in the directions 0, 90 and 180 degrees, length one
+  with open(filename, "w") as file:
+    file.write("Space_Dim = 2;\nHyperEdge_Dim = 1;\nN_Points = 4;\nN_HyperNodes = 4;\n"
+               "N_HyperEdges = 3;\nPOINTS:\n0 0\n1 0\n0 1\n-1 0\n"
+               "HYPERNODES_OF_HYPEREDGES:\n0 1\n0 2\n0 3\nTYPES_OF_HYPERFACES:\n3 1\n3 1\n3 1\n"
+               "POINTS_OF_HYPEREDGES:\n0 1\n0 2\n0 3\nHYPEREDGE_PROPERTIES: 5\n")
+    for weight in d:
+      file.write("%r 1.0 1.0 0.0 %r\n" % (weight, mu / 3.))
 
 success = True
 degree = 2
@@ -140,5 +161,43 @@ rate = np.log2(errors[0] / errors[1])
 ok = rate > 2 * degree + 0.5
 success &= ok
 print("eigenvalue errors", errors, "order %.2f" % rate, "OK" if ok else "FAILED")
+
+
+# One-dimensional hyperedges: star graph with hypernode mass.
+d, mu = (1.5, 1.5, 3.0), 24. / (17. * np.pi)
+dispersion = lambda w: 6. * w * np.cos(w) - mu * w * w * np.sin(w)
+omega, left, right = None, 1e-6, np.pi / 2.  # the smallest root lies in (0, pi / 2)
+for _ in range(200):
+  omega = 0.5 * (left + right)
+  left, right = (omega, right) if dispersion(left) * dispersion(omega) > 0. else (left, omega)
+exact = omega * omega
+with tempfile.TemporaryDirectory() as directory:
+  star = os.path.join(directory, "star.geo")
+  write_star(star, d, mu)
+  errors = []
+  for n in [2, 4]:
+    hdg = module.Graph(star, 1.)
+    hdg.set_refinement(n)
+    errors.append(abs(eigenvalues(hdg, 1)[0] - exact))
+  rate = np.log2(errors[0] / errors[1])
+  hdg = module.Graph(star, 1.)
+  x = np.random.default_rng(2).standard_normal(hdg.size_of_system())
+  face = hdg.face_values(list(x), [0.5])  # one value per face: the coefficient of the hypernode
+  nodes = hdg.face_node_indices()
+  ok = rate > 2 * degree + 0.5 and np.allclose(face, x[nodes])
+  success &= ok
+  print("star graph: lambda_1 = %.12f, errors" % exact, errors, "order %.2f" % rate,
+        "OK" if ok else "FAILED")
+
+  # Constructors with geometry argument: bound for cubic geometries only.
+  cubic = module.Cubic([4, 4], [4, 4], 1.)
+  try:
+    module.File(star.replace("star", "unused"), star, 1.)
+    bound = True
+  except TypeError:
+    bound = False
+  ok = cubic.size_of_system() == module.Cubic([4, 4], 1.).size_of_system() and not bound
+  success &= ok
+  print("(topology, geometry, local solver) constructors:", "OK" if ok else "FAILED")
 
 assert success, "Some checks of GlobalLoop::GeneralizedEigenvalue failed!"

@@ -5,10 +5,14 @@ Plate E_i is parametrized by s (along the junction N, 0 < s < 1) and r (distance
 mass density mu = 24 / (17 pi), the plates are clamped (Dirichlet) at r = 1, and the edges s = 0
 and s = 1 of all plates are natural boundaries. Separation of variables gives the eigenfunctions
 u^i(s, r) = f^i(r) cos(k pi s), k = 0, 1, 2, ..., where either
-  - (symmetric) f^i(r) = sin(omega (1 - r)) on all plates with
-    sum(d) omega cos(omega) = (omega^2 + k^2 pi^2) mu sin(omega), lambda = omega^2 + k^2 pi^2, or
-  - (antisymmetric) f^i(r) = a_i sin(n pi r) with d_1 a_1 + d_2 a_2 + d_3 a_3 = 0, u^N = 0, and
-    lambda = (n^2 + k^2) pi^2 (double eigenvalue).
+  - (symmetric, u^N != 0) f^1 = f^2 = f^3 and, with lambda = omega^2 + k^2 pi^2,
+    f(r) = sin(omega (1 - r)) with sum(d) omega cos(omega) = lambda mu sin(omega) if lambda > k^2 pi^2,
+    f(r) = sinh(beta (1 - r)) with sum(d) beta cosh(beta) = lambda mu sinh(beta), omega = i beta,
+    if lambda < k^2 pi^2 (only for k >= 2, since lambda = sum(d) beta coth(beta) / mu >= sum(d) / mu),
+    and f(r) = 1 - r if lambda = k^2 pi^2 = sum(d) / mu (not the case here), or
+  - (antisymmetric, u^N = 0) f^i(r) = a_i sin(n pi r) with d_1 a_1 + d_2 a_2 + d_3 a_3 = 0 and
+    lambda = (n^2 + k^2) pi^2, a two-dimensional eigenspace for every pair (n, k); eigenvalues of
+    several pairs (e.g. 5 pi^2 for (1, 2) and (2, 1)) have a correspondingly higher multiplicity.
 """
 
 import math
@@ -100,18 +104,46 @@ def gram(modes, inner=h0_inner):
   return np.array([[inner(a, b) for b in modes] for a in modes])
 
 
+def _roots(func, start, end, n_intervals):
+  """Roots of func in (start, end) at sign changes on a uniform grid."""
+  grid = np.linspace(start, end, n_intervals + 1)
+  values = [func(x) for x in grid]
+  return [brentq(func, a, b, xtol=1e-15, rtol=1e-15) for a, b, fa, fb in
+          zip(grid[:-1], grid[1:], values[:-1], values[1:]) if fa * fb < 0.]
+
+
+def eigenvalues_below(bound, d=D, mu=MU):
+  """All eigenvalues below bound (with multiplicity), sorted, with a description of their modes."""
+  entries, total = [], d.sum()
+  k = 0
+  while (k * math.pi) ** 2 < bound:
+    K = (k * math.pi) ** 2
+    top = math.sqrt(bound - K)  # symmetric, lambda > K
+    real = lambda w: total * w * math.cos(w) - (w * w + K) * mu * math.sin(w)
+    entries += [(w * w + K, f"k={k} symmetric") for w in _roots(real, 1e-9, top,
+                                                                 max(200, int(2000 * top)))]
+    if K > 0.:  # symmetric, lambda < K
+      imaginary = lambda b: total * b * math.cosh(b) - (K - b * b) * mu * math.sinh(b)
+      entries += [(K - b * b, f"k={k} symmetric, imaginary frequency")
+                  for b in _roots(imaginary, 1e-9, math.sqrt(K), 20000)]
+      if abs(total / mu - K) < 1e-12 * K:  # symmetric, lambda = K
+        entries.append((K, f"k={k} symmetric, f = 1 - r"))
+    n = 1
+    while (n * n + k * k) * math.pi ** 2 < bound:  # antisymmetric, two-dimensional
+      entries += 2 * [((n * n + k * k) * math.pi ** 2, f"k={k} antisymmetric n={n}")]
+      n += 1
+    k += 1
+  return sorted(entry for entry in entries if entry[0] < bound)
+
+
 def spectrum(n_eigs=8):
   """The n_eigs smallest eigenvalues (with multiplicity) and a description of their modes."""
-  entries = []
-  for k in range(4):
-    for branch in range(3):
-      entries.append((symmetric_omega(k, branch) ** 2 + (k * math.pi) ** 2, f"k={k} symmetric"))
-    for n in range(1, 4):
-      entries += 2 * [((n * n + k * k) * math.pi ** 2, f"k={k} antisymmetric n={n}")]
-  # imaginary frequencies (lambda < k^2 pi^2) only exist for k >= 2, i.e., above 4 pi^2 - 6/mu
-  return sorted(entries)[:n_eigs]
+  bound = 50.
+  while len(eigenvalues_below(bound)) < n_eigs:
+    bound *= 2.
+  return eigenvalues_below(bound)[:n_eigs]
 
 
 if __name__ == "__main__":
-  for index, (value, kind) in enumerate(spectrum(8)):
+  for index, (value, kind) in enumerate(spectrum(16)):
     print(f"lambda_{index + 1} = {value:.15f}  ({kind})")
