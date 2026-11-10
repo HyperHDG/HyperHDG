@@ -116,4 +116,9 @@ foreach(degree 1 2 3)
   add_hyperhdg_test(timoshenko_p${degree} timoshenko.cxx RECORDS)
   target_compile_definitions(timoshenko_p${degree} PRIVATE DEGREE=${degree})
   set_tests_properties(timoshenko_p${degree} PROPERTIES WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+  # Its layouts against each other, on skew beams (domains/skew_beams.geo).
+  add_hyperhdg_test(timoshenko_layouts_p${degree} timoshenko_layouts.cxx)
+  target_compile_definitions(timoshenko_layouts_p${degree} PRIVATE DEGREE=${degree})
+  set_tests_properties(timoshenko_layouts_p${degree} PROPERTIES WORKING_DIRECTORY
+                                                                ${PROJECT_SOURCE_DIR})
 endforeach()

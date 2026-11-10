@@ -8,6 +8,9 @@
 #include <tpp/quadrature/tensorial.hxx>
 #include <tpp/shape_function/shape_function.hxx>
 
+#include <array>
+#include <cmath>
+#include <limits>
 #include <tuple>
 
 namespace LocalSolver
@@ -188,6 +191,141 @@ struct TimoschenkoBeamParametersClamped
 };  // end of struct TimoschenkoBeamParametersClamped
 
 /*!*************************************************************************************************
+ * \brief   Layout of the Timoshenko beam: the frame of the beam and its six stiffnesses.
+ *
+ * In the frame of the beam (tangent, two normals) the local problem falls into four independent
+ * ones: stretching (u_0), twisting (r_0), and bending in the two planes, which couples the
+ * transverse displacement with the rotation about the other normal, (u_2, r_1) and (u_1, r_2).
+ * Without a load, the fluxes of each are in balance and vanish for rigid motions, so the condensed
+ * operator of a problem is fixed by few numbers: with the differences d(.) between the two nodes,
+ *   stretching:  flux = -+ k_a d(u_0),            twisting likewise with k_t and r_0,
+ *   bending:     shear force  = -+ k_s e_s,       e_s = d(u) - h (r at node 0 + r at node 1),
+ *                moment       = -+ k_b d(r) + h k_s e_s,
+ * (upper sign at node 1) with h = +- half the length of the beam. The operator keeps the frame,
+ * h and the six stiffnesses (128 bytes in double, whatever the degree), which the solver computes
+ * from the four small local problems (TimoshenkoBeam::beam_operator); apply rotates the traces
+ * into the frame, applies the formulas and rotates back. residual and local_solution, which need
+ * the local load, solve the four problems of their beam on the fly.
+ **************************************************************************************************/
+struct BeamStiffness
+{
+  template <typename T>
+  struct Operator
+  {
+    using Trace = std::array<std::array<T, 6>, 2>;  // per node: u and r in the frame of the beam
+
+    std::array<T, 9> frame;  // rows: the tangent and the two normals of the beam
+    T half_length;           // h for (u_2, r_1), -h for (u_1, r_2); signed with the tangent
+    T axial, torsion;
+    std::array<T, 2> shear, bending;  // of (u_2, r_1) and of (u_1, r_2)
+
+    template <unsigned int k, class SolverT, class Edge, class Args>
+    void apply(const SolverT&,
+               Edge&,
+               const SmallMat<12, k, T>& in,
+               const Args&,
+               SmallMat<12, k, T>& out) const
+    {
+      for (unsigned int col = 0; col < k; ++col)
+        to_nodes(flux(to_beam(in, col)), out, col);
+    }
+    template <class SolverT, class Edge, class Args>
+    void residual(const SolverT& solver,
+                  Edge& edge,
+                  const SmallVec<12, T>& lambda,
+                  const Args& args,
+                  SmallVec<12, T>& r) const
+    {
+      const auto problem = solver.beam_problem(edge);
+      const Trace trace = to_beam(lambda, 0);
+      to_nodes(problem.flux(solved(solver, edge, problem, trace, args), trace), r, 0);
+    }
+    template <class SolverT, class Edge, class Args>
+    auto local_solution(const SolverT& solver,
+                        Edge& edge,
+                        const SmallVec<12, T>& lambda,
+                        const Args& args) const
+    {
+      return solved(solver, edge, solver.beam_problem(edge), to_beam(lambda, 0), args);
+    }
+
+   private:
+    // The local solution of the beam for the trace (in its frame) and the local load.
+    template <class SolverT, class Edge, class ProblemT, class Args>
+    static auto solved(const SolverT& solver,
+                       Edge& edge,
+                       const ProblemT& problem,
+                       const Trace& trace,
+                       const Args& args)
+    {
+      auto x = problem.rhs(trace);
+      const auto load = solver.local_load(edge, args);
+      for (unsigned int i = 0; i < x.size(); ++i)
+        x[i] += load[i];
+      problem.solve(x);
+      return x;
+    }
+    // Column col of the traces at the nodes (u and r in space), rotated into the frame.
+    template <unsigned int k>
+    Trace to_beam(const SmallMat<12, k, T>& values, const unsigned int col) const
+    {
+      Trace trace;
+      for (unsigned int block = 0; block < 4; ++block)  // u and r at node 0, u and r at node 1
+        for (unsigned int c = 0; c < 3; ++c)
+        {
+          T value = 0.;
+          for (unsigned int d = 0; d < 3; ++d)
+            value += frame[3 * c + d] * values(3 * block + d, col);
+          trace[block / 2][3 * (block % 2) + c] = value;
+        }
+      return trace;
+    }
+    template <unsigned int k>
+    void to_nodes(const Trace& trace, SmallMat<12, k, T>& values, const unsigned int col) const
+    {
+      for (unsigned int block = 0; block < 4; ++block)
+        for (unsigned int d = 0; d < 3; ++d)
+        {
+          T value = 0.;
+          for (unsigned int c = 0; c < 3; ++c)
+            value += frame[3 * c + d] * trace[block / 2][3 * (block % 2) + c];
+          values(3 * block + d, col) = value;
+        }
+    }
+    Trace flux(const Trace& trace) const
+    {
+      Trace result;
+      const T stretch = axial * (trace[1][0] - trace[0][0]);
+      result[0][0] = stretch, result[1][0] = -stretch;
+      const T twist = torsion * (trace[1][3] - trace[0][3]);
+      result[0][3] = twist, result[1][3] = -twist;
+      bend(trace, result, 2, 4, half_length, shear[0], bending[0]);
+      bend(trace, result, 1, 5, -half_length, shear[1], bending[1]);
+      return result;
+    }
+    static void bend(const Trace& trace,
+                     Trace& result,
+                     const unsigned int u,
+                     const unsigned int r,
+                     const T h,
+                     const T k_s,
+                     const T k_b)
+    {
+      const T force = k_s * (trace[1][u] - trace[0][u] - h * (trace[0][r] + trace[1][r]));
+      const T moment = k_b * (trace[1][r] - trace[0][r]);
+      result[0][u] = force, result[1][u] = -force;
+      result[0][r] = moment + h * force, result[1][r] = -moment + h * force;
+    }
+  };
+
+  template <class SolverT, class Edge, class Kind, class Args>
+  static auto make(const SolverT& solver, Edge& edge, Kind, const Args&)
+  {
+    return solver.beam_operator(edge);
+  }
+};
+
+/*!*************************************************************************************************
  * \brief   Local solver for the equation that governs the bending and change of length of an
  *          elastic Bernoulli beam.
  *
@@ -200,7 +338,7 @@ template <unsigned int hyEdge_dimT,
           unsigned int quad_deg,
           template <unsigned int, typename> typename parametersT = TimoschenkoBeamParametersDefault,
           typename lSol_float_t = double,
-          class LayoutT = LocalOperator::Condensed>
+          class LayoutT = BeamStiffness>
 class TimoshenkoBeam
 {
  public:
@@ -342,6 +480,54 @@ class TimoshenkoBeam
    * \param   tau           Penalty parameter of HDG scheme.
    ************************************************************************************************/
   TimoshenkoBeam(const constructor_value_type& tau = 1.) : tau_(tau) {}
+
+  /*!***********************************************************************************************
+   * \brief   The six stiffness coefficients of a beam in its frame (EA, the two shear stiffnesses,
+   *          the torsional and the two bending stiffnesses); one without data of the geometry.
+   ************************************************************************************************/
+  template <typename hyEdgeT>
+  SmallVec<2 * space_dim, lSol_float_t> beam_coefficients(hyEdgeT& hyper_edge) const
+  {
+    SmallVec<2 * space_dim, lSol_float_t> extra_coeffs(1.);
+
+    if (hyper_edge.geometry.has_extra_data())
+    {
+      auto extra_data = hyper_edge.geometry.extra_data();
+      // (EA, kG_1A, kG_2A, G_xI_x, E_1I_1, E_2I_2):   6 structural constants
+      // (n_11,n_12,n_13) : normal 1
+      // (n_21,n_22,n_23) : normal 2
+      SmallVec<space_dim, lSol_float_t> normal1 =
+        std::array<lSol_float_t, space_dim>{{extra_data[6], extra_data[7], extra_data[8]}};
+      SmallVec<space_dim, lSol_float_t> normal2 =
+        std::array<lSol_float_t, space_dim>{{extra_data[9], extra_data[10], extra_data[11]}};
+      SmallVec<space_dim, lSol_float_t> outer1 = hyper_edge.geometry.outer_normal(0);
+      SmallVec<space_dim, lSol_float_t> outer2 = hyper_edge.geometry.outer_normal(1);
+
+      extra_coeffs[0] = extra_data[0];
+      extra_coeffs[1] = extra_data[1] * scalar_product(outer1, normal1) +
+                        extra_data[2] * scalar_product(outer1, normal2);
+      extra_coeffs[2] = extra_data[1] * scalar_product(outer2, normal1) +
+                        extra_data[2] * scalar_product(outer2, normal2);
+      extra_coeffs[3] = extra_data[3];
+      extra_coeffs[4] = extra_data[4] * scalar_product(outer1, normal1) +
+                        extra_data[5] * scalar_product(outer1, normal2);
+      extra_coeffs[5] = extra_data[4] * scalar_product(outer2, normal1) +
+                        extra_data[5] * scalar_product(outer2, normal2);
+
+      extra_coeffs[0] *= 1e4;
+      extra_coeffs[1] *= 1e4;
+      extra_coeffs[2] *= 1e4;
+      extra_coeffs[3] *= 1e12;
+      extra_coeffs[4] *= 1e12;
+      extra_coeffs[5] *= 1e12;
+    }
+
+    for (unsigned int i = 0; i < extra_coeffs.size(); ++i)
+      extra_coeffs[i] = std::abs(extra_coeffs[i]);
+    // extra_coeffs[i] = 1.;
+    // hy_assert(false, extra_coeffs);
+    return extra_coeffs;
+  }
 
   template <typename hyEdgeT>
   inline SmallSquareMat<n_loc_dofs_, lSol_float_t> assemble_loc_matrix(
@@ -696,7 +882,9 @@ class TimoshenkoBeam
   // trace_to_flux / residual_flux by construction. The leading 2 space_dim n_shape_fct_ unknowns,
   // the stress resultants n and m, have a diagonal mass block (Legendre basis, coefficients
   // constant on a beam) and are eliminated by the factorization. Dirichlet values enter through
-  // the local load; constraining the trace on Dirichlet nodes is the loop's business.
+  // the local load; constraining the trace on Dirichlet nodes is the loop's business. The blocks
+  // serve the layouts of local_operator.hxx (Condensed, Factored, Streaming); the default layout,
+  // BeamStiffness, does not use them (see below).
 
   struct Args
   {
@@ -761,6 +949,242 @@ class TimoshenkoBeam
   {
     return assemble_rhs_from_global_rhs(edge, args.time);
   }
+  // -----------------------------------------------------------------------------------------------
+  // The local problem by its four independent parts (the layout BeamStiffness)
+  // -----------------------------------------------------------------------------------------------
+  //
+  // In the frame of the beam the local matrix couples a stress resultant only with its own
+  // displacement or rotation, except for the cross product: the shear force n_2 with the rotation
+  // r_1 and n_1 with r_2. So A falls into the problems of (n_0, u_0), of (m_0, r_0), of
+  // (n_2, m_1, u_2, r_1) and of (n_1, m_2, u_1, r_2), each with a diagonal mass block of the
+  // stress resultants, which is eliminated: LU factors of size n_shape_fct_ twice and
+  // 2 n_shape_fct_ twice, instead of 6 n_shape_fct_ for the whole matrix.
+
+  using BeamTrace = std::array<std::array<lSol_float_t, 2 * space_dim>, 2>;  // in the beam's frame
+  struct BeamProblem
+  {
+    static constexpr unsigned int n = n_shape_fct_;
+    static constexpr std::array<unsigned int, 2> single_dim{0, 3};
+    static constexpr std::array<unsigned int, 2> force_dim{2, 1}, moment_dim{4, 5};
+
+    std::array<LocalOperator::detail::Factors<2 * n, n, lSol_float_t>, 2> single;
+    std::array<LocalOperator::detail::Factors<4 * n, 2 * n, lSol_float_t>, 2> coupled;
+    std::array<std::array<lSol_float_t, n>, 2> shape_at_node;  // of the shape functions
+    std::array<lSol_float_t, 2> normal;                        // local normal at the nodes
+    lSol_float_t tau;
+
+    // B lambda, as assemble_rhs_from_lambda.
+    Load rhs(const BeamTrace& lambda) const
+    {
+      Load result;
+      for (unsigned int node = 0; node < 2; ++node)
+        for (unsigned int dim = 0; dim < 2 * space_dim; ++dim)
+          for (unsigned int i = 0; i < n; ++i)
+          {
+            const lSol_float_t value = lambda[node][dim] * shape_at_node[node][i];
+            result[dim * n + i] -= normal[node] * value;
+            result[(2 * space_dim + dim) * n + i] += tau * value;
+          }
+      return result;
+    }
+    // x = A^-1 x.
+    void solve(Load& x) const
+    {
+      for (unsigned int c = 0; c < 2; ++c)
+      {
+        const std::array<unsigned int, 2> first{single_dim[c] * n,
+                                                (2 * space_dim + single_dim[c]) * n};
+        solve_part(single[c], first, x);
+      }
+      for (unsigned int c = 0; c < 2; ++c)
+      {
+        const std::array<unsigned int, 4> first{force_dim[c] * n, moment_dim[c] * n,
+                                                (2 * space_dim + force_dim[c]) * n,
+                                                (2 * space_dim + moment_dim[c]) * n};
+        solve_part(coupled[c], first, x);
+      }
+    }
+    // C x + D lambda, as extract_fluxes_from_coeffs and -tau lambda.
+    BeamTrace flux(const Load& x, const BeamTrace& lambda) const
+    {
+      BeamTrace result;
+      for (unsigned int node = 0; node < 2; ++node)
+        for (unsigned int dim = 0; dim < 2 * space_dim; ++dim)
+        {
+          lSol_float_t value = -tau * lambda[node][dim];
+          for (unsigned int i = 0; i < n; ++i)
+            value += shape_at_node[node][i] *
+                     (normal[node] * x[dim * n + i] + tau * x[(2 * space_dim + dim) * n + i]);
+          result[node][dim] = value;
+        }
+      return result;
+    }
+
+   private:
+    // Solve with the unknowns of one part: blocks of n unknowns starting at first[.].
+    template <class FactorsT, std::size_t n_blocks>
+    static void solve_part(const FactorsT& factors,
+                           const std::array<unsigned int, n_blocks>& first,
+                           Load& x)
+    {
+      SmallVec<n_blocks * n, lSol_float_t> part;
+      for (unsigned int block = 0; block < n_blocks; ++block)
+        for (unsigned int i = 0; i < n; ++i)
+          part[block * n + i] = x[first[block] + i];
+      factors.solve(part);
+      for (unsigned int block = 0; block < n_blocks; ++block)
+        for (unsigned int i = 0; i < n; ++i)
+          x[first[block] + i] = part[block * n + i];
+    }
+  };
+  /*!***********************************************************************************************
+   * \brief   Set up and factorize the four parts of the local problem of a beam (the entries are
+   *          those of assemble_loc_matrix).
+   ************************************************************************************************/
+  template <class Edge>
+  BeamProblem beam_problem(Edge& edge) const
+  {
+    static_assert(hyEdge_dimT == 1 && space_dim == 3,
+                  "The parts of the local problem are those of a beam in three dimensions.");
+    constexpr unsigned int n = n_shape_fct_;
+    const SmallVec<2 * space_dim, lSol_float_t> coeff = beam_coefficients(edge);
+    BeamProblem problem;
+    problem.tau = tau_;
+    for (unsigned int node = 0; node < 2; ++node)
+    {
+      problem.normal[node] = edge.geometry.local_normal(node)[0];
+      for (unsigned int i = 0; i < n; ++i)
+        problem.shape_at_node[node][i] =
+          integrator::template integrate_bdr_phipsi<decltype(Edge::geometry)>(i, 0, node,
+                                                                              edge.geometry);
+    }
+    // mass, gradient, its partner (normal - gradient) and the penalty, as in assemble_loc_matrix
+    SmallSquareMat<n, lSol_float_t> mass, grad, grad_t, face;
+    for (unsigned int i = 0; i < n; ++i)
+      for (unsigned int j = 0; j < n; ++j)
+      {
+        mass(i, j) = integrator::integrate_vol_phiphi(i, j, edge.geometry);
+        grad(i, j) =
+          integrator::template integrate_vol_nablaphiphi<SmallVec<hyEdge_dimT, lSol_float_t>,
+                                                         decltype(Edge::geometry)>(
+            i, j, edge.geometry)[0];
+        grad_t(i, j) = -grad(i, j);
+        for (unsigned int node = 0; node < 2; ++node)
+        {
+          const lSol_float_t value =
+            integrator::template integrate_bdr_phiphi<decltype(Edge::geometry)>(i, j, node,
+                                                                                edge.geometry);
+          face(i, j) += tau_ * value;
+          grad_t(i, j) += problem.normal[node] * value;
+        }
+      }
+    for (unsigned int c = 0; c < 2; ++c)
+    {
+      SmallSquareMat<2 * n, lSol_float_t> part;
+      for (unsigned int i = 0; i < n; ++i)
+        for (unsigned int j = 0; j < n; ++j)
+        {
+          part(i, j) = mass(i, j) / coeff[BeamProblem::single_dim[c]];
+          part(i, n + j) = -grad(i, j);
+          part(n + i, j) = grad_t(i, j);
+          part(n + i, n + j) = face(i, j);
+        }
+      problem.single[c] = LocalOperator::detail::Factors<2 * n, n, lSol_float_t>(part);
+    }
+    for (unsigned int c = 0; c < 2; ++c)
+    {
+      // unknowns (n_a, m_b, u_a, r_b); the cross product couples n_a with r_b, with this sign
+      const unsigned int a = BeamProblem::force_dim[c], b = BeamProblem::moment_dim[c];
+      const lSol_float_t sign = a == 1 ? 1. : -1.;
+      SmallSquareMat<4 * n, lSol_float_t> part;
+      for (unsigned int i = 0; i < n; ++i)
+        for (unsigned int j = 0; j < n; ++j)
+        {
+          part(i, j) = mass(i, j) / coeff[a];
+          part(i, 2 * n + j) = -grad(i, j);
+          part(i, 3 * n + j) = sign * mass(i, j);
+          part(n + i, n + j) = mass(i, j) / coeff[b];
+          part(n + i, 3 * n + j) = -grad(i, j);
+          part(2 * n + i, j) = grad_t(i, j);
+          part(2 * n + i, 2 * n + j) = face(i, j);
+          part(3 * n + i, j) = -sign * mass(i, j);
+          part(3 * n + i, n + j) = grad_t(i, j);
+          part(3 * n + i, 3 * n + j) = face(i, j);
+        }
+      problem.coupled[c] = LocalOperator::detail::Factors<4 * n, 2 * n, lSol_float_t>(part);
+    }
+    return problem;
+  }
+  /*!***********************************************************************************************
+   * \brief   The operator of the layout BeamStiffness: the frame of the beam and its stiffnesses.
+   *
+   * The stiffnesses are the responses to unit differences of the traces between the two nodes
+   * (two solves of the four parts). Debug builds check what the formulas of the operator rest on:
+   * no flux for rigid motions, and no coupling of shear and curvature.
+   ************************************************************************************************/
+  template <class Edge>
+  BeamStiffness::Operator<lSol_float_t> beam_operator(Edge& edge) const
+  {
+    static_assert(poly_deg >= 1, "Rigid rotations need linear displacements.");
+    const BeamProblem problem = beam_problem(edge);
+    auto response = [&problem](const BeamTrace& lambda)
+    {
+      Load x = problem.rhs(lambda);
+      problem.solve(x);
+      return problem.flux(x, lambda);
+    };
+    // the stiffness of a component: flux = -+ k (difference of the traces)
+    auto stiffness = [](const BeamTrace& flux, const unsigned int dim)
+    { return (flux[0][dim] - flux[1][dim]) / 2; };
+
+    BeamStiffness::Operator<lSol_float_t> op;
+    const Point<space_dim, lSol_float_t> tangent = edge.geometry.inner_normal(0),
+                                         normal_1 = edge.geometry.outer_normal(0),
+                                         normal_2 = edge.geometry.outer_normal(1);
+    for (unsigned int d = 0; d < space_dim; ++d)
+    {
+      op.frame[d] = tangent[d];
+      op.frame[space_dim + d] = normal_1[d];
+      op.frame[2 * space_dim + d] = normal_2[d];
+    }
+    op.half_length = problem.normal[1] * edge.geometry.area() / 2;
+
+    BeamTrace stretch_and_rotate{}, shear{};
+    for (const unsigned int dim : {0, 3, 4, 5})
+      stretch_and_rotate[0][dim] = -0.5, stretch_and_rotate[1][dim] = 0.5;
+    for (const unsigned int dim : {1, 2})
+      shear[0][dim] = -0.5, shear[1][dim] = 0.5;
+    const BeamTrace flux_rotate = response(stretch_and_rotate), flux_shear = response(shear);
+    op.axial = stiffness(flux_rotate, 0);
+    op.torsion = stiffness(flux_rotate, 3);
+    op.bending = {stiffness(flux_rotate, 4), stiffness(flux_rotate, 5)};
+    op.shear = {stiffness(flux_shear, 2), stiffness(flux_shear, 1)};
+
+    if constexpr (hy_debug_mode)
+    {
+      const lSol_float_t h = op.half_length;
+      const lSol_float_t scale =
+        (op.axial + op.torsion + op.bending[0] + op.bending[1] + op.shear[0] + op.shear[1]) *
+        (1. + std::abs(h));
+      const lSol_float_t tol = 1e4 * std::numeric_limits<lSol_float_t>::epsilon() * scale;
+      // rigid motions: a translation, and a rotation about each axis of the frame
+      BeamTrace rigid;
+      rigid[0] = {1., 1. + h, 1. - h, 1., 1., 1.};
+      rigid[1] = {1., 1. - h, 1. + h, 1., 1., 1.};
+      const BeamTrace flux_rigid = response(rigid);
+      for (unsigned int node = 0; node < 2; ++node)
+        for (unsigned int dim = 0; dim < 2 * space_dim; ++dim)
+          hy_assert(std::abs(flux_rigid[node][dim]) <= tol,
+                    "A rigid motion of the beam must not cause fluxes, but causes "
+                      << (double)flux_rigid[node][dim] << " (node " << node << ", component " << dim
+                      << ").");
+      for (unsigned int c = 0; c < 2; ++c)
+        hy_assert(std::abs(stiffness(flux_rotate, BeamProblem::force_dim[c])) <= tol &&
+                    std::abs(stiffness(flux_shear, BeamProblem::moment_dim[c])) <= tol,
+                  "Shear and curvature of the beam must not be coupled.");
+    }
+    return op;
+  }
   /*!***********************************************************************************************
    * \brief   Squared L2 error of the displacement on one beam, as errors() computes it.
    ************************************************************************************************/
@@ -817,44 +1241,7 @@ TimoshenkoBeam<hyEdge_dimT, space_dim, poly_deg, quad_deg, parametersT, lSol_flo
   SmallSquareMat<n_loc_dofs_, lSol_float_t> local_mat;
   lSol_float_t vol_integral, face_integral, helper;
   SmallVec<hyEdge_dimT, lSol_float_t> grad_int_vec, normal_int_vec;
-  SmallVec<2 * space_dim, lSol_float_t> extra_coeffs(1.);
-
-  if (hyper_edge.geometry.has_extra_data())
-  {
-    auto extra_data = hyper_edge.geometry.extra_data();
-    // (EA, kG_1A, kG_2A, G_xI_x, E_1I_1, E_2I_2):   6 structural constants
-    // (n_11,n_12,n_13) : normal 1
-    // (n_21,n_22,n_23) : normal 2
-    SmallVec<space_dim, lSol_float_t> normal1 =
-      std::array<lSol_float_t, space_dim>{{extra_data[6], extra_data[7], extra_data[8]}};
-    SmallVec<space_dim, lSol_float_t> normal2 =
-      std::array<lSol_float_t, space_dim>{{extra_data[9], extra_data[10], extra_data[11]}};
-    SmallVec<space_dim, lSol_float_t> outer1 = hyper_edge.geometry.outer_normal(0);
-    SmallVec<space_dim, lSol_float_t> outer2 = hyper_edge.geometry.outer_normal(1);
-
-    extra_coeffs[0] = extra_data[0];
-    extra_coeffs[1] = extra_data[1] * scalar_product(outer1, normal1) +
-                      extra_data[2] * scalar_product(outer1, normal2);
-    extra_coeffs[2] = extra_data[1] * scalar_product(outer2, normal1) +
-                      extra_data[2] * scalar_product(outer2, normal2);
-    extra_coeffs[3] = extra_data[3];
-    extra_coeffs[4] = extra_data[4] * scalar_product(outer1, normal1) +
-                      extra_data[5] * scalar_product(outer1, normal2);
-    extra_coeffs[5] = extra_data[4] * scalar_product(outer2, normal1) +
-                      extra_data[5] * scalar_product(outer2, normal2);
-
-    extra_coeffs[0] *= 1e4;
-    extra_coeffs[1] *= 1e4;
-    extra_coeffs[2] *= 1e4;
-    extra_coeffs[3] *= 1e12;
-    extra_coeffs[4] *= 1e12;
-    extra_coeffs[5] *= 1e12;
-  }
-
-  for (unsigned int i = 0; i < extra_coeffs.size(); ++i)
-    extra_coeffs[i] = std::abs(extra_coeffs[i]);
-  // extra_coeffs[i] = 1.;
-  // hy_assert(false, extra_coeffs);
+  const SmallVec<2 * space_dim, lSol_float_t> extra_coeffs = beam_coefficients(hyper_edge);
 
   for (unsigned int i = 0; i < n_shape_fct_; ++i)
   {
