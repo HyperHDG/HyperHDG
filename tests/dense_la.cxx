@@ -197,8 +197,7 @@ void test_qr_single_column()
     SmallSquareMat<3, double> q, lapack_q;
     SmallSquareMat<1, double> r, lapack_r;
     qr_decomp(matrix, q, r);
-    Wrapper::lapack_qr_decomp<3, 1, double>(lapack_matrix.data(), lapack_q.data(),
-                                            lapack_r.data());
+    Wrapper::lapack_qr_decomp<3, 1, double>(lapack_matrix.data(), lapack_q.data(), lapack_r.data());
     if (dir[1] != 0. || dir[2] != 0.)  // a reflector, det = -1
       for (unsigned int i = 0; i < 3; ++i)
         lapack_q(i, 2) *= -1.;

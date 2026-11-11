@@ -1010,12 +1010,12 @@ class TimoshenkoBeam
   // and tau lambda in the frame of the beam, rotated back (D) -- so the operator is that of
   // trace_to_flux / residual_flux by construction. The flux is that of the stress resultants
   // out of the beam, -(n nu + tau (u - lambda)) with the local normal nu, the sign with which the
-  // condensed matrix D + C A^-1 B is positive semi-definite. The leading 2 space_dim n_shape_fct_ unknowns,
-  // the stress resultants n and m, have a diagonal mass block (Legendre basis, coefficients
-  // constant on a beam) and are eliminated by the factorization. Dirichlet values enter through
-  // the local load; constraining the trace on Dirichlet nodes is the loop's business. The blocks
-  // serve the layouts of local_operator.hxx (Condensed, Factored, Streaming); the default layout,
-  // BeamStiffness, does not use them (see below).
+  // condensed matrix D + C A^-1 B is positive semi-definite. The leading 2 space_dim n_shape_fct_
+  // unknowns, the stress resultants n and m, have a diagonal mass block (Legendre basis,
+  // coefficients constant on a beam) and are eliminated by the factorization. Dirichlet values
+  // enter through the local load; constraining the trace on Dirichlet nodes is the loop's business.
+  // The blocks serve the layouts of local_operator.hxx (Condensed, Factored, Streaming); the
+  // default layout, BeamStiffness, does not use them (see below).
 
   struct Args
   {
