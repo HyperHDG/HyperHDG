@@ -116,8 +116,8 @@ hdg = module.Beams(opt.domain)
 hdg.constrain_dirichlet_nodes()
 hdg.prepare()
 
-# The system: the residual at zero is minus the right-hand side. The condensed matrix is negative
-# definite, so the system is solved with its negative.
+# The system: the residual at zero is minus the right-hand side. The condensed matrix is positive
+# definite.
 size = hdg.size_of_system()
 rhs = np.empty(size)
 hdg.residual(np.zeros(size), rhs)
@@ -129,11 +129,11 @@ if opt.solver == "direct":
     matrix = sp.coo_matrix((vals, (rows, cols)), shape=(size, size)).tocsc()
     solution = spla.spsolve(matrix, -rhs)
 else:
-    def minus_apply(x):
+    def apply(x):
         y = np.empty(size)
         hdg.apply(x, y)
-        return -y
-    solution, info = spla.cg(spla.LinearOperator((size, size), matvec=minus_apply), rhs,
+        return y
+    solution, info = spla.cg(spla.LinearOperator((size, size), matvec=apply), -rhs,
                              rtol=1e-10, maxiter=20 * size)
     if info != 0:
         sys.exit(f"CG did not converge (info = {info})")

@@ -292,10 +292,12 @@ struct TimoschenkoBeamParametersUnitSquare
  * transverse displacement with the rotation about the other normal, (u_2, r_1) and (u_1, r_2).
  * Without a load, the fluxes of each are in balance and vanish for rigid motions, so the condensed
  * operator of a problem is fixed by few numbers: with the differences d(.) between the two nodes,
- *   stretching:  flux = -+ k_a d(u_0),            twisting likewise with k_t and r_0,
- *   bending:     shear force  = -+ k_s e_s,       e_s = d(u) - h (r at node 0 + r at node 1),
- *                moment       = -+ k_b d(r) + h k_s e_s,
- * (upper sign at node 1) with h = +- half the length of the beam. The operator starts with the
+ *   stretching:  flux = +- k_a d(u_0),            twisting likewise with k_t and r_0,
+ *   bending:     shear force  = +- k_s e_s,       e_s = d(u) - h (r at node 0 + r at node 1),
+ *                moment       = +- k_b d(r) - h k_s e_s,
+ * (upper sign at node 1) with h = +- half the length of the beam. The stiffnesses are positive, so
+ * the condensed operator is positive semi-definite (definite with constraints that exclude the
+ * rigid motions of the network). The operator starts with the
  * frame, h and the six stiffnesses, which the solver computes from the four small local problems
  * (TimoshenkoBeam::beam_operator): 16 numbers, two cache lines in double, whatever the degree,
  * and all that apply reads. apply rotates the traces into the frame, applies the formulas and
@@ -430,9 +432,9 @@ struct BeamStiffness
     {
       Trace result;
       const T stretch = axial * (trace[1][0] - trace[0][0]);
-      result[0][0] = stretch, result[1][0] = -stretch;
+      result[0][0] = -stretch, result[1][0] = stretch;
       const T twist = torsion * (trace[1][3] - trace[0][3]);
-      result[0][3] = twist, result[1][3] = -twist;
+      result[0][3] = -twist, result[1][3] = twist;
       bend(trace, result, 2, 4, half_length, shear[0], bending[0]);
       bend(trace, result, 1, 5, -half_length, shear[1], bending[1]);
       return result;
@@ -447,8 +449,8 @@ struct BeamStiffness
     {
       const T force = k_s * (trace[1][u] - trace[0][u] - h * (trace[0][r] + trace[1][r]));
       const T moment = k_b * (trace[1][r] - trace[0][r]);
-      result[0][u] = force, result[1][u] = -force;
-      result[0][r] = moment + h * force, result[1][r] = -moment + h * force;
+      result[0][u] = -force, result[1][u] = force;
+      result[0][r] = -moment - h * force, result[1][r] = moment - h * force;
     }
   };
 
@@ -786,7 +788,7 @@ class TimoshenkoBeam
           integral = integrator::template integrate_bdr_phipsi<decltype(hyEdgeT::geometry)>(
             i, j, face, hyper_edge.geometry);
           for (unsigned int dim = 0; dim < 2 * space_dim; ++dim)
-            bdr_values(face, j + dim) +=
+            bdr_values(face, j + dim) -=
               hyper_edge.geometry.local_normal(face).operator[](0) * integral *
                 coeffs[dim * n_shape_fct_ + i] +
               tau_ * coeffs[(2 * space_dim + dim) * n_shape_fct_ + i] * integral;
@@ -826,7 +828,7 @@ class TimoshenkoBeam
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int j = 0; j < 2 * space_dim; ++j)
-        lambda_values_loc[i][j] = result(i, j) - tau_ * lambda_values_loc[i][j];
+        lambda_values_loc[i][j] = result(i, j) + tau_ * lambda_values_loc[i][j];
 
     // for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
     //   for (unsigned int j = 0; j < 2 * space_dim; ++j)
@@ -872,7 +874,7 @@ class TimoshenkoBeam
     auto result = extract_fluxes_from_coeffs(coeffs, hyper_edge);
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
       for (unsigned int j = 0; j < 2 * space_dim; ++j)
-        lambda_values_loc[i][j] = result(i, j) - tau_ * lambda_values_loc[i][j];
+        lambda_values_loc[i][j] = result(i, j) + tau_ * lambda_values_loc[i][j];
     lambda_values_out = edge_dof_to_node_dof(lambda_values_loc, lambda_values_out, hyper_edge);
 
     for (unsigned int i = 0; i < 2 * hyEdge_dimT; ++i)
@@ -1005,8 +1007,10 @@ class TimoshenkoBeam
   // traces in the frame of the nodes (as the global loop stores them): A is assemble_loc_matrix;
   // B, C and D are the legacy maps applied to unit vectors -- the rotation into the frame of the
   // beam with assemble_rhs_from_lambda (B), extract_fluxes_from_coeffs with the rotation back (C),
-  // and -tau lambda in the frame of the beam, rotated back (D) -- so the operator is that of
-  // trace_to_flux / residual_flux by construction. The leading 2 space_dim n_shape_fct_ unknowns,
+  // and tau lambda in the frame of the beam, rotated back (D) -- so the operator is that of
+  // trace_to_flux / residual_flux by construction. The flux is that of the stress resultants
+  // out of the beam, -(n nu + tau (u - lambda)) with the local normal nu, the sign with which the
+  // condensed matrix D + C A^-1 B is positive semi-definite. The leading 2 space_dim n_shape_fct_ unknowns,
   // the stress resultants n and m, have a diagonal mass block (Legendre basis, coefficients
   // constant on a beam) and are eliminated by the factorization. Dirichlet values enter through
   // the local load; constraining the trace on Dirichlet nodes is the loop's business. The blocks
@@ -1046,7 +1050,7 @@ class TimoshenkoBeam
       Trace local_flux{}, flux{};
       for (unsigned int face = 0; face < 2 * hyEdge_dimT; ++face)
         for (unsigned int k = 0; k < n_node; ++k)
-          local_flux[face][k] = -tau_ * local[face][k];
+          local_flux[face][k] = tau_ * local[face][k];
       edge_dof_to_node_dof(local_flux, flux, edge);
       for (unsigned int row = 0; row < n_loc; ++row)
         blocks.D(row, col) = flux[row / n_node][row % n_node];
@@ -1132,16 +1136,16 @@ class TimoshenkoBeam
         solve_part(coupled[c], first, x);
       }
     }
-    // C x + D lambda, as extract_fluxes_from_coeffs and -tau lambda.
+    // C x + D lambda, as extract_fluxes_from_coeffs and tau lambda.
     BeamTrace flux(const Load& x, const BeamTrace& lambda) const
     {
       BeamTrace result;
       for (unsigned int node = 0; node < 2; ++node)
         for (unsigned int dim = 0; dim < 2 * space_dim; ++dim)
         {
-          lSol_float_t value = -tau * lambda[node][dim];
+          lSol_float_t value = tau * lambda[node][dim];
           for (unsigned int i = 0; i < n; ++i)
-            value += shape_at_node[node][i] *
+            value -= shape_at_node[node][i] *
                      (normal[node] * x[dim * n + i] + tau * x[(2 * space_dim + dim) * n + i]);
           result[node][dim] = value;
         }
@@ -1156,8 +1160,8 @@ class TimoshenkoBeam
       for (unsigned int node = 0; node < 2; ++node)
         for (unsigned int i = 0; i < n; ++i)
         {
-          transposed_k(i, node) = normal[node] * shape_at_node[node][i];
-          transposed_k(n + i, node) = tau * shape_at_node[node][i];
+          transposed_k(i, node) = -normal[node] * shape_at_node[node][i];
+          transposed_k(n + i, node) = -tau * shape_at_node[node][i];
         }
       single[c].solve(transposed_k, 'T');
       return transposed(transposed_k);
@@ -1171,8 +1175,8 @@ class TimoshenkoBeam
         for (unsigned int node = 0; node < 2; ++node)
           for (unsigned int i = 0; i < n; ++i)
           {
-            transposed_k(field * n + i, 2 * field + node) = normal[node] * shape_at_node[node][i];
-            transposed_k((2 + field) * n + i, 2 * field + node) = tau * shape_at_node[node][i];
+            transposed_k(field * n + i, 2 * field + node) = -normal[node] * shape_at_node[node][i];
+            transposed_k((2 + field) * n + i, 2 * field + node) = -tau * shape_at_node[node][i];
           }
       coupled[c].solve(transposed_k, 'T');
       return transposed(transposed_k);
@@ -1292,9 +1296,9 @@ class TimoshenkoBeam
       problem.solve(x);
       return problem.flux(x, lambda);
     };
-    // the stiffness of a component: flux = -+ k (difference of the traces)
+    // the stiffness of a component: flux = +- k (difference of the traces)
     auto stiffness = [](const BeamTrace& flux, const unsigned int dim)
-    { return (flux[0][dim] - flux[1][dim]) / 2; };
+    { return (flux[1][dim] - flux[0][dim]) / 2; };
 
     BeamStiffness::Operator<lSol_float_t, n_shape_fct_> op;
     const Point<space_dim, lSol_float_t> tangent = edge.geometry.inner_normal(0),

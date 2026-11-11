@@ -2,7 +2,8 @@
 // tree) with the manufactured solution of tests/parameters/timoshenko.hxx: solve on 2, 4, 8
 // subintervals per beam and check that the L2 error of the displacement converges with order
 // degree + 1 on the last refinement. The assembled matrix is also solved directly: it must be
-// non-singular, and the direct solution must agree with the matrix-free CG. One executable per
+// non-singular, and the direct solution must agree with the matrix-free CG. It must also be
+// positive definite (it has a Cholesky factorization). One executable per
 // DEGREE, set by CMake (tests/CMakeLists.txt). The records are checked against
 // tests/expected/timoshenko_p<DEGREE>.yaml (tests/records.hxx).
 #include <HyperHDG/geometry/file.hxx>
@@ -18,6 +19,7 @@
 
 #include <algorithm>
 #include <cmath>
+#include <cstddef>
 #include <cstdio>
 #include <string>
 #include <vector>
@@ -36,6 +38,34 @@ using Loop = GlobalLoop::Generic<
   Geometry::File<1, 3>,
   NodeDescriptor::File<1, 3>,
   LocalSolver::TimoshenkoBeam<1, 3, degree, 2 * degree, tests::TimoshenkoCrossParameters>>;
+
+// Whether the assembled matrix of the loop (with a unit diagonal on constrained dofs) is positive
+// definite: its dense Cholesky factorization exists.
+template <class LoopT>
+bool positive_definite(LoopT& loop)
+{
+  const std::size_t size = loop.size_of_system(), n_triplets = loop.n_triplets(true);
+  std::vector<unsigned int> rows(n_triplets), cols(n_triplets);
+  std::vector<double> vals(n_triplets), a(size * size, 0.);
+  loop.assemble(typename LoopT::Args(), true, rows, cols, vals);
+  for (std::size_t k = 0; k < n_triplets; ++k)
+    a[rows[k] * size + cols[k]] += vals[k];
+  for (std::size_t j = 0; j < size; ++j)  // the lower triangle becomes the factor
+  {
+    for (std::size_t k = 0; k < j; ++k)
+      a[j * size + j] -= a[j * size + k] * a[j * size + k];
+    if (!(a[j * size + j] > 0.))
+      return false;
+    a[j * size + j] = std::sqrt(a[j * size + j]);
+    for (std::size_t i = j + 1; i < size; ++i)
+    {
+      for (std::size_t k = 0; k < j; ++k)
+        a[i * size + j] -= a[i * size + k] * a[j * size + k];
+      a[i * size + j] /= a[j * size + j];
+    }
+  }
+  return true;
+}
 
 int main()
 {
@@ -87,6 +117,9 @@ int main()
       std::printf("  direct vs cg: %.2e (relative, at most 1e-8)\n", difference / scale);
       if (!(difference <= 1e-8 * scale))
         ++failures;
+      const bool definite = positive_definite(loop);
+      std::printf("  positive definite: %s\n", definite ? "yes" : "NO");
+      failures += !definite;
     }
 
     // Only the last rate is checked: the coarse meshes are preasymptotic.

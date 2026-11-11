@@ -357,9 +357,9 @@ vectorT conjugate_gradient(const vectorT& b,
  *
  * The matrix is given by triplets, as GlobalLoop::Generic::assemble writes them: duplicates are
  * summed, and of the symmetric matrix only the entries with row <= column are read. \c sign says
- * which of A (1) and -A (-1) is positive definite, as the condensed matrices of the local solvers
- * are negative definite; multiply and solve are those of A either way. Constrained dofs need a
- * diagonal entry of that sign.
+ * which of A (1) and -A (-1) is positive definite, as the condensed matrices of the diffusion
+ * solvers are negative definite (those of TimoshenkoBeam are positive definite); multiply and
+ * solve are those of A either way. Constrained dofs need a diagonal entry of that sign.
  *
  * Usage: analyze() (ordering and symbolic factorization, once per sparsity pattern), factorize()
  * (numeric), then solve() per right-hand side. Only with the CMake option HYPERHDG_CHOLMOD.
