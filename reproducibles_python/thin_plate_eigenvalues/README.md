@@ -27,14 +27,13 @@ Requirements: a C++20 compiler, CMake 3.18 or newer, LAPACK, Python 3.9 or newer
 SciPy, and the git submodules of HyperHDG (nanobind). Then,
 
 ```sh
-git clone https://github.com/HyperHDG/HyperHDG.git
+git clone --recursive https://github.com/HyperHDG/HyperHDG.git
 cd HyperHDG
-git fetch origin <commit given in the manuscript>
-git checkout <commit given in the manuscript>
-git submodule update --init --recursive
 python3 -m pip install numpy scipy cmake        # if not available otherwise
 python3 reproducibles_python/thin_plate_eigenvalues/run_experiments.py
 ```
+
+(In an existing clone, `git pull` and `git submodule update --init --recursive` first.)
 
 The C++ module is compiled on the first run (into `.hyperhdg-cache/`, which takes about a minute),
 and all studies take about seven minutes on a laptop. `--only hdg thin combined` selects studies, and
@@ -49,7 +48,7 @@ written to `output/thin_plate_eigenvalues/results/` (ignored by git), or to the 
 - `environment.json`: the versions of Python, NumPy, and SciPy, the platform, and the run times.
 
 The subdirectory `results/` of this directory contains the results of the manuscript (computed on
-macOS with Apple clang), which are the reference. At the end of a run, the new results are compared
+macOS with Apple clang), which are the reference, and the main branch of HyperHDG reproduces them. At the end of a run, the new results are compared
 with the reference, file by file: identical files are reported as such, and for differing JSON
 files the largest absolute deviation is printed. Repeated runs on the same machine give identical
 results; other machines reproduce them up to rounding errors, which affect the eigenvalue errors of
@@ -73,9 +72,12 @@ by `diff -r reproducibles_python/thin_plate_eigenvalues/results output/thin_plat
   the junction cross section. A second computation on refined meshes estimates the accuracy of
   the eigenvalues and of the averaged eigenspaces (gap between the averaged eigenspaces of both
   meshes, recorded in `thin.json`).
-- `common.py`: compilation of the module, `.geo` output, assembly, eigensolver (Lanczos in shift and
-  invert mode with diagonal equilibration, iterative refinement, a fixed start vector, and
-  purification of the eigenvectors, since the mass matrix is singular), Gauss quadrature, and gaps.
+- `common.py`: compilation of the module, `.geo` output (the generated domain files in
+  `output/thin_plate_eigenvalues/` are named after a hash of their content), assembly, eigensolver
+  (Lanczos in shift and invert mode with diagonal equilibration, iterative refinement, a fixed start
+  vector, and purification of the eigenvectors, since the mass matrix is singular), Gauss
+  quadrature, and gaps between subspaces (sines of the principal angles from residuals of
+  orthogonal projections of the sampled functions, accurate also for tiny gaps).
 - `run_experiments.py`: runs the studies, writes the results and tables, and compares them with
   the reference in `results/`.
 

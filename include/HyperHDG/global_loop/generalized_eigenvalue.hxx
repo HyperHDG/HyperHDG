@@ -22,10 +22,12 @@ namespace GlobalLoop
  * unknowns and the bulk unknowns. Its typical local solver is LocalSolver::DiffusionEigsWeighted.
  * In contrast to the condensed eigenvalue loops (NonlinearEigenvalue, ShiftedInverseEigenvalue),
  * the bulk unknowns are kept, which makes the problem linear in the eigenvalue and allows for
- * mass on the skeleton (e.g. on hypernodes). Both matrices are symmetric, \f$A\f$ is positive
- * definite (after removal of the Dirichlet unknowns), and \f$M\f$ is positive semi-definite. Thus,
- * the problem can be solved by sparse eigenvalue solvers in shift-and-invert mode, e.g. by
- * \c scipy.sparse.linalg.eigsh.
+ * mass on the skeleton (e.g. on hypernodes). Both matrices are symmetric and positive
+ * semi-definite. After removal of the Dirichlet unknowns, \f$A\f$ is positive definite if every
+ * connected component of the hypergraph contains a Dirichlet face or a hyperedge with positive
+ * reaction coefficient; otherwise, the constants are in its kernel. Thus, the problem can be solved
+ * by sparse eigenvalue solvers in shift-and-invert mode, e.g. by \c scipy.sparse.linalg.eigsh, with
+ * a shift that is not an eigenvalue (zero if \f$A\f$ is positive definite, negative otherwise).
  *
  * The unknowns are ordered as follows: The first n_skeleton_dofs() unknowns are the skeletal
  * unknowns (in the order of the hypernode factory), followed by n_loc_bulk_dofs() unknowns for

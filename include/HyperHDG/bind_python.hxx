@@ -97,6 +97,31 @@ out_array<T> to_array(const std::vector<T>& v)
   std::copy(v.begin(), v.end(), view.begin());
   return array;
 }
+/*!*************************************************************************************************
+ * \brief   Whether the geometry of a global loop is constructed from (and refers to) a topology.
+ *
+ * The global loops are templates GlobalLoopT<TopologyT, GeometryT, NodeDescriptorT, LocalSolverT,
+ * LargeVecT, dof_index_t>. Their constructor (topology, geometry, local solver) passes the second
+ * argument to the constructor of GeometryT. The file based geometries are constructed from a
+ * topology, a reference to whose domain information they keep, whereas the cubic geometries copy
+ * the vector of elements. For other global loops, the answer is true (to be safe).
+ **************************************************************************************************/
+template <typename GlobalLoopT>
+struct geometry_from_topology : std::true_type
+{
+};
+template <template <class, class, class, class, typename, typename> class LoopT,
+          class TopologyT,
+          class GeometryT,
+          class NodeDescriptorT,
+          class LocalSolverT,
+          typename LargeVecT,
+          typename dof_index_t>
+struct geometry_from_topology<
+  LoopT<TopologyT, GeometryT, NodeDescriptorT, LocalSolverT, LargeVecT, dof_index_t>>
+: std::bool_constant<std::is_same_v<typename GeometryT::constructor_value_type, TopologyT>>
+{
+};
 }  // end of namespace detail
 
 /*!*************************************************************************************************
@@ -140,20 +165,28 @@ auto bind_python(nanobind::module_& m, const char* name)
   auto cls = nb::class_<GlobalLoopT>(m, name);
 
   // constructors: (topology), (topology, local solver), (topology, geometry, local solver)
-  static_assert(
-    std::is_constructible_v<GlobalLoopT, const TopoArgT&> ||
-      std::is_constructible_v<GlobalLoopT, const TopoArgT&, const SolverArgT&> ||
-      std::is_constructible_v<GlobalLoopT, const TopoArgT&, const TopoArgT&, const SolverArgT&>,
-    "No constructor of GlobalLoopT takes TopoArgT (and SolverArgT): pass the "
-    "constructor argument types as template arguments of bind_python, e.g. "
-    "std::vector<unsigned int> for the cubic topologies.");
-  if constexpr (std::is_constructible_v<GlobalLoopT, const TopoArgT&>)
+  //
+  // The last one is not bound if the geometry is constructed from a topology object, as the file
+  // based geometries are, which keep a reference to its domain information: from python, that
+  // topology would be a temporary converted from the file name, destroyed after the construction,
+  // so that every later use of the geometry would read freed memory. The cubic geometries copy the
+  // vector of elements, so their constructor is bound.
+  constexpr bool bind_with_topology = std::is_constructible_v<GlobalLoopT, const TopoArgT&>;
+  constexpr bool bind_with_solver =
+    std::is_constructible_v<GlobalLoopT, const TopoArgT&, const SolverArgT&>;
+  constexpr bool bind_with_geometry =
+    std::is_constructible_v<GlobalLoopT, const TopoArgT&, const TopoArgT&, const SolverArgT&> &&
+    !detail::geometry_from_topology<GlobalLoopT>::value;
+  static_assert(bind_with_topology || bind_with_solver || bind_with_geometry,
+                "No constructor of GlobalLoopT takes TopoArgT (and SolverArgT): pass the "
+                "constructor argument types as template arguments of bind_python, e.g. "
+                "std::vector<unsigned int> for the cubic topologies.");
+  if constexpr (bind_with_topology)
     cls.def(nb::init<const TopoArgT&>(), nb::arg("topology"));
-  if constexpr (std::is_constructible_v<GlobalLoopT, const TopoArgT&, const SolverArgT&>)
+  if constexpr (bind_with_solver)
     cls.def(nb::init<const TopoArgT&, const SolverArgT&>(), nb::arg("topology"),
             nb::arg("local_solver"));
-  if constexpr (std::is_constructible_v<GlobalLoopT, const TopoArgT&, const TopoArgT&,
-                                        const SolverArgT&>)
+  if constexpr (bind_with_geometry)
     cls.def(nb::init<const TopoArgT&, const TopoArgT&, const SolverArgT&>(), nb::arg("topology"),
             nb::arg("geometry"), nb::arg("local_solver"));
 

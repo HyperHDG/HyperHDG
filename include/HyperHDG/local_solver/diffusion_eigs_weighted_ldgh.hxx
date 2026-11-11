@@ -417,12 +417,17 @@ class DiffusionEigsWeighted
    * \brief   Evaluate a skeletal function (given by its coefficients) at a reference point.
    *
    * The reference point is a point of the reference face, whose coordinates are those of the
-   * reference hyperedge without the coordinate that is constant on the face.
+   * reference hyperedge without the coordinate that is constant on the face. For one-dimensional
+   * hyperedges, the faces are points with the constant shape function one, and the reference
+   * point is ignored.
    ************************************************************************************************/
   template <typename coeffsT, typename pointT>
   static lSol_float_t face_value(const coeffsT& coeffs, const pointT& ref_point)
   {
-    return face_shape_t::template lin_comb_fct_val<lSol_float_t>(coeffs, ref_point);
+    if constexpr (hyEdge_dimT == 1)
+      return coeffs[0];
+    else
+      return face_shape_t::template lin_comb_fct_val<lSol_float_t>(coeffs, ref_point);
   }
   /*!***********************************************************************************************
    * \brief   Evaluate the local reconstruction of an eigenfunction at tensorial abscissas.
