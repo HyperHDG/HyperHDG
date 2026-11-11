@@ -2,7 +2,8 @@
 // 2, 4, 8 (degree 1: up to 16) elements per direction and check that the L2 error converges with
 // order degree + 1 on the last refinement. On meshes small enough for a dense LU, the assembled
 // matrix is also solved directly: it must be non-singular, and the direct solution must agree with
-// the matrix-free CG. One executable per (DIM, DEGREE, SOLVER), set by CMake
+// the matrix-free CG. It must also be positive definite (it has a Cholesky factorization). One
+// executable per (DIM, DEGREE, SOLVER), set by CMake
 // (tests/CMakeLists.txt): SOLVER is Diffusion or DiffusionTensor (sum factorization); REAL = float
 // makes the geometry, the solver and the vectors single precision (one case, 2D degree 1, whose
 // errors stay well above the round-off floor of the solve in float).
@@ -109,6 +110,9 @@ int main()
       std::printf("  direct vs cg: %.2e (relative, at most %.0e)\n", difference / scale, tolerance);
       if (!(difference <= tolerance * scale))
         ++failures;
+      const bool definite = tests::positive_definite(loop);
+      std::printf("  positive definite: %s\n", definite ? "yes" : "NO");
+      failures += !definite;
     }
 
     // Only the last rate is checked: the coarse meshes are preasymptotic.

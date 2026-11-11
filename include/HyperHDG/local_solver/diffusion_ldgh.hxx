@@ -1022,8 +1022,11 @@ class Diffusion
   //
   // local_blocks(edge, Stiffness, args) sets up the local problem of one hyperedge as the blocks
   // A x = B lambda + l, flux = C x + D lambda (A: the local matrix, B: trace -> local rhs, C: local
-  // solution -> flux, D: -tau * face area on the diagonal); the boundary integrals are evaluated
-  // once per operator. local_operator makes the operator the loop uses, as LayoutT says
+  // solution -> flux, D: tau * face area on the diagonal); the boundary integrals are evaluated
+  // once per operator. The flux is -(q . nu + tau (u - lambda)) with the local normal nu, the
+  // negative of that of trace_to_flux / residual_flux above: with this sign the condensed matrix
+  // D + C A^-1 B is positive semi-definite (definite with constraints). local_operator makes the
+  // operator the loop uses, as LayoutT says
   // (local_operator.hxx: by default the condensed S = C A^-1 B + D and K = C A^-1, which the
   // layout computes from these blocks). As in the methods above, Dirichlet values enter
   // through the local load; constraining the trace on Dirichlet nodes is the loop's business, no
@@ -1089,18 +1092,18 @@ class Diffusion
       for (unsigned int j = 0; j < n_shape_bdr_; ++j)
       {
         const unsigned int col = face * n_shape_bdr_ + j;
-        blocks.D(col, col) = -tau_ * edge.geometry.face_area(face);
+        blocks.D(col, col) = tau_ * edge.geometry.face_area(face);
         for (unsigned int i = 0; i < n_shape_fct_; ++i)
         {
           const lSol_float_t integral =
             integrator::template integrate_bdr_phipsi<decltype(Edge::geometry)>(i, j, face,
                                                                                 edge.geometry);
           blocks.B(hyEdge_dimT * n_shape_fct_ + i, col) += tau_ * integral;
-          blocks.C(col, hyEdge_dimT * n_shape_fct_ + i) += tau_ * integral;
+          blocks.C(col, hyEdge_dimT * n_shape_fct_ + i) -= tau_ * integral;
           for (unsigned int dim = 0; dim < hyEdge_dimT; ++dim)
           {
             blocks.B(dim * n_shape_fct_ + i, col) -= normal[dim] * integral;
-            blocks.C(col, dim * n_shape_fct_ + i) += normal[dim] * integral;
+            blocks.C(col, dim * n_shape_fct_ + i) -= normal[dim] * integral;
           }
         }
       }

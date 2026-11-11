@@ -197,17 +197,18 @@ class DiffusionTensor
                  SmallVec<n_loc, T>& r) const
     {
       const SmallVec<n_ldofs, T> x = solve(lambda_in, load);
-      // flux = C x + D lambda: restriction of n_d q_d + tau u to every face
+      // flux = C x + D lambda: restriction of -(n_d q_d + tau (u - lambda)) to every face, the
+      // sign with which the condensed operator is positive semi-definite (as Diffusion)
       for (unsigned int d = 0; d < dim; ++d)
         for (unsigned int s = 0; s < 2; ++s)
         {
           const unsigned int face = 2 * d + s;
           for (unsigned int j = 0; j < n_face; ++j)
-            r[face * n_face + j] = -tau * face_area[d] * lambda_in[face * n_face + j];
+            r[face * n_face + j] = tau * face_area[d] * lambda_in[face * n_face + j];
           for (unsigned int i = 0; i < n_vol; ++i)
           {
             const unsigned int i_d = digit(i, d);
-            r[face * n_face + face_index(i, d)] +=
+            r[face * n_face + face_index(i, d)] -=
               face_area[d] * b[s][i_d] * (n[d][s] * x[d * n_vol + i] + tau * x[dim * n_vol + i]);
           }
         }

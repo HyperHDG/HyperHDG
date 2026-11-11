@@ -39,34 +39,6 @@ using Loop = GlobalLoop::Generic<
   NodeDescriptor::File<1, 3>,
   LocalSolver::TimoshenkoBeam<1, 3, degree, 2 * degree, tests::TimoshenkoCrossParameters>>;
 
-// Whether the assembled matrix of the loop (with a unit diagonal on constrained dofs) is positive
-// definite: its dense Cholesky factorization exists.
-template <class LoopT>
-bool positive_definite(LoopT& loop)
-{
-  const std::size_t size = loop.size_of_system(), n_triplets = loop.n_triplets(true);
-  std::vector<unsigned int> rows(n_triplets), cols(n_triplets);
-  std::vector<double> vals(n_triplets), a(size * size, 0.);
-  loop.assemble(typename LoopT::Args(), true, rows, cols, vals);
-  for (std::size_t k = 0; k < n_triplets; ++k)
-    a[rows[k] * size + cols[k]] += vals[k];
-  for (std::size_t j = 0; j < size; ++j)  // the lower triangle becomes the factor
-  {
-    for (std::size_t k = 0; k < j; ++k)
-      a[j * size + j] -= a[j * size + k] * a[j * size + k];
-    if (!(a[j * size + j] > 0.))
-      return false;
-    a[j * size + j] = std::sqrt(a[j * size + j]);
-    for (std::size_t i = j + 1; i < size; ++i)
-    {
-      for (std::size_t k = 0; k < j; ++k)
-        a[i * size + j] -= a[i * size + k] * a[j * size + k];
-      a[i * size + j] /= a[j * size + j];
-    }
-  }
-  return true;
-}
-
 int main()
 {
   int failures = 0;
@@ -117,7 +89,7 @@ int main()
       std::printf("  direct vs cg: %.2e (relative, at most 1e-8)\n", difference / scale);
       if (!(difference <= 1e-8 * scale))
         ++failures;
-      const bool definite = positive_definite(loop);
+      const bool definite = tests::positive_definite(loop);
       std::printf("  positive definite: %s\n", definite ? "yes" : "NO");
       failures += !definite;
     }

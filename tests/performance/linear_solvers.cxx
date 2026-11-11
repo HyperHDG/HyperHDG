@@ -82,8 +82,8 @@ void measure(ankerl::nanobench::Bench& bench, const unsigned int n)
             });
   row.cg = last_median(bench);
 
-  // assembled: the condensed matrix is negative definite, so the constrained dofs get -1 on the
-  // diagonal (assemble appends their entries last) and CHOLMOD factorizes -A
+  // assembled: the condensed matrix is positive definite, with a unit diagonal on the constrained
+  // dofs
   const std::size_t n_triplets = loop.n_triplets(true);
   std::vector<unsigned int> triplet_rows(n_triplets), triplet_cols(n_triplets);
   Vec triplet_vals(n_triplets);
@@ -92,8 +92,7 @@ void measure(ankerl::nanobench::Bench& bench, const unsigned int n)
             [&]
             {
               loop.assemble(typename Loop::Args(), true, triplet_rows, triplet_cols, triplet_vals);
-              std::fill(triplet_vals.begin() + loop.n_triplets(false), triplet_vals.end(), -1.);
-              cholmod.emplace(size, triplet_rows, triplet_cols, triplet_vals, -1.);
+              cholmod.emplace(size, triplet_rows, triplet_cols, triplet_vals);
             });
   row.assemble = last_median(bench);
   row.dofs = size;
