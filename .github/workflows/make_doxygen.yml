@@ -2,28 +2,48 @@
 
 name: Doxygen
 
-on: push
+# Deployed from main. On pull requests that touch documented files it is built as a check only.
+on:
+  push:
+    branches: [main]
+  pull_request:
+    paths:
+      - 'include/**'
+      - 'examples/**'
+      - 'doxygen/**'
+      - '**.md'
+      - 'submodules/tensor_product_polynomials.git'
+      - 'submodules/tensor_product_chain_complex.git'
+      - '.github/workflows/make_doxygen.yml'
+  workflow_dispatch:
 
-env:
-  CXX: g++-14
+# A new push to a pull request supersedes the run of the previous one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 jobs:
   make_and_deploy_doxygen:
     name: Make and deploy doxygen
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-24.04
     steps:
-    - name: Install cmake and LAPACK
-      run: sudo apt-get update; sudo apt-get install -y cmake libblas-dev liblapack-dev
     - name: Checkout current branch
       uses: actions/checkout@v4
-      with:
-        submodules: recursive
+    # Only TPP and TPCC, which get pages of their own; no build, no CMake (doxygen/Doxyfile).
+    - name: Fetch TPP and TPCC
+      run: >
+        git submodule update --init --depth 1 --
+        submodules/tensor_product_polynomials.git submodules/tensor_product_chain_complex.git
     - name: Run build and deploy action
       uses: HyperHDG/actions@doxygen
       with:
         deploy_doxygen: ${{ github.ref == 'refs/heads/main' }}
         doxygen_command: |
-          eval "mkdir build && cd build && CXX=${{env.CXX}} cmake .. && make doxygen && cd .."
+          export DOXYGEN_OUTPUT_DIRECTORY=build/doxygen
+          mkdir -p build/doxygen/html
+          doxygen doxygen/Doxyfile.tpp
+          doxygen doxygen/Doxyfile.tpcc
+          doxygen doxygen/Doxyfile
         ci_repo_token: ${{ secrets.CI_REPO_TOKEN }}
         ci_user_name: HyperHDG-CI
         ci_user_mail: HyperHDG@rupp.ink

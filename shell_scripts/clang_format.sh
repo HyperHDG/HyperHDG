@@ -13,7 +13,7 @@ CLANG_FORMAT="${CLANG_FORMAT:-clang-format}"
 
 ## Names of files that will be formatted. (Placeholders may be used.)
 FORMAT_FILES=("*.cxx" "*.hxx")
-FORMAT_FOLDERS=("reproducibles_c++" "tests_c++" "include" "examples")
+FORMAT_FOLDERS=("reproducibles_c++" "tests" "include" "examples")
 
 ## Do nothing if not started from main directory.
 if [ "$(cd "$(dirname "$0")" && pwd)" = "$PWD/shell_scripts" ]; then

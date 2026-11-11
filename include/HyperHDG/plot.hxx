@@ -194,6 +194,21 @@ struct ComponentSelect
 };  // end of struct ComponentSelect
 
 /*!*************************************************************************************************
+ * \brief   Turn fileType enum into string.
+ **************************************************************************************************/
+std::string fileType_to_string(const PlotOptions::fileType& type)
+{
+  switch (type)
+  {
+    case PlotOptions::fileType::vtu:
+      return "vtu";
+    case PlotOptions::fileType::vtkhdf:
+      return "vtkhdf";
+  }
+  hy_assert(false, "File type seems to be invalid.");
+  return "";
+}
+/*!*************************************************************************************************
  * \brief Set a plot option and return the new value of this option as std::string.
  **************************************************************************************************/
 std::string set_plot_option(PlotOptions& plot_options,
@@ -214,6 +229,16 @@ std::string set_plot_option(PlotOptions& plot_options,
       plot_options.fileEnding = PlotOptions::vtkhdf;
     else
       hy_assert(false, "You have chosen an invalid file type!");
+  }
+  else if (option == "filePath")
+  {
+    // outputDir/fileName.fileEnding at once: "run/beams.vtkhdf", or "beams.vtu" in this directory
+    const std::filesystem::path path(value);
+    hy_assert(path.has_stem() && path.has_extension(),
+              "The file path needs a file name and a file ending!");
+    plot_options.outputDir = path.has_parent_path() ? path.parent_path().string() : ".";
+    plot_options.fileName = path.stem().string();
+    set_plot_option(plot_options, "fileEnding", path.extension().string().substr(1));
   }
   else if (option == "energy")
     plot_options.energy = (value == "true" || value == "1");
@@ -246,7 +271,10 @@ std::string set_plot_option(PlotOptions& plot_options,
   else if (option == "fileName")
     return_value = plot_options.fileName;
   else if (option == "fileEnding")
-    return_value = plot_options.fileEnding == PlotOptions::vtu ? "vtu" : "vtkhdf";
+    return_value = fileType_to_string(plot_options.fileEnding);
+  else if (option == "filePath")
+    return_value = plot_options.outputDir + "/" + plot_options.fileName + "." +
+                   fileType_to_string(plot_options.fileEnding);
   else if (option == "energy")
     return_value = std::to_string(plot_options.energy);
   else if (option == "valuesSelect")
@@ -319,21 +347,6 @@ void plot(HyperGraphT& hyper_graph,
  **************************************************************************************************/
 namespace PlotFunctions
 {
-/*!*************************************************************************************************
- * \brief   Turn fileType enum into string.
- **************************************************************************************************/
-std::string fileType_to_string(const PlotOptions::fileType& type)
-{
-  switch (type)
-  {
-    case PlotOptions::fileType::vtu:
-      return "vtu";
-    case PlotOptions::fileType::vtkhdf:
-      return "vtkhdf";
-  }
-  hy_assert(false, "File type seems to be invalid.");
-  return "";
-}
 /*!*************************************************************************************************
  * \brief   Open stream to file.
  **************************************************************************************************/
@@ -802,7 +815,7 @@ using HDF5Domain::Id;
  **************************************************************************************************/
 inline std::string file_path(const PlotOptions& plot_options)
 {
-  if (std::filesystem::create_directory(plot_options.outputDir))
+  if (std::filesystem::create_directories(plot_options.outputDir))
     std::cout << "Directory \"" << plot_options.outputDir << "\" has been created." << std::endl;
   return plot_options.outputDir + "/" + plot_options.fileName + ".vtkhdf";
 }
@@ -1328,9 +1341,6 @@ void plot_vtu(HyperGraphT& hyper_graph,
   myfile << "    </Piece>" << std::endl;
   myfile << "  </UnstructuredGrid>" << std::endl;
   myfile << "</VTKFile>" << std::endl;
-  std::cout << plot_options.fileName;
-  if (plot_options.printFileNumber)
-    std::cout << "." << plot_options.fileNumber << " was written\n";
   PlotFunctions::close_ofstream(myfile);
 }  // end of void plot_vtu
 

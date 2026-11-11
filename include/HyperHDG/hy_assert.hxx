@@ -73,15 +73,12 @@ inline constexpr bool hy_debug_mode = true;
  * \param   Expr  C++ Expression that can be evaluated to \c true or \c false.
  * \param   Msg   Message that is to be displayed if \c Expr is evaluated to \c false.
  **************************************************************************************************/
-#define hy_assert(Expr, Msg)                                              \
-  {                                                                       \
-    if (!(Expr))                                                          \
-    {                                                                     \
-      std::stringstream __hy_assertion_text;                              \
-      __hy_assertion_text << Msg;                                         \
-      __Hy_Assert(#Expr, false, __FILE__, __LINE__, __hy_assertion_text); \
-    }                                                                     \
-  }                                                                       \
+#define hy_assert(Expr, Msg)                                                                      \
+  {                                                                                               \
+    if (!(Expr)) [[unlikely]]                                                                     \
+      __hy_assert_failed(#Expr, __FILE__, __LINE__,                                               \
+                         [&](std::ostream& __hy_assertion_text) { __hy_assertion_text << Msg; }); \
+  }                                                                                               \
   static_assert(true, "")
 
 // -------------------------------------------------------------------------------------------------
@@ -93,23 +90,25 @@ inline constexpr bool hy_debug_mode = true;
  *
  * This function is \b not to be used in regular code. It only / solely is defined to allow the use
  * of function \c hy_assert( \c Expr, \c Msg) which is implemented as a macro in file HyAssert.hxx.
+ * The failure path is cold and never inlined: a passing assertion costs one comparison and a
+ * branch, so the functions that contain assertions (e.g. the element access of SmallMat) stay
+ * small enough to be inlined and vectorized in optimized debug builds.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2020.
  * \authors   Andreas Rupp, Heidelberg University, 2020.
  **************************************************************************************************/
-inline void __Hy_Assert(const char* expr_str,
-                        bool expr,
-                        const char* file,
-                        int line,
-                        std::stringstream& msg)
+template <class WriteMessageT>
+[[noreturn, gnu::cold, gnu::noinline]] void __hy_assert_failed(const char* expr_str,
+                                                               const char* file,
+                                                               int line,
+                                                               const WriteMessageT& write_message)
 {
-  if (!expr)
-  {
-    std::cerr << "Assert failed:  " << msg.str() << std::endl
-              << "Expected:       " << expr_str << std::endl
-              << "Source:         " << file << ", line " << line << std::endl;
-    abort();
-  }
+  std::stringstream msg;
+  write_message(msg);
+  std::cerr << "Assert failed:  " << msg.str() << std::endl
+            << "Expected:       " << expr_str << std::endl
+            << "Source:         " << file << ", line " << line << std::endl;
+  abort();
 }
 
 #else  // alternative branch of ifndef NDEBUG

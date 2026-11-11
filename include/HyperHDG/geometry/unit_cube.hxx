@@ -37,6 +37,18 @@ template <unsigned int hyEdge_dimT,
 class UnitCube
 {
   /*!***********************************************************************************************
+   * \brief   Binomial coefficient n over k (0 if k > n).
+   ************************************************************************************************/
+  static constexpr unsigned int binomial(const unsigned int n, const unsigned int k)
+  {
+    if (k > n)
+      return 0;
+    unsigned int result = 1;
+    for (unsigned int i = 1; i <= k; ++i)
+      result = result * (n - k + i) / i;
+    return result;
+  }
+  /*!***********************************************************************************************
    * \brief   Definition of the geometry of a single hyperedge.
    *
    * A hyperege is uniquely defined by a translation, the spanning dimensions, and the lengths of
@@ -141,6 +153,30 @@ class UnitCube
      * \brief   Return dimension of the surrounding space.
      **********************************************************************************************/
     static constexpr unsigned int space_dim() { return space_dimT; }
+    /*!*********************************************************************************************
+     * \brief   The number of congruence classes of the hyperedges of the unit cube.
+     *
+     * All hyperedges that span the same axes are congruent (same lengths along the same axes, in
+     * the same order), so there is one class per choice of hyEdge_dimT of the space_dimT axes
+     * (for hyperedges of dimension one: one per axis). Local solvers whose operators depend on
+     * the shape of the hyperedge only share them by \c congruence_class.
+     **********************************************************************************************/
+    unsigned int n_congruence_classes() const { return binomial(space_dimT, hyEdge_dimT); }
+    /*!*********************************************************************************************
+     * \brief   The congruence class of this hyperedge, in 0, ..., n_congruence_classes() - 1: the
+     *          rank of the set of axes it spans (combinatorial number system).
+     **********************************************************************************************/
+    unsigned int congruence_class() const
+    {
+      std::array<unsigned int, hyEdge_dimT> axes;
+      for (unsigned int i = 0; i < hyEdge_dimT; ++i)
+        axes[i] = dim_indices[i];
+      std::sort(axes.begin(), axes.end());
+      unsigned int rank = 0;
+      for (unsigned int i = 0; i < hyEdge_dimT; ++i)
+        rank += binomial(axes[i], i + 1);
+      return rank;
+    }
     /*!*********************************************************************************************
      * \brief   Construct a orthotopic hyperedge from its index and the surrounding unit hypercube.
      *

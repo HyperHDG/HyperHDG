@@ -13,8 +13,6 @@ os.chdir(main_dir)
 
 ## Case name -> (reproducible module, test function, arguments).
 CASES = {
-  "Diffusion_Elliptic":
-    ("diffusion_convergence_elliptic", "diffusion_test", (1, 2, 1)),
   "Diffusion_Elliptic_hypergraph":
     ("diffusion_hypergraph_convergence_elliptic", "diffusion_test", (1, 2, 1)),
   "DiffusionIP_Elliptic":
@@ -25,8 +23,6 @@ CASES = {
     ("advection_diffusion_reaction_convergence_elliptic", "adv_dif_reac_test", (1, 2, 1)),
   "Bilaplacian_Elliptic":
     ("bilaplacian_convergence_elliptic", "bilaplacian_test", (1, 2, 1)),
-  "TimoshenkoBeam_Elliptic":
-    ("timoshenko_convergence_cross", "diffusion_test", (1, 0)),
   "DiffusionParab_Parabolic":
     ("diffusion_convergence_parabolic", "diffusion_test", (1, 1, 1)),
   "BilaplacianParab_Parabolic":

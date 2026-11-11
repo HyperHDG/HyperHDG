@@ -1,22 +1,18 @@
+# The documentation as .github/workflows/make_doxygen.yml builds it (doxygen/Doxyfile; TPP and TPCC
+# first, so that their tag files exist), output in <build>/doxygen/html.
 find_package(Doxygen)
 
 if(DOXYGEN_FOUND)
-  set(DOXYGEN_TAB_SIZE 2)
-  set(DOXYGEN_TOC_INCLUDE_HEADINGS 0)
-  set(DOXYGEN_EXTRACT_ALL YES)
-  set(DOXYGEN_EXTRACT_PRIVATE YES)
-  set(DOXYGEN_EXTRACT_STATIC YES)
-  set(DPXYGEN_STRICT_PROTO_MATCHING YES)
-  set(DOXYGEN_USE_MATHJAX YES)
-  set(DOXYGEN_MACRO_EXPANSION YES)
-  set(DOXYGEN_EXPAND_ONLY_PREDEF YES)
-  set(DOXYGEN_CALL_GRAPH YES)
-  set(DOXYGEN_DOT_MULTI_TARGETS NO)
-  set(DOXYGEN_EXAMPLE_PATH ${CMAKE_SOURCE_DIR}/examples)
-  doxygen_add_docs(
+  set(doxygen_env ${CMAKE_COMMAND} -E env DOXYGEN_OUTPUT_DIRECTORY=${CMAKE_CURRENT_BINARY_DIR})
+  add_custom_target(
     doxygen
-    ${CMAKE_SOURCE_DIR}
-    WORKING_DIRECTORY ${CMAKE_CURRENT_BINARY_DIR}
-    COMMENT Building Doxygen documentation...
+    # Doxygen creates one directory level only, not html/tpp without html
+    COMMAND ${CMAKE_COMMAND} -E make_directory ${CMAKE_CURRENT_BINARY_DIR}/html
+    COMMAND ${doxygen_env} ${DOXYGEN_EXECUTABLE} doxygen/Doxyfile.tpp
+    COMMAND ${doxygen_env} ${DOXYGEN_EXECUTABLE} doxygen/Doxyfile.tpcc
+    COMMAND ${doxygen_env} ${DOXYGEN_EXECUTABLE} doxygen/Doxyfile
+    WORKING_DIRECTORY ${PROJECT_SOURCE_DIR}
+    COMMENT "Building the Doxygen documentation"
+    VERBATIM
   )
 endif()
