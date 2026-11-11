@@ -32,13 +32,18 @@ import numpy as np
 import scipy.sparse as sp
 import scipy.sparse.linalg as spla
 
+def tprint(*args):
+    print(f"# [{time.strftime('%H:%M:%S')}]", *args)
+
 try:  # optional: the Cholesky factorization of CHOLMOD, else the direct solver of SciPy
     import sksparse.cholmod as spch
 
     def sparse_direct_solve(matrix, rhs):
         return spch.cho_factor(matrix).solve(rhs)
+    tprint("using cholmod")
 except ImportError:
     sparse_direct_solve = spla.spsolve
+    tprint("using superlu")
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "python"))
 import hyperhdg  # noqa: E402  (python/hyperhdg.py)
@@ -89,13 +94,9 @@ SIDES = {"xmin": (0, 1), "xmax": (0, 2), "ymin": (1, 1), "ymax": (1, 2)}
 COMPONENTS = ["ux", "uy", "uz", "rx", "ry", "rz"]  # the unknowns of a node, in this order
 EXPERIMENTS = {  # force, displacement of the right side, clamped components of the clamped sides
     "force": ((0., 0., -1.), (0., 0., 0.), dict.fromkeys(SIDES, COMPONENTS)),
-    "tensile": ((0., 0., 0.), (0.1, 0., 0.), {"xmin": COMPONENTS, "xmax": COMPONENTS}),
+    "tensile": ((0., 0., 0.), (0.01, 0., 0.), {"xmin": COMPONENTS, "xmax": COMPONENTS}),
     "bending": ((0., 0., 0.), (0., 0., 0.1), {"xmin": COMPONENTS, "xmax": ["uz"]}),
 }
-
-
-def tprint(*args):
-    print(f"# [{time.strftime('%H:%M:%S')}]", *args)
 
 
 def node_types(sides):
