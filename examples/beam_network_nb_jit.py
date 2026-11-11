@@ -3,33 +3,42 @@
 
     python3 examples/beam_network_nb_jit.py                        # the grid of domains/grid_7x7.geo
     python3 examples/beam_network_nb_jit.py --experiment tensile
-    python3 examples/beam_network_nb_jit.py network.geo.h5 --solver cg --plot vtkhdf
+    python3 examples/beam_network_nb_jit.py network.geo.h5 -o beam.vtkhdf
 
 Three experiments:
     force     all four sides clamped, the force -e_z on every beam (the default)
     tensile   the left side clamped, the right side clamped and moved by 0.1 e_x
-    bending   the left side clamped, the right side clamped and moved by 0.1 e_z
+    bending   the left side clamped, the right side held in z only and moved by 0.1 e_z
 --force, --displacement and --clamp change their force, the displacement of the right side and the
-clamped sides. Clamped nodes have zero rotation and the displacement that interpolates the
-displacements of the four corners of the square bilinearly (zero on the left, --displacement on
-the right).
+clamped sides (--clamp clamps all components). Clamped nodes have zero rotation and the
+displacement that interpolates the displacements of the four corners of the square bilinearly
+(zero on the left, --displacement on the right); components that are not clamped are free.
 
 The domain is a .geo file or, with HDF5, a .geo.h5 file (e.g. from
 github.com/HyperHDG/fiber_network), whose node types tell the sides: 1 and 2 on xmin and xmax,
 3 and 6 on ymin and ymax, summed at the corners. The C++ below is the module source, in which
 DEGREE is replaced; hyperhdg.load compiles it with CMake the first time a degree is asked for and
 imports it. Its parameters are static data of the module, set before the system is built. The
-solution is written to output/beam_network.vtu or, with --plot vtkhdf, to
-output/beam_network.vtkhdf, which needs HDF5; ParaView reads both.
+solution is written to the file of -o, whose ending tells the format: .vtu or, with HDF5, .vtkhdf;
+ParaView reads both.
 """
 
 import argparse
 import sys
+import time
 from pathlib import Path
 
 import numpy as np
 import scipy.sparse as sp
 import scipy.sparse.linalg as spla
+
+try:  # optional: the Cholesky factorization of CHOLMOD, else the direct solver of SciPy
+    import sksparse.cholmod as spch
+
+    def sparse_direct_solve(matrix, rhs):
+        return spch.cho_factor(matrix).solve(rhs)
+except ImportError:
+    sparse_direct_solve = spla.spsolve
 
 sys.path.insert(0, str(Path(__file__).resolve().parent.parent / "python"))
 import hyperhdg  # noqa: E402  (python/hyperhdg.py)
@@ -77,11 +86,47 @@ NB_MODULE(beam_network_jit, m)
 """
 
 SIDES = {"xmin": (0, 1), "xmax": (0, 2), "ymin": (1, 1), "ymax": (1, 2)}
-EXPERIMENTS = {  # force, displacement of the right side, clamped sides
-    "force": ((0., 0., -1.), (0., 0., 0.), ("xmin", "xmax", "ymin", "ymax")),
-    "tensile": ((0., 0., 0.), (0.1, 0., 0.), ("xmin", "xmax")),
-    "bending": ((0., 0., 0.), (0., 0., 0.1), ("xmin", "xmax")),
+COMPONENTS = ["ux", "uy", "uz", "rx", "ry", "rz"]  # the unknowns of a node, in this order
+EXPERIMENTS = {  # force, displacement of the right side, clamped components of the clamped sides
+    "force": ((0., 0., -1.), (0., 0., 0.), dict.fromkeys(SIDES, COMPONENTS)),
+    "tensile": ((0., 0., 0.), (0.1, 0., 0.), {"xmin": COMPONENTS, "xmax": COMPONENTS}),
+    "bending": ((0., 0., 0.), (0., 0., 0.1), {"xmin": COMPONENTS, "xmax": ["uz"]}),
 }
+
+
+def tprint(*args):
+    print(f"# [{time.strftime('%H:%M:%S')}]", *args)
+
+
+def node_types(sides):
+    """The node types on the sides: digit 0 (x) or 1 (y) of the type in base 3 names the side."""
+    return [node_type for node_type in range(1, 27)
+            if any(node_type // 3**axis % 3 == side
+                   for axis, side in (SIDES[name] for name in sides))]
+
+
+def set_problem(module, hdg, force, displacement, clamp):
+    """Set the force, the displacement of the right side and the constraints of the clamped sides.
+
+    clamp maps a side to its clamped components. The loop constrains all unknowns of the nodes
+    of the clamped node types (constrain_dirichlet_nodes), so the sides are constrained one by
+    one, keeping the unknowns of their clamped components (those of a node are consecutive, in
+    the order of COMPONENTS). A corner has the clamped components of both of its sides.
+    """
+    # Free components have no prescribed value: only the clamped ones enter the load.
+    displacement = [value if COMPONENTS[d] in clamp.get("xmax", COMPONENTS) else 0.
+                    for d, value in enumerate(displacement)]
+    corner_displacement = [[0., 0., 0.], displacement] * 2  # corners (0,0), (1,0), (0,1), (1,1)
+    constraints = []
+    for side, components in clamp.items():
+        module.set_problem(node_types([side]), force, corner_displacement)
+        hdg.constrain_dirichlet_nodes()
+        unknowns = hdg.constraints()
+        clamped = [COMPONENTS.index(name) for name in components]
+        constraints.append(unknowns[np.isin(unknowns % len(COMPONENTS), clamped)])
+    module.set_problem(node_types(clamp), force, corner_displacement)
+    hdg.set_constraints(np.unique(np.concatenate(constraints)))
+
 
 parser = argparse.ArgumentParser(description=__doc__,
                                  formatter_class=argparse.RawDescriptionHelpFormatter)
@@ -93,57 +138,43 @@ parser.add_argument("--force", type=float, nargs=3, metavar=("FX", "FY", "FZ"),
 parser.add_argument("--displacement", type=float, nargs=3, metavar=("UX", "UY", "UZ"),
                     help="displacement of the right side (default: that of the experiment)")
 parser.add_argument("--clamp", nargs="+", choices=list(SIDES),
-                    help="clamped sides (default: those of the experiment)")
+                    help="sides clamped in all components (default: those of the experiment)")
 parser.add_argument("--degree", type=int, default=2, help="polynomial degree")
-parser.add_argument("--solver", choices=["direct", "cg"], default="direct",
-                    help="sparse direct solve of the assembled matrix, or matrix-free CG")
-parser.add_argument("--plot", choices=["vtu", "vtkhdf"], default="vtu", help="format of the plot")
+parser.add_argument("-o", "--output", default="output/beam_network.vtu", help="output file")
 opt = parser.parse_args()
 
 force, displacement, clamp = EXPERIMENTS[opt.experiment]
-force = opt.force or force
-displacement = opt.displacement or displacement
-clamp = opt.clamp or clamp
-# The node types on the clamped sides: digit 0 (x) or 1 (y) of the type in base 3 names the side.
-dirichlet_nodes = [node_type for node_type in range(1, 27)
-                   if any(node_type // 3**axis % 3 == side
-                          for axis, side in (SIDES[name] for name in clamp))]
-zero = [0., 0., 0.]
+if opt.clamp:
+    clamp = dict.fromkeys(opt.clamp, COMPONENTS)
 
+tprint("compiling ...")
 module = hyperhdg.load(MODULE.replace("DEGREE", str(opt.degree)))
-module.set_problem(dirichlet_nodes, force, [zero, displacement, zero, displacement])
+tprint("constructing ...")
 hdg = module.Beams(opt.domain)
-hdg.constrain_dirichlet_nodes()
+set_problem(module, hdg, opt.force or force, opt.displacement or displacement, clamp)
+tprint("preparing ...")
 hdg.prepare()
 
-# The system: the residual at zero is minus the right-hand side. The condensed matrix is positive
-# definite.
+# The system: the residual at zero is minus the right-hand side, assemble writes the triplets of
+# the matrix, with a unit diagonal on the constrained unknowns. It is positive definite.
 size = hdg.size_of_system()
 rhs = np.empty(size)
 hdg.residual(np.zeros(size), rhs)
-if opt.solver == "direct":
-    # assemble writes the triplets of the matrix, with a unit diagonal on the Dirichlet dofs
-    m = hdg.n_triplets(True)
-    rows, cols, vals = np.empty(m, np.uint32), np.empty(m, np.uint32), np.empty(m)
-    hdg.assemble(rows, cols, vals, 0., True)
-    matrix = sp.coo_matrix((vals, (rows, cols)), shape=(size, size)).tocsc()
-    solution = spla.spsolve(matrix, -rhs)
-else:
-    def apply(x):
-        y = np.empty(size)
-        hdg.apply(x, y)
-        return y
-    solution, info = spla.cg(spla.LinearOperator((size, size), matvec=apply), -rhs,
-                             rtol=1e-10, maxiter=20 * size)
-    if info != 0:
-        sys.exit(f"CG did not converge (info = {info})")
+m = hdg.n_triplets(True)
+rows, cols, vals = np.empty(m, np.uint32), np.empty(m, np.uint32), np.empty(m)
+tprint("assembling ...")
+hdg.assemble(rows, cols, vals, 0., True)
+matrix = sp.coo_matrix((vals, (rows, cols)), shape=(size, size)).tocsc()
+tprint("solving ...")
+solution = sparse_direct_solve(matrix, -rhs)
+tprint("solved")
 
-print(f"beams: {hdg.n_hyEdges()}, unknowns: {size}")
+print(f"beams: {hdg.n_hyEdges()}")
+print(f"unknowns: {size}")
 # the analytic displacement of the parameters is zero: this is the norm of the solution
-print(f"L2 norm of the displacement: {hdg.errors(solution)[0]:.6e}")
+print(f"norm_l2: {hdg.errors(solution)[0]:.6e}")
 
-hdg.plot_option("fileName", "beam_network")
-hdg.plot_option("fileEnding", opt.plot)
+hdg.plot_option("filePath", opt.output)
 hdg.plot_option("printFileNumber", "false")
 hdg.plot_solution(solution)
-print(f"plot: output/beam_network.{opt.plot}")
+print(f"plot: {opt.output}")
