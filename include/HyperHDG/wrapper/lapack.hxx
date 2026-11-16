@@ -366,16 +366,17 @@ inline void lapack_factorize(int system_size, std::complex<double>* mat_a, int* 
  * \brief   Solve using LU factors produced by \c lapack_factorize --- DO NOT USE.
  *
  * The factored matrix \c mat_a and \c ipiv must come from a previous \c lapack_factorize call.
- * \c rhs_b holds the right-hand side on entry and the solution on exit.
+ * \c rhs_b holds the right-hand side on entry and the solution on exit. \c trans = 'T' solves with
+ * the transposed matrix (LAPACK's getrs), from the same factors.
  **************************************************************************************************/
 inline void lapack_solve_factored(int system_size,
                                   int n_rhs_cols,
                                   double* mat_a,
                                   int* ipiv,
-                                  double* rhs_b)
+                                  double* rhs_b,
+                                  char trans = 'N')
 {
   int info = -1;
-  char trans = 'N';
   dgetrs_(&trans, &system_size, &n_rhs_cols, mat_a, &system_size, ipiv, rhs_b, &system_size, &info);
   if (info != 0)
     throw LAPACKexception();
@@ -384,10 +385,10 @@ inline void lapack_solve_factored(int system_size,
                                   int n_rhs_cols,
                                   float* mat_a,
                                   int* ipiv,
-                                  float* rhs_b)
+                                  float* rhs_b,
+                                  char trans = 'N')
 {
   int info = -1;
-  char trans = 'N';
   sgetrs_(&trans, &system_size, &n_rhs_cols, mat_a, &system_size, ipiv, rhs_b, &system_size, &info);
   if (info != 0)
     throw LAPACKexception();
@@ -396,10 +397,10 @@ inline void lapack_solve_factored(int system_size,
                                   int n_rhs_cols,
                                   std::complex<double>* mat_a,
                                   int* ipiv,
-                                  std::complex<double>* rhs_b)
+                                  std::complex<double>* rhs_b,
+                                  char trans = 'N')
 {
   int info = -1;
-  char trans = 'N';
   zgetrs_(&trans, &system_size, &n_rhs_cols, mat_a, &system_size, ipiv, rhs_b, &system_size, &info);
   if (info != 0)
     throw LAPACKexception();

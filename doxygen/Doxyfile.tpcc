@@ -1,0 +1,19 @@
+# The documentation of the submodule tensor_product_chain_complex, linked from HyperHDG's
+# through its tag file. Run from the source root before doxygen/Doxyfile, with
+# DOXYGEN_OUTPUT_DIRECTORY set (see there); the pages go to $(DOXYGEN_OUTPUT_DIRECTORY)/html/tpcc.
+
+PROJECT_NAME         = "TPCC — tensor product chain complex"
+OUTPUT_DIRECTORY     = $(DOXYGEN_OUTPUT_DIRECTORY)
+HTML_OUTPUT          = html/tpcc
+GENERATE_TAGFILE     = $(DOXYGEN_OUTPUT_DIRECTORY)/tpcc.tag
+INPUT                = submodules/tensor_product_chain_complex.git/include
+RECURSIVE            = YES
+
+TAB_SIZE             = 2
+EXTRACT_ALL          = YES
+EXTRACT_PRIVATE      = YES
+EXTRACT_STATIC       = YES
+USE_MATHJAX          = YES
+GENERATE_LATEX       = NO
+HAVE_DOT             = YES
+CALL_GRAPH           = YES

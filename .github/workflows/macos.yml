@@ -2,44 +2,73 @@
 
 name: macOS
 
-on: [push]
+# Portability (Apple Clang, Accelerate, the Python modules on macOS) is checked on pull requests,
+# on main, and on demand, not on every push to a branch.
+on:
+  pull_request:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+# A new push to a pull request supersedes the run of the previous one.
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
 
 env:
-  PYTHON: cython numpy scipy matplotlib pandas joblib
+  PYTHON: numpy scipy
 
 
 jobs:
   # ============ Test code on the latest macOS using Apple Clang and the Accelerate ============
   # ============ framework (BLAS/LAPACK). Python dependencies are installed via pip.  ============
   build_and_test_macos:
-    strategy:
-      matrix:
-        osys: [ macos-latest ]
-
-    name: Test code with Apple Clang on ${{ matrix.osys }}
-    runs-on: ${{ matrix.osys }}
+    name: Test code with Apple Clang on macos-latest
+    runs-on: macos-latest
+    env:
+      # Only the submodules the build needs (not docker.git).
+      SUBMODULES: >-
+        submodules/tensor_product_chain_complex.git submodules/tensor_product_polynomials.git
+        submodules/nanobind.git
 
     steps:
     - name: Checkout
       uses: actions/checkout@v4
+    # The submodule repositories are cached by the commits they are pinned to (as in cmake.yml).
+    - name: Submodule pins
+      id: pins
+      run: echo "hash=$(git ls-tree HEAD $SUBMODULES | shasum -a 256 | cut -c1-16)" >> $GITHUB_OUTPUT
+    - name: Restore submodules
+      id: submodules
+      uses: actions/cache/restore@v4
       with:
-        submodules: recursive
+        path: .git/modules
+        key: submodules-${{ runner.os }}-${{ steps.pins.outputs.hash }}
+        restore-keys: submodules-${{ runner.os }}-
+    - name: Fetch submodules
+      run: git submodule update --init --recursive --depth 1 --jobs 4 -- $SUBMODULES
+    - name: Save submodules
+      if: steps.submodules.outputs.cache-hit != 'true'
+      uses: actions/cache/save@v4
+      with:
+        path: .git/modules
+        key: submodules-${{ runner.os }}-${{ steps.pins.outputs.hash }}
     - name: Set up Python
       uses: actions/setup-python@v5
       with:
         python-version: '3.13'
+        cache: pip
+        cache-dependency-path: .github/workflows/macos.yml
     - name: Install Python dependencies
-      run: |
-        python3 -m pip install --upgrade pip
-        python3 -m pip install ${{ env.PYTHON }}
-    - name: Install HDF5
-      run: brew install hdf5
+      run: python3 -m pip install ${{ env.PYTHON }}
+    # tests/ and examples/ only, without HDF5, as in cmake.yml.
     - name: Configure
       run: >
         cmake -S . -B build -DCMAKE_BUILD_TYPE=Debug
         -DCMAKE_C_COMPILER=clang -DCMAKE_CXX_COMPILER=clang++
         -DPython3_EXECUTABLE=$(which python3)
+        -DHYPERHDG_LEGACY_TESTS=OFF -DHYPERHDG_HDF5=OFF
     - name: Build
-      run: cmake --build build --config Debug
+      run: cmake --build build --config Debug -j $(sysctl -n hw.ncpu)
     - name: Test
-      run: ctest --test-dir build -C Debug --output-on-failure
+      run: ctest --test-dir build -C Debug --output-on-failure -j $(sysctl -n hw.ncpu)

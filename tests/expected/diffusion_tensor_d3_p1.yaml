@@ -1,0 +1,4 @@
+- {solver: DiffusionTensor, dim: 3, degree: 1, n: 2, dofs: 144, cg: converged_rtol, iterations: 8, error: 7.721190e-03}
+- {solver: DiffusionTensor, dim: 3, degree: 1, n: 4, dofs: 960, cg: converged_rtol, iterations: 35, error: 2.700569e-03}
+- {solver: DiffusionTensor, dim: 3, degree: 1, n: 8, dofs: 6912, cg: converged_rtol, iterations: 69, error: 8.480615e-04}
+- {solver: DiffusionTensor, dim: 3, degree: 1, n: 16, dofs: 52224, cg: converged_rtol, iterations: 123, error: 2.455501e-04}

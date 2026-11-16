@@ -2,8 +2,18 @@
 
 #include <HyperHDG/hy_assert.hxx>
 
-// #include <cmath>
-// #include <exception>
+#ifdef HYPERHDG_HAVE_CHOLMOD  // CMake option HYPERHDG_CHOLMOD
+#include <cholmod.h>
+#endif
+
+#include <algorithm>  // std::max
+#include <cmath>
+#include <cstddef>
+#include <exception>
+#include <functional>
+#include <limits>
+#include <type_traits>
+#include <vector>
 
 /*!*************************************************************************************************
  * \brief   A namespace containing different functions that implement basic linear algebra
@@ -134,12 +144,181 @@ void linear_combination(const typename vectorT::value_type leftFac,
     result[i] = leftFac * leftV[i] + rightFac * rightV[i];
 }
 /*!*************************************************************************************************
- * \brief   Execute conjugate gradient algorithm to find solution to system of equations.
+ * \brief   Why an iterative solver stopped (cf. PETSc's KSPConvergedReason).
+ **************************************************************************************************/
+enum class StopReason
+{
+  converged_rtol,           //!< ||r|| <= rtol * ||b||, which is at least atol
+  converged_atol,           //!< ||r|| <= atol, which is larger than rtol * ||b||
+  diverged_dtol,            //!< ||r|| > dtol * ||r_0||
+  diverged_max_iterations,  //!< max_iterations done without convergence
+  diverged_breakdown,       //!< d^T A d is zero: A is singular or indefinite on the Krylov space
+  diverged_nan              //!< a residual norm or d^T A d is not finite
+};
+/*!*************************************************************************************************
+ * \brief   The name of a StopReason, e.g. for log output.
+ **************************************************************************************************/
+inline const char* to_string(const StopReason reason)
+{
+  switch (reason)
+  {
+    case StopReason::converged_rtol:
+      return "converged_rtol";
+    case StopReason::converged_atol:
+      return "converged_atol";
+    case StopReason::diverged_dtol:
+      return "diverged_dtol";
+    case StopReason::diverged_max_iterations:
+      return "diverged_max_iterations";
+    case StopReason::diverged_breakdown:
+      return "diverged_breakdown";
+    case StopReason::diverged_nan:
+      return "diverged_nan";
+  }
+  return "unknown";
+}
+/*!*************************************************************************************************
+ * \brief   Stopping criteria and monitoring of an iterative solver; the defaults are PETSc's.
  *
- * Execute conjugate gradient algorithm where the matrix is not explicitly given, but the template
- * class \c ProblemT is supposed to implement a function \c matrix_vector_multiply which only takes
- * a \c large vector and generates the matrix vector product from that. The associated matrix is
- * assumed to be square and symmetric positive definite.
+ * The solver stops as converged if ||r|| <= max(rtol * ||b||, atol), and as diverged if ||r|| >
+ * dtol * ||r_0|| or after max_iterations iterations. ||.|| is the Euclidean norm, r the residual of
+ * the solver's recursion, r_0 the initial residual b - A x_0.
+ **************************************************************************************************/
+struct SolverOptions
+{
+  double rtol = 1e-5;
+  double atol = 1e-50;
+  double dtol = 1e5;
+  unsigned int max_iterations = 10000;
+  /*!
+   * Called with (iteration, ||r||) before every iteration and for the final residual, if set.
+   */
+  std::function<void(unsigned int, double)> monitor;
+};
+/*!*************************************************************************************************
+ * \brief   What an iterative solver did.
+ **************************************************************************************************/
+struct SolverResult
+{
+  StopReason reason;
+  unsigned int iterations;       //!< matrix-vector products in the iteration (not counting r_0)
+  double residual_norm;          //!< ||r|| at the end
+  double initial_residual_norm;  //!< ||r_0||, the reference of dtol
+  double rhs_norm;               //!< ||b||, the reference of rtol
+  bool converged() const
+  {
+    return reason == StopReason::converged_rtol || reason == StopReason::converged_atol;
+  }
+};
+/*!*************************************************************************************************
+ * \brief   Conjugate gradients for A x = b with A symmetric and definite (either sign).
+ *
+ * The operator is any callable apply(in, out) that writes out = A in; in and out are std::vector
+ * of the value type of b, e.g. [&](const auto& in, auto& out) { loop.apply(in, out); } for
+ * GlobalLoop::Generic. b and x are vector-like (size(), operator[]); x is the initial guess on
+ * entry (r_0 = b is used without a product if x is zero) and the last iterate on return, also if
+ * the solver did not converge.
+ *
+ * \param   apply     The operator: apply(in, out) sets out = A in.
+ * \param   b         Right-hand side.
+ * \param   x         Initial guess on entry, solution on return.
+ * \param   options   Stopping criteria and an optional monitor.
+ * \retval  result    Stop reason, iterations and residual norms.
+ **************************************************************************************************/
+template <class OperatorT, class RhsVectorT, class VectorT>
+SolverResult cg(OperatorT&& apply,
+                const RhsVectorT& b,
+                VectorT& x,
+                const SolverOptions& options = SolverOptions())
+{
+  using value_t = std::remove_cvref_t<decltype(b[0])>;
+  // inner products, alpha and beta in at least double; in a wider type (e.g. std::float128_t)
+  // in that one, so that the iteration keeps its precision. Norms are reported as double.
+  using acc_t = std::common_type_t<value_t, double>;
+  const std::size_t n = b.size();
+  hy_assert(x.size() == n, "Solution and right-hand side must be of the same size.");
+  auto dot = [n](const std::vector<value_t>& u, const std::vector<value_t>& v)
+  {
+    acc_t sum = 0.;
+    for (std::size_t i = 0; i < n; ++i)
+      sum += (acc_t)u[i] * (acc_t)v[i];
+    return sum;
+  };
+  auto norm = [](const acc_t square) { return (double)std::sqrt(square); };
+
+  std::vector<value_t> r(n), d(n), z(n);
+  for (std::size_t i = 0; i < n; ++i)
+    r[i] = b[i];
+  const double rhs_norm = norm(dot(r, r));
+  bool zero_guess = true;
+  for (std::size_t i = 0; i < n; ++i)
+    zero_guess = zero_guess && x[i] == (value_t)0.;
+  if (!zero_guess)
+  {
+    for (std::size_t i = 0; i < n; ++i)
+      d[i] = x[i];
+    apply(d, z);
+    for (std::size_t i = 0; i < n; ++i)
+      r[i] -= z[i];
+  }
+  for (std::size_t i = 0; i < n; ++i)
+    d[i] = r[i];
+  acc_t r_square = dot(r, r);
+  const double initial_residual_norm = norm(r_square);
+  const double target = std::max(options.rtol * rhs_norm, options.atol);
+
+  SolverResult result{StopReason::diverged_max_iterations, 0, initial_residual_norm,
+                      initial_residual_norm, rhs_norm};
+  auto stop = [&](const StopReason reason)
+  {
+    result.reason = reason;
+    if (options.monitor)
+      options.monitor(result.iterations, result.residual_norm);
+    return result;
+  };
+  for (;; ++result.iterations)
+  {
+    result.residual_norm = norm(r_square);
+    if (!std::isfinite(result.residual_norm))
+      return stop(StopReason::diverged_nan);
+    // The reason names the tolerance that set the target, not the smallest one the residual
+    // meets: a residual that rounds to exactly zero would otherwise read converged_atol on one
+    // platform and converged_rtol on another (PETSc reports atol whenever ||r|| <= atol).
+    if (result.residual_norm <= target)
+      return stop(options.rtol * rhs_norm >= options.atol ? StopReason::converged_rtol
+                                                          : StopReason::converged_atol);
+    if (result.residual_norm > options.dtol * initial_residual_norm)
+      return stop(StopReason::diverged_dtol);
+    if (result.iterations == options.max_iterations)
+      return stop(StopReason::diverged_max_iterations);
+    if (options.monitor)
+      options.monitor(result.iterations, result.residual_norm);
+
+    apply(d, z);
+    const acc_t curvature = dot(d, z);
+    if (!std::isfinite((double)curvature))
+      return stop(StopReason::diverged_nan);
+    if (curvature == (acc_t)0.)
+      return stop(StopReason::diverged_breakdown);
+    const value_t alpha = (value_t)(r_square / curvature);
+    for (std::size_t i = 0; i < n; ++i)
+    {
+      x[i] += alpha * d[i];
+      r[i] -= alpha * z[i];
+    }
+    const acc_t r_square_old = r_square;
+    r_square = dot(r, r);
+    const value_t beta = (value_t)(r_square / r_square_old);
+    for (std::size_t i = 0; i < n; ++i)
+      d[i] = r[i] + beta * d[i];
+  }
+}
+/*!*************************************************************************************************
+ * \brief   Execute conjugate gradient algorithm to find solution to system of equations (legacy).
+ *
+ * The interface of the older C++ tests and examples, on top of \c cg: the template class
+ * \c ProblemT implements \c trace_to_flux, which takes a large vector and returns the matrix vector
+ * product. The associated matrix is assumed to be square and symmetric positive definite.
  *
  * \tparam  ProblemT            Class to implement matrix vector multiplication.
  * \tparam  vectorT             The class name of the large vector.
@@ -147,8 +326,8 @@ void linear_combination(const typename vectorT::value_type leftFac,
  * \param   problem             Class instantiation to implement matrix vector multiplication.
  * \param   n_iterations        Maximum number of iterations. 0 is default and the size of b.
  * \param   tolerance           Absolute tolerance value in 2 norm. Default is 1e-9.
- * \retval  solution            Vector sufficing Ax = b up to given tolerance if converged.
- * \retval  n_iterations        Number of needed iterations. -1 indicates no convergence.
+ * \retval  solution            Vector sufficing Ax = b up to given tolerance if converged; throws
+ *                              SolveException otherwise.
  *
  * \authors   Guido Kanschat, Heidelberg University, 2020.
  * \authors   Andreas Rupp, Heidelberg University, 2020.
@@ -159,47 +338,138 @@ vectorT conjugate_gradient(const vectorT& b,
                            unsigned int n_iterations = 0,
                            const typename vectorT::value_type tolerance = 1e-9)
 {
+  SolverOptions options;
+  options.rtol = 0.;
+  options.atol = tolerance;
+  options.dtol = std::numeric_limits<double>::infinity();
+  options.max_iterations = n_iterations == 0 ? b.size() : n_iterations;
   vectorT x(b.size(), (typename vectorT::value_type)0.);
-  vectorT r = b;  // b - A * x (with x = 0)
-  vectorT d = r;
-
-  typename vectorT::value_type r_square_new = inner_product(r, r);
-  typename vectorT::value_type r_square_old = r_square_new;
-
-  if (r_square_new < tolerance * tolerance)
-  {
-    n_iterations = 0;
-    return x;
-  }
-
-  if (n_iterations == 0)
-    n_iterations = b.size();
-  hy_assert(n_iterations > 0, "Number of allowed iterations of CG solver must be positive.");
-
-  for (unsigned int k = 0; k < n_iterations; ++k)
-  {
-    vectorT z = problem.trace_to_flux(d);
-    r_square_old = r_square_new;
-
-    typename vectorT::value_type alpha = r_square_old / inner_product(d, z);
-    linear_combination((typename vectorT::value_type)1., x, alpha, d, x);
-    linear_combination((typename vectorT::value_type)1., r, -alpha, z, r);
-
-    r_square_new = inner_product(r, r);
-
-    typename vectorT::value_type beta = r_square_new / r_square_old;
-    linear_combination((typename vectorT::value_type)1., r, beta, d, d);
-
-    if (r_square_new < tolerance * tolerance)
-    {
-      n_iterations = k + 1;
-      return x;
-    }
-  }
-
-  throw SparseLA::SolveException();
-
+  const SolverResult result =
+    cg([&](const auto& in, auto& out) { out = problem.trace_to_flux(in); }, b, x, options);
+  if (!result.converged())
+    throw SparseLA::SolveException();
   return x;
 }
+
+#ifdef HYPERHDG_HAVE_CHOLMOD
+/*!*************************************************************************************************
+ * \brief   Sparse Cholesky factorization of a symmetric definite matrix with CHOLMOD.
+ *
+ * The matrix is given by triplets, as GlobalLoop::Generic::assemble writes them: duplicates are
+ * summed, and of the symmetric matrix only the entries with row <= column are read. \c sign says
+ * which of A (1) and -A (-1) is positive definite (the condensed matrices that
+ * GlobalLoop::Generic assembles for Diffusion, DiffusionTensor and TimoshenkoBeam are positive
+ * definite, those of the legacy global loops for the diffusion solvers negative definite);
+ * multiply and solve are those of A either way. Constrained dofs need a diagonal entry of that
+ * sign.
+ *
+ * Usage: analyze() (ordering and symbolic factorization, once per sparsity pattern), factorize()
+ * (numeric), then solve() per right-hand side. Only with the CMake option HYPERHDG_CHOLMOD.
+ **************************************************************************************************/
+class Cholmod
+{
+  cholmod_common common_;
+  cholmod_sparse* matrix_ = nullptr;  // sign * A, upper triangle
+  cholmod_factor* factor_ = nullptr;
+  double sign_;
+
+  // A dense CHOLMOD vector on the data of a std::vector.
+  static cholmod_dense view(const std::vector<double>& x)
+  {
+    cholmod_dense dense{};
+    dense.nrow = dense.nzmax = dense.d = x.size();
+    dense.ncol = 1;
+    dense.x = const_cast<double*>(x.data());
+    dense.xtype = CHOLMOD_REAL;
+    dense.dtype = CHOLMOD_DOUBLE;
+    return dense;
+  }
+
+ public:
+  template <class IndexVecT, class ValueVecT>
+  Cholmod(const std::size_t size,
+          const IndexVecT& rows,
+          const IndexVecT& cols,
+          const ValueVecT& vals,
+          const double sign = 1.)
+  : sign_(sign)
+  {
+    hy_assert(cols.size() == rows.size() && vals.size() == rows.size(),
+              "Triplets need a row, a column and a value each.");
+    cholmod_start(&common_);
+    std::size_t n_upper = 0;
+    for (std::size_t k = 0; k < rows.size(); ++k)
+      n_upper += rows[k] <= cols[k];
+    cholmod_triplet* triplet =
+      cholmod_allocate_triplet(size, size, n_upper, 1, CHOLMOD_REAL, &common_);
+    int *i = static_cast<int*>(triplet->i), *j = static_cast<int*>(triplet->j);
+    double* x = static_cast<double*>(triplet->x);
+    std::size_t pos = 0;
+    for (std::size_t k = 0; k < rows.size(); ++k)
+      if (rows[k] <= cols[k])
+      {
+        i[pos] = rows[k];
+        j[pos] = cols[k];
+        x[pos++] = sign_ * vals[k];
+      }
+    triplet->nnz = n_upper;
+    matrix_ = cholmod_triplet_to_sparse(triplet, n_upper, &common_);  // sums duplicates
+    cholmod_free_triplet(&triplet, &common_);
+  }
+  ~Cholmod()
+  {
+    cholmod_free_factor(&factor_, &common_);
+    cholmod_free_sparse(&matrix_, &common_);
+    cholmod_finish(&common_);
+  }
+  Cholmod(const Cholmod&) = delete;
+  Cholmod& operator=(const Cholmod&) = delete;
+
+  std::size_t size() const { return matrix_->nrow; }
+  /*!
+   * Fill-reducing ordering and symbolic factorization.
+   */
+  void analyze()
+  {
+    cholmod_free_factor(&factor_, &common_);
+    factor_ = cholmod_analyze(matrix_, &common_);
+  }
+  /*!
+   * Numeric factorization (after analyze); false if sign * A is not positive definite.
+   */
+  bool factorize()
+  {
+    cholmod_factorize(matrix_, factor_, &common_);
+    return common_.status == CHOLMOD_OK && factor_->minor == factor_->n;
+  }
+  /*!
+   * x = A^-1 b (after factorize).
+   */
+  void solve(const std::vector<double>& b, std::vector<double>& x)
+  {
+    cholmod_dense rhs = view(b);
+    cholmod_dense* result = cholmod_solve(CHOLMOD_A, factor_, &rhs, &common_);
+    const double* values = static_cast<double*>(result->x);
+    x.resize(b.size());
+    for (std::size_t k = 0; k < b.size(); ++k)
+      x[k] = sign_ * values[k];
+    cholmod_free_dense(&result, &common_);
+  }
+  /*!
+   * y = A x, with the assembled matrix.
+   */
+  void multiply(const std::vector<double>& x, std::vector<double>& y)
+  {
+    cholmod_dense in = view(x), out = view(y);
+    double alpha[2] = {sign_, 0.}, beta[2] = {0., 0.};
+    cholmod_sdmult(matrix_, 0, alpha, beta, &in, &out, &common_);
+  }
+  /*!
+   * Nonzeros of the matrix (one triangle) and of its factor (after analyze).
+   */
+  std::size_t nnz() { return cholmod_nnz(matrix_, &common_); }
+  double factor_nnz() const { return common_.lnz; }
+};
+#endif
 
 }  // end of namespace SparseLA
