@@ -120,10 +120,20 @@ int main()
 
     const double e_rel = error[0] / norm[0], e_trace = error[1] / norm[1],
                  e_dual = error[2] / norm[2];
-    tests::record(
-      "- {degree: %u, stages: %u, n: %u, nt: %u, dofs: %u, e_rel: %.6e, e_trace: %.6e, "
-      "e_dual: %.6e}\n",
-      degree, stages, n, n_steps, size, e_rel, e_trace, e_dual);
+    // At degree 5, e_trace (down to 3e-11) is at the round-off of the dense LU solves and depends
+    // on the BLAS (MKL and OpenBLAS differ by 1e-2 relative at n = 16): printed, but not recorded.
+    if constexpr (degree < 5)
+      tests::record(
+        "- {degree: %u, stages: %u, n: %u, nt: %u, dofs: %u, e_rel: %.6e, e_trace: %.6e, "
+        "e_dual: %.6e}\n",
+        degree, stages, n, n_steps, size, e_rel, e_trace, e_dual);
+    else
+    {
+      tests::record(
+        "- {degree: %u, stages: %u, n: %u, nt: %u, dofs: %u, e_rel: %.6e, e_dual: %.6e}\n", degree,
+        stages, n, n_steps, size, e_rel, e_dual);
+      std::printf("  e_trace: %.6e\n", e_trace);
+    }
     if (!std::isfinite(e_rel) || !std::isfinite(e_trace) || !std::isfinite(e_dual))
     {
       std::printf("  FAIL: an error is not finite\n");
