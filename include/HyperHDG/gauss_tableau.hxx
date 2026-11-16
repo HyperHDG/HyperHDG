@@ -41,7 +41,6 @@ struct StageTime
   int stage;
 };
 
-
 /*!*************************************************************************************************
  * \brief   Gauss-Legendre nodes c (mapped to [0,1]) and weights b (sum to 1).
  **************************************************************************************************/
@@ -80,15 +79,15 @@ inline void gauss_legendre(const unsigned int s, std::vector<double>& c, std::ve
  **************************************************************************************************/
 struct Tableau
 {
-  unsigned int s;                            // number of stages
-  unsigned int n_reps;                       // number of solved representatives, ceil(s/2)
-  std::vector<double> c;                     // collocation nodes in (0,1), length s
-  std::vector<std::complex<double>> theta;   // representative Butcher eigenvalues, length n_reps
-  std::vector<std::complex<double>> omega;   // load weights (T^{-1} 1)_rep
-  std::vector<std::complex<double>> w;       // value-form recombination weights (b^T T)_rep/theta
-  std::vector<std::complex<double>> tinv;    // T^{-1} rows of the reps, row-major n_reps x s
-  std::vector<double> mult;                  // multiplicity: 2 for a conjugate pair, else 1
-  double affine;                             // 1 - b^T A^{-1} 1 = R(infinity) = (-1)^s
+  unsigned int s;                           // number of stages
+  unsigned int n_reps;                      // number of solved representatives, ceil(s/2)
+  std::vector<double> c;                    // collocation nodes in (0,1), length s
+  std::vector<std::complex<double>> theta;  // representative Butcher eigenvalues, length n_reps
+  std::vector<std::complex<double>> omega;  // load weights (T^{-1} 1)_rep
+  std::vector<std::complex<double>> w;      // value-form recombination weights (b^T T)_rep/theta
+  std::vector<std::complex<double>> tinv;   // T^{-1} rows of the reps, row-major n_reps x s
+  std::vector<double> mult;                 // multiplicity: 2 for a conjugate pair, else 1
+  double affine;                            // 1 - b^T A^{-1} 1 = R(infinity) = (-1)^s
 };
 
 /*!*************************************************************************************************

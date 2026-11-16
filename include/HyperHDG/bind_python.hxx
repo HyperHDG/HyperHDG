@@ -343,19 +343,15 @@ auto bind_python(nanobind::module_& m, const char* name)
     cls.def_static("n_gauss_stages", []() { return GlobalLoopT::n_gauss_stages(); });
     cls.def_static("n_gauss_reps", []() { return GlobalLoopT::n_gauss_reps(); });
     cls.def(
-      "trace_to_flux_mat_stage",
-      [to_coo](GlobalLoopT& o, int rep, double t)
-      { return to_coo(o.trace_to_flux_mat(StageTime{t, rep})); },
-      nb::arg("rep"), nb::arg("time"));
+      "trace_to_flux_mat_stage", [to_coo](GlobalLoopT& o, int rep, double t)
+      { return to_coo(o.trace_to_flux_mat(StageTime{t, rep})); }, nb::arg("rep"), nb::arg("time"));
     cls.def(
-      "residual_flux_stage",
-      [](GlobalLoopT& o, const Vec& v, int rep, double t)
-      { return o.residual_flux(v, StageTime{t, rep}); },
-      nb::arg("x"), nb::arg("rep"), nb::arg("time"));
+      "residual_flux_stage", [](GlobalLoopT& o, const Vec& v, int rep, double t)
+      { return o.residual_flux(v, StageTime{t, rep}); }, nb::arg("x"), nb::arg("rep"),
+      nb::arg("time"));
     cls.def(
-      "set_data_stage",
-      [](GlobalLoopT& o, const Vec& v, int rep, double t) { o.set_data(v, StageTime{t, rep}); },
-      nb::arg("x"), nb::arg("rep"), nb::arg("time"));
+      "set_data_stage", [](GlobalLoopT& o, const Vec& v, int rep, double t)
+      { o.set_data(v, StageTime{t, rep}); }, nb::arg("x"), nb::arg("rep"), nb::arg("time"));
     cls.def("finalize_step", [](GlobalLoopT& o) { o.finalize_step(); });
   }
 

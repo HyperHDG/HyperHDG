@@ -99,8 +99,8 @@ class Hyperbolic : public CondensedOperator<Hyperbolic,
    * \param   construct_loc_sol Information to construct a local solver.
    ************************************************************************************************/
   Hyperbolic(const typename TopologyT::constructor_value_type& construct_topo,
-            const typename GeometryT::constructor_value_type& construct_geom,
-            const typename LocalSolverT::constructor_value_type& construct_loc_sol)
+             const typename GeometryT::constructor_value_type& construct_geom,
+             const typename LocalSolverT::constructor_value_type& construct_loc_sol)
   : hyper_graph_(construct_topo, construct_geom), local_solver_(construct_loc_sol)
   {
     static_assert(TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim(),
@@ -120,7 +120,7 @@ class Hyperbolic : public CondensedOperator<Hyperbolic,
    * \param   construct_loc_sol Information to construct a local solver.
    ************************************************************************************************/
   Hyperbolic(const typename TopologyT::constructor_value_type& construct_topo,
-            const typename LocalSolverT::constructor_value_type& construct_loc_sol)
+             const typename LocalSolverT::constructor_value_type& construct_loc_sol)
   : hyper_graph_(construct_topo), local_solver_(construct_loc_sol)
   {
     static_assert(TopologyT::hyEdge_dim() == GeometryT::hyEdge_dim(),
@@ -196,9 +196,15 @@ class Hyperbolic : public CondensedOperator<Hyperbolic,
         }
 
         // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
-        if constexpr (requires { local_solver_.trace_to_flux(hyEdge_dofs_old, hyEdge_dofs_new, prvalue_of(time)); })
+        if constexpr (requires {
+                        local_solver_.trace_to_flux(hyEdge_dofs_old, hyEdge_dofs_new,
+                                                    prvalue_of(time));
+                      })
           local_solver_.trace_to_flux(hyEdge_dofs_old, hyEdge_dofs_new, time);
-        else if constexpr (requires { local_solver_.trace_to_flux(hyEdge_dofs_old, hyEdge_dofs_new, hyper_edge, prvalue_of(time)); })
+        else if constexpr (requires {
+                             local_solver_.trace_to_flux(hyEdge_dofs_old, hyEdge_dofs_new,
+                                                         hyper_edge, prvalue_of(time));
+                           })
           local_solver_.trace_to_flux(hyEdge_dofs_old, hyEdge_dofs_new, hyper_edge, time);
         else
           static_assert(always_false_v<LocalSolverT, decltype(hyper_edge)>,
@@ -212,7 +218,6 @@ class Hyperbolic : public CondensedOperator<Hyperbolic,
 
     return vec_Ax;
   }
-
 
   /*!***********************************************************************************************
    * \brief   Evaluate condensed matrix-vector product.
@@ -253,9 +258,15 @@ class Hyperbolic : public CondensedOperator<Hyperbolic,
         }
 
         // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
-        if constexpr (requires { local_solver_.residual_flux(hyEdge_dofs_old, hyEdge_dofs_new, prvalue_of(time)); })
+        if constexpr (requires {
+                        local_solver_.residual_flux(hyEdge_dofs_old, hyEdge_dofs_new,
+                                                    prvalue_of(time));
+                      })
           local_solver_.residual_flux(hyEdge_dofs_old, hyEdge_dofs_new, time);
-        else if constexpr (requires { local_solver_.residual_flux(hyEdge_dofs_old, hyEdge_dofs_new, hyper_edge, prvalue_of(time)); })
+        else if constexpr (requires {
+                             local_solver_.residual_flux(hyEdge_dofs_old, hyEdge_dofs_new,
+                                                         hyper_edge, prvalue_of(time));
+                           })
           local_solver_.residual_flux(hyEdge_dofs_old, hyEdge_dofs_new, hyper_edge, time);
         else
           static_assert(always_false_v<LocalSolverT, decltype(hyper_edge)>,
@@ -299,7 +310,9 @@ class Hyperbolic : public CondensedOperator<Hyperbolic,
         // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
         if constexpr (requires { local_solver_.set_data(hyEdge_dofs, prvalue_of(time)); })
           local_solver_.set_data(hyEdge_dofs, time);
-        else if constexpr (requires { local_solver_.set_data(hyEdge_dofs, hyper_edge, prvalue_of(time)); })
+        else if constexpr (requires {
+                             local_solver_.set_data(hyEdge_dofs, hyper_edge, prvalue_of(time));
+                           })
           local_solver_.set_data(hyEdge_dofs, hyper_edge, time);
         else
           static_assert(always_false_v<LocalSolverT, decltype(hyper_edge)>,
@@ -378,14 +391,20 @@ class Hyperbolic : public CondensedOperator<Hyperbolic,
             hyEdge_dofs[hyNode][d] = x_vec[hyEdge_hyNodes[hyNode] * n_dofs_per_node + d];
 
         // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
-        if constexpr (requires { local_solver_.make_initial_from_static(hyEdge_dofs, prvalue_of(time)); })
+        if constexpr (requires {
+                        local_solver_.make_initial_from_static(hyEdge_dofs, prvalue_of(time));
+                      })
           local_solver_.make_initial_from_static(hyEdge_dofs, time);
-        else if constexpr (requires { local_solver_.make_initial_from_static(hyEdge_dofs, hyper_edge, prvalue_of(time)); })
+        else if constexpr (requires {
+                             local_solver_.make_initial_from_static(hyEdge_dofs, hyper_edge,
+                                                                    prvalue_of(time));
+                           })
           local_solver_.make_initial_from_static(hyEdge_dofs, hyper_edge, time);
         else
           // optional capability (static-init hack): fail loudly at runtime instead of at compile
           // time, so solvers without it still instantiate this loop
-          hy_check(false, "LocalSolverT implements no usable overload of make_initial_from_static!");
+          hy_check(false,
+                   "LocalSolverT implements no usable overload of make_initial_from_static!");
 
         // write per-edge dofs back to the global trace vector (mirrors make_initial)
         for (unsigned int hyNode = 0; hyNode < hyEdge_hyNodes.size(); ++hyNode)
@@ -423,7 +442,9 @@ class Hyperbolic : public CondensedOperator<Hyperbolic,
         // Turn degrees of freedom of x_vec that have been stored locally into those of vec_Ax.
         if constexpr (requires { local_solver_.make_initial(hyEdge_dofs, prvalue_of(time)); })
           local_solver_.make_initial(hyEdge_dofs, time);
-        else if constexpr (requires { local_solver_.make_initial(hyEdge_dofs, hyper_edge, prvalue_of(time)); })
+        else if constexpr (requires {
+                             local_solver_.make_initial(hyEdge_dofs, hyper_edge, prvalue_of(time));
+                           })
           local_solver_.make_initial(hyEdge_dofs, hyper_edge, time);
         else
           static_assert(always_false_v<LocalSolverT, decltype(hyper_edge)>,
@@ -486,8 +507,8 @@ class Hyperbolic : public CondensedOperator<Hyperbolic,
   {
     constexpr unsigned int n_comp = n_energy_components();
     hy_check(out.size() == static_cast<std::size_t>(n_edges()) * n_comp,
-             "energy span size mismatch: got " << out.size()
-             << " expected " << static_cast<std::size_t>(n_edges()) * n_comp);
+             "energy span size mismatch: got " << out.size() << " expected "
+                                               << static_cast<std::size_t>(n_edges()) * n_comp);
 
     std::array<std::array<dof_value_t, n_dofs_per_node>, 2 * hyEdge_dim> dofs;
 
@@ -541,7 +562,7 @@ class Hyperbolic : public CondensedOperator<Hyperbolic,
    * \param   time          Time at which analytic functions are evaluated.
    * \retval  file          A file in the output directory.
    ************************************************************************************************/
-  template<typename SpanT>
+  template <typename SpanT>
   void plot_solution(const SpanT& lambda, const double time = 0.)
   {
     plot(hyper_graph_, local_solver_, lambda, plot_options, time);

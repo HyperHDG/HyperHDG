@@ -14,13 +14,13 @@ struct TestTimoWave4
   static constexpr std::array<unsigned int, 10U> dirichlet_nodes{1, 2, 3, 4, 5, 6, 7, 8, 9, 10};
   static constexpr std::array<unsigned int, 0U> neumann_nodes{};
 
-  static constexpr param_float_t omega = 2*M_PI;
+  static constexpr param_float_t omega = 2 * M_PI;
 
   // u_k = au[k] cos(w sigma) cos(w t + pu[k]), r_k = ar[k] cos(w sigma) cos(w t + pr[k])
   // on the axis-aligned cross (cross2.geo).
   // arms must come in +-pairs so the nodal forces n(0) = -i x r(0) balance.
   // distinct per-component phases: all of u, v, r, s, n, m are nonzero at t = 0
-  static constexpr std::array<param_float_t, 3> au{1, 2, 3},  pu{0.3, 0.8, 1.3};
+  static constexpr std::array<param_float_t, 3> au{1, 2, 3}, pu{0.3, 0.8, 1.3};
   static constexpr std::array<param_float_t, 3> ar{5, 7, 11}, pr{0.5, 1.1, 1.7};
 
   // Runtime SPATIAL phase of the standing-wave factor cos(w*(x+y+z) + px). The time phases
@@ -32,43 +32,51 @@ struct TestTimoWave4
   // pairwise smoothness through the center, independent of px). Default 0 = classic wave4.
   static inline param_float_t px = 0.;
 
-  static SmallVec<space_dimT, param_float_t> uvec(const param_float_t time) {
+  static SmallVec<space_dimT, param_float_t> uvec(const param_float_t time)
+  {
     SmallVec<space_dimT, param_float_t> res(0.);
     for (unsigned int k = 0; k < 3; k++)
-      res[k] = au[k]*cos(omega*time + pu[k]);
+      res[k] = au[k] * cos(omega * time + pu[k]);
     return res;
   }
-  static SmallVec<space_dimT, param_float_t> dt_uvec(const param_float_t time) {
+  static SmallVec<space_dimT, param_float_t> dt_uvec(const param_float_t time)
+  {
     SmallVec<space_dimT, param_float_t> res(0.);
     for (unsigned int k = 0; k < 3; k++)
-      res[k] = -omega*au[k]*sin(omega*time + pu[k]);
+      res[k] = -omega * au[k] * sin(omega * time + pu[k]);
     return res;
   }
-  static SmallVec<space_dimT, param_float_t> rvec(const param_float_t time) {
+  static SmallVec<space_dimT, param_float_t> rvec(const param_float_t time)
+  {
     SmallVec<space_dimT, param_float_t> res(0.);
     for (unsigned int k = 0; k < 3; k++)
-      res[k] = ar[k]*cos(omega*time + pr[k]);
+      res[k] = ar[k] * cos(omega * time + pr[k]);
     return res;
   }
-  static SmallVec<space_dimT, param_float_t> dt_rvec(const param_float_t time) {
+  static SmallVec<space_dimT, param_float_t> dt_rvec(const param_float_t time)
+  {
     SmallVec<space_dimT, param_float_t> res(0.);
     for (unsigned int k = 0; k < 3; k++)
-      res[k] = -omega*ar[k]*sin(omega*time + pr[k]);
+      res[k] = -omega * ar[k] * sin(omega * time + pr[k]);
     return res;
   }
 
   // axis of the arm containing point (exactly one coordinate is nonzero off the center)
-  static unsigned int arm_axis(const Point<space_dimT, param_float_t>& point) {
-    if (point[0] != 0) return 0;
-    if (point[1] != 0) return 1;
+  static unsigned int arm_axis(const Point<space_dimT, param_float_t>& point)
+  {
+    if (point[0] != 0)
+      return 0;
+    if (point[1] != 0)
+      return 1;
     return 2;
   }
   // e_ax x vec
   static SmallVec<space_dimT, param_float_t> cross_e(const unsigned int ax,
-                                                     const SmallVec<space_dimT, param_float_t>& vec) {
+                                                     const SmallVec<space_dimT, param_float_t>& vec)
+  {
     SmallVec<space_dimT, param_float_t> res(0.);
-    res[(ax+1)%3] = -vec[(ax+2)%3];
-    res[(ax+2)%3] =  vec[(ax+1)%3];
+    res[(ax + 1) % 3] = -vec[(ax + 2) % 3];
+    res[(ax + 2) % 3] = vec[(ax + 1) % 3];
     return res;
   }
 
@@ -79,7 +87,7 @@ struct TestTimoWave4
   {
     const unsigned int ax = arm_axis(point);
     auto res = cross_e(ax, rvec(time));
-    res *= omega*sin(omega*point[ax] + px);
+    res *= omega * sin(omega * point[ax] + px);
     return scalar_product(res, normal);
   }
   // g = w sin(w x_ax) (e_ax x uvec) + cos(w x_ax) (rvec - e_ax (e_ax . rvec)), per arm
@@ -89,11 +97,11 @@ struct TestTimoWave4
   {
     const unsigned int ax = arm_axis(point);
     auto res = cross_e(ax, uvec(time));
-    res *= omega*sin(omega*point[ax] + px);
+    res *= omega * sin(omega * point[ax] + px);
     auto perp = rvec(time);
     perp[ax] = 0.;
     for (unsigned int k = 0; k < 3; k++)
-      res[k] += perp[k]*cos(omega*point[ax] + px);
+      res[k] += perp[k] * cos(omega * point[ax] + px);
     return scalar_product(res, normal);
   }
   static param_float_t dirichlet_value_u(const Point<space_dimT, param_float_t>& point,
@@ -123,27 +131,39 @@ struct TestTimoWave4
     return scalar_product(res, normal);
   }
 
-  static SmallVec<space_dimT, param_float_t> initial_u(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
+  static SmallVec<space_dimT, param_float_t> initial_u(
+    const Point<space_dimT, param_float_t>& point,
+    const param_float_t time = 0.)
+  {
     auto res = uvec(time);
-    res *= cos(omega*(point[0]+point[1]+point[2]) + px);
+    res *= cos(omega * (point[0] + point[1] + point[2]) + px);
     return res;
   }
 
-  static SmallVec<space_dimT, param_float_t> initial_v(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
+  static SmallVec<space_dimT, param_float_t> initial_v(
+    const Point<space_dimT, param_float_t>& point,
+    const param_float_t time = 0.)
+  {
     auto res = dt_uvec(time);
-    res *= cos(omega*(point[0]+point[1]+point[2]) + px);
+    res *= cos(omega * (point[0] + point[1] + point[2]) + px);
     return res;
   }
 
-  static SmallVec<space_dimT, param_float_t> initial_s(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
+  static SmallVec<space_dimT, param_float_t> initial_s(
+    const Point<space_dimT, param_float_t>& point,
+    const param_float_t time = 0.)
+  {
     auto res = dt_rvec(time);
-    res *= cos(omega*(point[0]+point[1]+point[2]) + px);
+    res *= cos(omega * (point[0] + point[1] + point[2]) + px);
     return res;
   }
 
-  static SmallVec<space_dimT, param_float_t> initial_r(const Point<space_dimT, param_float_t>& point, const param_float_t time = 0.) {
+  static SmallVec<space_dimT, param_float_t> initial_r(
+    const Point<space_dimT, param_float_t>& point,
+    const param_float_t time = 0.)
+  {
     auto res = rvec(time);
-    res *= cos(omega*(point[0]+point[1]+point[2]) + px);
+    res *= cos(omega * (point[0] + point[1] + point[2]) + px);
     return res;
   }
 
@@ -154,29 +174,29 @@ struct TestTimoWave4
   //   n = -du/ds - d x r = w sin(w sig + px) (d.1) uvec - cos(w sig + px) d x rvec
   //   m = -dr/ds         = w sin(w sig + px) (d.1) rvec
   static SmallVec<space_dimT, param_float_t> analytic_result_n(
-      const Point<space_dimT, param_float_t>& point,
-      const Point<space_dimT, param_float_t>& axial,
-      const param_float_t time = 0.)
+    const Point<space_dimT, param_float_t>& point,
+    const Point<space_dimT, param_float_t>& axial,
+    const param_float_t time = 0.)
   {
     const param_float_t sig = point[0] + point[1] + point[2];
     const param_float_t dsum = axial[0] + axial[1] + axial[2];
     auto res = uvec(time);
-    res *= omega * sin(omega*sig + px) * dsum;
+    res *= omega * sin(omega * sig + px) * dsum;
     const auto r = rvec(time);
-    const param_float_t c = cos(omega*sig + px);
+    const param_float_t c = cos(omega * sig + px);
     for (unsigned int k = 0; k < 3; k++)
-      res[k] -= c * (axial[(k+1)%3]*r[(k+2)%3] - axial[(k+2)%3]*r[(k+1)%3]);
+      res[k] -= c * (axial[(k + 1) % 3] * r[(k + 2) % 3] - axial[(k + 2) % 3] * r[(k + 1) % 3]);
     return res;
   }
   static SmallVec<space_dimT, param_float_t> analytic_result_m(
-      const Point<space_dimT, param_float_t>& point,
-      const Point<space_dimT, param_float_t>& axial,
-      const param_float_t time = 0.)
+    const Point<space_dimT, param_float_t>& point,
+    const Point<space_dimT, param_float_t>& axial,
+    const param_float_t time = 0.)
   {
     const param_float_t sig = point[0] + point[1] + point[2];
     const param_float_t dsum = axial[0] + axial[1] + axial[2];
     auto res = rvec(time);
-    res *= omega * sin(omega*sig + px) * dsum;
+    res *= omega * sin(omega * sig + px) * dsum;
     return res;
   }
 };
