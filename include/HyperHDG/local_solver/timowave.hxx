@@ -568,7 +568,7 @@ class TimoshenkoWave
       for (unsigned int j = 0; j < n_shape_fct_; ++j)
       {
         const lSol_float_t vol_integral =
-          integrator::template integrate_vol_phiphi(i, j, hyper_edge.geometry);
+          integrator::integrate_vol_phiphi(i, j, hyper_edge.geometry);
         const auto grad_int_vec =
           integrator::template integrate_vol_nablaphiphi<SmallVec<hyEdge_dimT, lSol_float_t>,
                                                          decltype(hyEdgeT::geometry)>(
@@ -890,8 +890,7 @@ class TimoshenkoWave
     for (unsigned int i = 0; i < n; ++i)
       for (unsigned int j = 0; j < n; ++j)
       {
-        const lSol_float_t vol =
-          integrator::template integrate_vol_phiphi(i, j, hyper_edge.geometry);
+        const lSol_float_t vol = integrator::integrate_vol_phiphi(i, j, hyper_edge.geometry);
         const auto grad =
           integrator::template integrate_vol_nablaphiphi<SmallVec<hyEdge_dimT, lSol_float_t>,
                                                          decltype(hyEdgeT::geometry)>(
@@ -1999,7 +1998,7 @@ class TimoshenkoWave
     SmallSquareMat<n_shape_fct_> mmat;
     for (unsigned int i = 0; i < n_shape_fct_; ++i)
       for (unsigned int j = 0; j < n_shape_fct_; ++j)
-        mmat(i, j) = integrator::template integrate_vol_phiphi(i, j, hyper_edge.geometry);
+        mmat(i, j) = integrator::integrate_vol_phiphi(i, j, hyper_edge.geometry);
 
     SmallVec<2 * space_dim * n_shape_fct_, lSol_float_t> dual;
     SmallVec<n_shape_fct_> temp;
