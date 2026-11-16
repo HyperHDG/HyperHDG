@@ -641,6 +641,8 @@ void plot_edge_values(HyperGraphT& hyper_graph,
                       const floatT time)
 {
   using dof_value_t = typename LargeVecT::value_type;
+  // The local solvers return real bulk values also for complex dofs (as in plot_vtkhdf).
+  using plot_value_t = decltype(std::real(std::declval<dof_value_t>()));
   constexpr unsigned int edge_dim = HyperGraphT::hyEdge_dim();
 
   const hyEdge_index_t n_edges = hyper_graph.n_hyEdges();
@@ -651,7 +653,7 @@ void plot_edge_values(HyperGraphT& hyper_graph,
     hyEdge_dofs = get_edge_dof_values<edge_dim, HyperGraphT, hyEdge_index_t, LargeVecT>(
       hyper_graph, he_number, lambda);
     std::array<
-      std::array<dof_value_t, Hypercube<HyperGraphT::hyEdge_dim()>::pow(n_subdivisions + 1)>,
+      std::array<plot_value_t, Hypercube<HyperGraphT::hyEdge_dim()>::pow(n_subdivisions + 1)>,
       LocalSolverT::system_dimension()>
       local_values;
     if constexpr (requires {

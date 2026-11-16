@@ -1,0 +1,3 @@
+- {degree: 5, stages: 3, n: 4, nt: 256, dofs: 150, e_rel: 1.204587e-04, e_dual: 1.560535e-05}
+- {degree: 5, stages: 3, n: 8, nt: 256, dofs: 294, e_rel: 1.155316e-06, e_dual: 1.385474e-07}
+- {degree: 5, stages: 3, n: 16, nt: 256, dofs: 582, e_rel: 1.618006e-08, e_dual: 1.771972e-09}

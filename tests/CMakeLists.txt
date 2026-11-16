@@ -123,6 +123,15 @@ foreach(degree 1 2 3)
                                                                 ${PROJECT_SOURCE_DIR})
 endforeach()
 
+# Timoshenko beam network waves on Hyperbolic (cross of beams, domains/cross2.geo; run in the source
+# tree), one executable per degree. Odd degrees only: (degree + 1) / 2 Gauss stages have the
+# temporal order 2s = degree + 1 of the spatial error.
+foreach(degree 1 3 5)
+  add_hyperhdg_test(timowave_p${degree} timowave.cxx RECORDS)
+  target_compile_definitions(timowave_p${degree} PRIVATE DEGREE=${degree})
+  set_tests_properties(timowave_p${degree} PROPERTIES WORKING_DIRECTORY ${PROJECT_SOURCE_DIR})
+endforeach()
+
 # Performance tests (nanobench; not part of CI, see tests/performance/README.md).
 option(HYPERHDG_PERFORMANCE_TESTS "Benchmarks in tests/performance (build with Release)" OFF)
 if(HYPERHDG_PERFORMANCE_TESTS)
