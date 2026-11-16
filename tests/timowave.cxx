@@ -150,5 +150,7 @@ int main()
     }
     previous = e_rel;
   }
-  return tests::check(failures);
+  // At degree 5, the round-off also reaches e_dual: Accelerate (macOS) differs from MKL by 1e-4
+  // relative at n = 16.
+  return tests::check(failures, degree < 5 ? 1e-5 : 1e-3);
 }
