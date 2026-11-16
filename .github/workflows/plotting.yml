@@ -1,11 +1,12 @@
 name: Plotting
 
-# Plotting (VTU, VTKHDF) and domain files (.geo, .geo.h5): run on every pull request, when the code
-# that writes or reads them changes, weekly (changes can reach these headers indirectly), and on
-# demand. The main runner (cmake.yml) needs neither HDF5 nor ParaView.
+# Plotting (VTU, VTKHDF) and domain files (.geo, .geo.h5): run on every pull request, on main when
+# the code that writes or reads them changes, weekly (changes can reach these headers indirectly),
+# and on demand. The main runner (cmake.yml) needs neither HDF5 nor ParaView.
 on:
   pull_request:
   push:
+    branches: [main]
     paths:
       - 'include/HyperHDG/plot*.hxx'
       - 'include/HyperHDG/read_domain*.hxx'
